@@ -66,10 +66,11 @@ class SetValue(webapp2.RequestHandler):
           entry_value=entry_value)
 
     entry.put()
-    clients = (models.Client.all(keys_only=True)
+    msg = entry.ToMessage()
+    clients = (models.Client.all()
                .ancestor(self.client.parent_key()))
     for client in clients:
-      entry.SendToClient(client)
+      client.SendMessage(msg)
 
     return {}
 
@@ -108,12 +109,10 @@ class CreateChannel(webapp2.RequestHandler):
     token = channel.create_channel(
         client_id=str(self.client.key()),
         duration_minutes=config.CHANNEL_DURATION_SECONDS / 60)
-    entries = (models.StateEntry.all()
-               .ancestor(self.client.parent_key()))
-    for entry in entries:
-      entry.SendToClient(self.client.key())
     return {
       'token': token,
+      'messages': [x.ToMessage()
+                   for x in self.client.parent().GetStateEntries()],
     }
 
 

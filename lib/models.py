@@ -52,9 +52,7 @@ class Profile(db.Model):
     # Merge from another profile into this one, using last_set time as the
     # arbiter.
     my_states = {}
-    for state_entry in (StateEntry.all()
-                        .ancestor(self)
-                        .run()):
+    for state_entry in self.GetStateEntries():
       my_states[state_entry.entry_key] = state_entry
 
     for state_entry in (StateEntry.all()
@@ -73,6 +71,10 @@ class Profile(db.Model):
             entry_value=state_entry.entry_value
             ).put()
 
+  @db.transactional()
+  def GetStateEntries(self):
+    return StateEntry.all().ancestor(self)
+
 
 class Client(db.Model):
   first_seen = db.DateTimeProperty(required=True, auto_now_add=True)
@@ -89,18 +91,21 @@ class Client(db.Model):
     profile = Profile.FromGoogleUser(google_user)
     return cls.FromProfile(profile)
 
+  def SendMessage(self, msg):
+    channel.send_message(str(self.key()), json.dumps(msg))
+
 
 class StateEntry(db.Model):
   last_set = db.DateTimeProperty(required=True, auto_now=True)
   entry_key = db.StringProperty(required=True)
   entry_value = db.StringProperty(required=True)
 
-  def SendToClient(self, client_id):
-    channel.send_message(str(client_id), json.dumps({
-        'message_type': 'state',
-        'key': self.entry_key,
-        'value': self.entry_value,
-    }))
+  def ToMessage(self):
+    return {
+      'message_type': 'state',
+      'key': self.entry_key,
+      'value': self.entry_value,
+    }
 
 
 class Subject(db.Model):

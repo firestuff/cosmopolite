@@ -168,6 +168,11 @@ cosmopolite.Client.prototype.onCreateChannel_ = function(data) {
     onmessage: this.$.proxy(this.onSocketMessage_, this),
     onerror: this.$.proxy(this.onSocketError_, this),
   });
+  // Handle messages that were immediately available as if they came over the
+  // channel.
+  for (var i = 0; i < data['messages'].length; ++i) {
+    this.onServerMessage_(data['messages'][i]);
+  }
 };
 
 cosmopolite.Client.prototype.onSocketOpen_ = function() {
@@ -184,12 +189,14 @@ cosmopolite.Client.prototype.onSocketClose_ = function() {
 };
 
 cosmopolite.Client.prototype.onSocketMessage_ = function(msg) {
-  console.log('message: ' + msg.data);
-  var parsed = JSON.parse(msg.data);
-  switch (parsed.message_type) {
+  this.onServerMessage_(JSON.parse(msg.data));
+};
+
+cosmopolite.Client.prototype.onServerMessage_ = function(msg) {
+  switch (msg.message_type) {
     case 'state':
-      var key = parsed['key'];
-      var value = parsed['value'];
+      var key = msg['key'];
+      var value = msg['value'];
       if (this.stateCache_[key] == value) {
         // Duplicate message.
         break;
@@ -200,10 +207,11 @@ cosmopolite.Client.prototype.onSocketMessage_ = function(msg) {
       }
       break;
     default:
-      console.log('Unknown message type: ' + parsed.message_type);
+      // Client out of date? Force refresh?
+      console.log('Unknown message type: ' + msg.message_type);
       break;
   }
-}
+};
 
 cosmopolite.Client.prototype.onSocketError_ = function(msg) {
   console.log('Socket error: ' + msg);
