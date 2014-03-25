@@ -1,0 +1,79 @@
+<html>
+  <head>
+    <script type="text/javascript" src="/cosmopolite/static/cosmopolite.js" charset="UTF-8"></script>
+    <style>
+a {
+  text-decoration: none;
+}
+    </style>
+  </head>
+  <body>
+    <div>Google user: <span id="google_user"></span></div>
+
+    <div>
+      Key:
+      <select id="keys">
+        <option></option>
+        <option>(add new)</option>
+      </select>
+      <input type="button" id="set" value="Set">
+      <br />
+      <textarea id="value" rows="10" cols="40"></textarea>
+    </div>
+    <script>
+window.addEventListener('load', function() {
+  var googleUser = document.getElementById('google_user');
+  var keys = document.getElementById('keys');
+
+  var callbacks = {
+    onLogin: function(username, logout_url) {
+      googleUser.innerHTML =
+        username +
+        ' <a href="' + logout_url + '" target="_blank">(log out)</a>';
+    },
+    onLogout: function(login_url) {
+      googleUser.innerHTML =
+        '<a href="' + login_url + '" target="_blank">(log in)</a>';
+    },
+    onStateChange: function(key, value) {
+      for (var i = 0; i < keys.options.length; ++i) {
+        if (keys.options[i].value == key) {
+          break;
+        };
+        if (keys.options[i].value > key) {
+          var option = document.createElement('option');
+          option.text = key;
+          keys.options.add(option, i);
+          break;
+        };
+      };
+      if (i == keys.options.length) {
+        var option = document.createElement('option');
+        option.text = key;
+        keys.options.add(option);
+      }
+    },
+  };
+
+  var debug = new cosmopolite.Client(callbacks);
+
+  document.getElementById('set').addEventListener('click', function() {
+    debug.setValue(
+      document.getElementById('keys').value,
+      document.getElementById('value').value);
+  });
+
+  document.getElementById('keys').addEventListener('change', function() {
+    if (this.value == '(add new)') {
+      var new_key = prompt('New key name:');
+      callbacks['onStateChange'](new_key, '');
+      this.value = new_key;
+      return;
+    }
+    var value = document.getElementById('value');
+    value.value = debug.getValue(this.value);
+  });
+});
+    </script>
+  </body>
+</html>

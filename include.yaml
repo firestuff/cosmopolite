@@ -1,0 +1,19 @@
+handlers:
+- url: /cosmopolite/api/.*
+  script: cosmopolite.api.app
+  secure: always
+
+- url: /cosmopolite/auth/.*
+  script: cosmopolite.auth.app
+  secure: always
+
+- url: /_ah/channel/.*
+  script: cosmopolite.channel.app
+
+- url: /cosmopolite/static
+  static_dir: cosmopolite/static
+  secure: always
+  http_headers:
+    X-Frame-Options: DENY
+    X-Content-Type-Options: nosniff
+    Strict-Transport-Security: max-age=31536000; includeSubDomains
