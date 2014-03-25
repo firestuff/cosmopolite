@@ -66,8 +66,12 @@ window.addEventListener('load', function() {
   document.getElementById('keys').addEventListener('change', function() {
     if (this.value == '(add new)') {
       var new_key = prompt('New key name:');
+      if (new_key === null) {
+        return;
+      }
       callbacks['onStateChange'](new_key, '');
       this.value = new_key;
+      document.getElementById('value').value = '';
       return;
     }
     var value = document.getElementById('value');
