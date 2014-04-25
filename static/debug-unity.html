@@ -8,29 +8,43 @@
 	<body>
     <div id="unityPlayer"></div>
 		<script type="text/javascript">
-var unityApp;
+var gameObject;
 var messageQueue = [];
 
 var onUnityLoad = function(obj) {
-  unityApp = obj.ref;
-  sendUnityMessage('Unity app loaded');
+  gameObject = obj.ref;
   while (messageQueue.length) {
-    var msg = messageQueue.shift();
-    sendUnityMessage(msg);
+    var item = messageQueue.shift();
+    sendUnityMessage(item[0], item[1]);
   }
 };
 
-var sendUnityMessage = function(msg) {
-  if (unityApp) {
-    unityApp.SendMessage('Cosmopolite', 'SetMessage', msg);
+var sendUnityMessage = function(funcName, msg) {
+  msg = msg || '';
+  if (gameObject) {
+    gameObject.SendMessage('Cosmopolite', funcName, msg);
   } else {
-    messageQueue.shift(msg);
+    messageQueue.shift([funcName, msg]);
+  }
+};
+
+var loginUrl, logoutUrl;
+
+var doLogin = function() {
+  if (loginUrl) {
+    window.open(loginUrl);
+  }
+};
+
+var doLogout = function() {
+  if (logoutUrl) {
+    window.open(logoutUrl);
   }
 };
 
 unityObject.embedUnity(
     'unityPlayer',
-    'CosmopoliteTest.unity3d',
+    'debug.unity3d',
     500,
     80,
     null,
@@ -39,13 +53,14 @@ unityObject.embedUnity(
 
 var callbacks = {
   onLogin: function(username, logout_url) {
-    sendUnityMessage('Logged in as ' + username);
+    logoutUrl = logout_url;
+    sendUnityMessage('OnLogin', username);
   },
   onLogout: function(login_url) {
-    sendUnityMessage('Logged out');
+    loginUrl = login_url;
+    sendUnityMessage('OnLogout');
   },
   onStateChange: function(key, value) {
-    sendUnityMessage(key + ' = ' + value);
   },
 };
 
