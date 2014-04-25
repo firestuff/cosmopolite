@@ -1,0 +1,55 @@
+<html>
+	<head>
+    <title>Cosmopolite Unity Demo</title>
+		<script type='text/javascript' src='https://ssl-webplayer.unity3d.com/download_webplayer-3.x/3.0/uo/jquery.min.js'></script>
+		<script type='text/javascript' src='https://ssl-webplayer.unity3d.com/download_webplayer-3.x/3.0/uo/UnityObject.js'></script>
+    <script type="text/javascript" src="/cosmopolite/static/cosmopolite.js" charset="UTF-8"></script>
+  </head>
+	<body>
+    <div id="unityPlayer"></div>
+		<script type="text/javascript">
+var unityApp;
+var messageQueue = [];
+
+var onUnityLoad = function(obj) {
+  unityApp = obj.ref;
+  sendUnityMessage('Unity app loaded');
+  while (messageQueue.length) {
+    var msg = messageQueue.shift();
+    sendUnityMessage(msg);
+  }
+};
+
+var sendUnityMessage = function(msg) {
+  if (unityApp) {
+    unityApp.SendMessage('Cosmopolite', 'SetMessage', msg);
+  } else {
+    messageQueue.shift(msg);
+  }
+};
+
+unityObject.embedUnity(
+    'unityPlayer',
+    'CosmopoliteTest.unity3d',
+    500,
+    80,
+    null,
+    null,
+    onUnityLoad);
+
+var callbacks = {
+  onLogin: function(username, logout_url) {
+    sendUnityMessage('Logged in as ' + username);
+  },
+  onLogout: function(login_url) {
+    sendUnityMessage('Logged out');
+  },
+  onStateChange: function(key, value) {
+    sendUnityMessage(key + ' = ' + value);
+  },
+};
+
+var cosmo = new cosmopolite.Client(callbacks);
+		</script>
+	</body>
+</html>
