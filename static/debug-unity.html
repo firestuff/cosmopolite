@@ -9,20 +9,17 @@
     <div id="unityPlayer"></div>
 		<script type="text/javascript">
 var gameObject;
+var gameModuleName;
 var messageQueue = [];
 
 var onUnityLoad = function(obj) {
   gameObject = obj.ref;
-  while (messageQueue.length) {
-    var item = messageQueue.shift();
-    sendUnityMessage(item[0], item[1]);
-  }
 };
 
 var sendUnityMessage = function(funcName, msg) {
   msg = msg || '';
-  if (gameObject) {
-    gameObject.SendMessage('Cosmopolite', funcName, msg);
+  if (gameObject && gameModuleName) {
+    gameObject.SendMessage(gameModuleName, funcName, msg);
   } else {
     messageQueue.shift([funcName, msg]);
   }
@@ -40,6 +37,18 @@ var doLogout = function() {
   if (logoutUrl) {
     window.open(logoutUrl);
   }
+};
+
+var registerGameObject = function(name) {
+  gameModuleName = name;
+  while (messageQueue.length) {
+    var item = messageQueue.shift();
+    sendUnityMessage(item[0], item[1]);
+  }
+};
+
+var pluginDidLoad = function() {
+  // Called by the Unity example code, but not used.
 };
 
 unityObject.embedUnity(
