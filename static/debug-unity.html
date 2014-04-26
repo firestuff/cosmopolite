@@ -21,7 +21,7 @@ var sendUnityMessage = function(funcName, msg) {
   if (gameObject && gameModuleName) {
     gameObject.SendMessage(gameModuleName, funcName, msg);
   } else {
-    messageQueue.shift([funcName, msg]);
+    messageQueue.push([funcName, msg]);
   }
 };
 
