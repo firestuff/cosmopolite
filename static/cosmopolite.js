@@ -23,17 +23,17 @@ cosmopolite.Client = function(opt_callbacks, opt_urlPrefix, opt_namespace) {
 
   this.stateCache_ = {};
 
-  var scripts = [
+  var scriptUrls = [
     'https://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js',
     '/_ah/channel/jsapi',
   ];
-  this.numScriptsToLoad_ = scripts.length;
-  for (var i = 0; i < scripts.length; i++) {
+  this.numScriptsToLoad_ = scriptUrls.length;
+  scriptUrls.forEach(function(scriptUrl) {
     var script = document.createElement('script');
-    script.src = scripts[i];
+    script.src = scriptUrl;
     script.onload = this.onLoad_.bind(this);
     document.body.appendChild(script);
-  }
+  }, this);
 };
 
 cosmopolite.Client.prototype.onLoad_ = function() {
@@ -170,9 +170,7 @@ cosmopolite.Client.prototype.onCreateChannel_ = function(data) {
   });
   // Handle messages that were immediately available as if they came over the
   // channel.
-  for (var i = 0; i < data['messages'].length; ++i) {
-    this.onServerMessage_(data['messages'][i]);
-  }
+  data['messages'].forEach(this.onServerMessage_, this);
 };
 
 cosmopolite.Client.prototype.onSocketOpen_ = function() {
