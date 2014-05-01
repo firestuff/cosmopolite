@@ -77,6 +77,8 @@ class Profile(db.Model):
 
 
 class Client(db.Model):
+  # Parent: Profile
+
   first_seen = db.DateTimeProperty(required=True, auto_now_add=True)
   channel_active = db.BooleanProperty(required=True, default=False)
 
@@ -96,6 +98,8 @@ class Client(db.Model):
 
 
 class StateEntry(db.Model):
+  # Parent: Profile
+
   last_set = db.DateTimeProperty(required=True, auto_now=True)
   entry_key = db.StringProperty(required=True)
   entry_value = db.StringProperty()
@@ -113,4 +117,6 @@ class Subject(db.Model):
 
 
 class Subscription(db.Model):
+  # Parent: Subject
+
   client = db.ReferenceProperty(reference_class=Client)
