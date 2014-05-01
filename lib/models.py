@@ -114,4 +114,3 @@ class Subject(db.Model):
 
 class Subscription(db.Model):
   client = db.ReferenceProperty(reference_class=Client)
-  subject = db.ReferenceProperty(reference_class=Subject)
