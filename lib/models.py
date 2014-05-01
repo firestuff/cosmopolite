@@ -98,7 +98,7 @@ class Client(db.Model):
 class StateEntry(db.Model):
   last_set = db.DateTimeProperty(required=True, auto_now=True)
   entry_key = db.StringProperty(required=True)
-  entry_value = db.StringProperty(required=True)
+  entry_value = db.StringProperty()
 
   def ToMessage(self):
     return {
@@ -114,3 +114,4 @@ class Subject(db.Model):
 
 class Subscription(db.Model):
   client = db.ReferenceProperty(reference_class=Client)
+  subject = db.ReferenceProperty(reference_class=Subject)

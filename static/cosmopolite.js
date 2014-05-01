@@ -149,6 +149,12 @@ cosmopolite.Client.prototype.setValue = function(key, value) {
     'key': key,
     'value': value,
   })
+  // Provide immediate feedback without waiting for a round trip.
+  // We'll also get a response from the server, so this should be eventually
+  // consistent.
+  if ('onStateChange' in this.callbacks_) {
+    this.callbacks_['onStateChange'](key, value);
+  }
 };
 
 cosmopolite.Client.prototype.getValue = function(key) {

@@ -12,18 +12,32 @@ a {
 
     <div>
       Key:
-      <select id="keys">
-        <option></option>
-        <option>(add new)</option>
-      </select>
+      <select id="keys"></select>
       <input type="button" id="set" value="Set">
+      <input type="button" id="add" value="Add">
       <br />
       <textarea id="value" rows="10" cols="40"></textarea>
     </div>
     <script>
+var keys = document.getElementById('keys');
+var value = document.getElementById('value');
+
+var selectKey = function(new_key) {
+  keys.value = new_key;
+  keys.dispatchEvent(new CustomEvent('change'));
+};
+
+var addKey = function(new_key, new_value, index) {
+  var option = document.createElement('option');
+  option.text = new_key;
+  keys.options.add(option, index);
+  if (keys.options.length == 1) {
+    selectKey(new_key);
+  }
+};
+
 window.addEventListener('load', function() {
   var googleUser = document.getElementById('google_user');
-  var keys = document.getElementById('keys');
 
   var callbacks = {
     onLogin: function(username, logout_url) {
@@ -35,47 +49,38 @@ window.addEventListener('load', function() {
       googleUser.innerHTML =
         '<a href="' + login_url + '" target="_blank">(log in)</a>';
     },
-    onStateChange: function(key, value) {
+    onStateChange: function(new_key, new_value) {
       for (var i = 0; i < keys.options.length; ++i) {
-        if (keys.options[i].value == key) {
-          break;
+        if (keys.options[i].value == new_key) {
+          return;
         };
-        if (keys.options[i].value > key) {
-          var option = document.createElement('option');
-          option.text = key;
-          keys.options.add(option, i);
-          break;
+        if (keys.options[i].value > new_key) {
+          addKey(new_key, new_value, i);
+          return;
         };
       };
-      if (i == keys.options.length) {
-        var option = document.createElement('option');
-        option.text = key;
-        keys.options.add(option);
-      }
+      // Sorts at the end
+      addKey(new_key, new_value, keys.options.length);
     },
   };
 
   var debug = new cosmopolite.Client(callbacks);
 
   document.getElementById('set').addEventListener('click', function() {
-    debug.setValue(
-      document.getElementById('keys').value,
-      document.getElementById('value').value);
+    debug.setValue(keys.value, value.value);
+  });
+
+  document.getElementById('add').addEventListener('click', function() {
+    var new_key = prompt('New key name:');
+    if (new_key === null) {
+      return;
+    }
+    debug.setValue(new_key, '');
+    selectKey(new_key);
   });
 
   document.getElementById('keys').addEventListener('change', function() {
-    if (this.value == '(add new)') {
-      var new_key = prompt('New key name:');
-      if (new_key === null) {
-        return;
-      }
-      callbacks['onStateChange'](new_key, '');
-      this.value = new_key;
-      document.getElementById('value').value = '';
-      return;
-    }
-    var value = document.getElementById('value');
-    value.value = debug.getValue(this.value);
+    value.value = debug.getValue(keys.value);
   });
 });
     </script>
