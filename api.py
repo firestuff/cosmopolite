@@ -51,6 +51,7 @@ class SetValue(webapp2.RequestHandler):
   def post(self):
     entry_key = self.request.get('key')
     entry_value = self.request.get('value')
+    public = (self.request.get('public') == 'true')
 
     entries = (models.StateEntry.all()
                .ancestor(self.client.parent_key())
@@ -59,11 +60,13 @@ class SetValue(webapp2.RequestHandler):
     if entries:
       entry = entries[0]
       entry.entry_value = entry_value
+      entry.public = public
     else:
       entry = models.StateEntry(
           parent=self.client.parent_key(),
           entry_key=entry_key,
-          entry_value=entry_value)
+          entry_value=entry_value,
+          public=public)
 
     entry.put()
     msg = entry.ToMessage()
@@ -71,29 +74,6 @@ class SetValue(webapp2.RequestHandler):
                .ancestor(self.client.parent_key()))
     for client in clients:
       client.SendMessage(msg)
-
-    return {}
-
-
-class GetValue(webapp2.RequestHandler):
-  @utils.chaos_monkey
-  @utils.returns_json
-  @utils.local_namespace
-  @security.google_user_xsrf_protection
-  @security.weak_security_checks
-  @session.session_required
-  @db.transactional()
-  def post(self):
-    entry_key = self.request.get('key')
-
-    entries = (models.StateEntry.all()
-               .ancestor(self.client.parent_key())
-               .filter('entry_key =', entry_key)
-               .fetch(1))
-    if entries:
-      return {
-          'value': entries[0].entry_value
-      }
 
     return {}
 
@@ -119,6 +99,5 @@ class CreateChannel(webapp2.RequestHandler):
 app = webapp2.WSGIApplication([
   (config.URL_PREFIX + '/api/createChannel', CreateChannel),
   (config.URL_PREFIX + '/api/getUser', GetUser),
-  (config.URL_PREFIX + '/api/getValue', GetValue),
   (config.URL_PREFIX + '/api/setValue', SetValue),
 ])

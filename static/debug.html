@@ -11,23 +11,35 @@ a {
     <div>Google user: <span id="google_user"></span></div>
 
     <div>
-      Key:
-      <select id="keys"></select>
-      <input type="button" id="set" value="Set">
-      <input type="button" id="add" value="Add">
-      <br />
-      <textarea id="value" rows="10" cols="40"></textarea>
+      <div>
+        Key:
+        <select id="keys"></select>
+        <input type="button" id="set" value="Set">
+        <input type="button" id="add" value="Add">
+      </div>
+      <div>
+        Last set:
+        <span id="last_set"></span>
+      </div>
+      <div>
+        <input type="checkbox" id="public"> Public
+      </div>
+      <div>
+        <textarea id="value" rows="10" cols="40"></textarea>
+      </div>
     </div>
     <script>
 var keys = document.getElementById('keys');
 var value = document.getElementById('value');
+var last_set = document.getElementById('last_set');
+var is_public = document.getElementById('public');
 
 var selectKey = function(new_key) {
   keys.value = new_key;
   keys.dispatchEvent(new CustomEvent('change'));
 };
 
-var addKey = function(new_key, new_value, index) {
+var addKey = function(new_key, index) {
   var option = document.createElement('option');
   option.text = new_key;
   keys.options.add(option, index);
@@ -55,19 +67,19 @@ window.addEventListener('load', function() {
           return;
         };
         if (keys.options[i].value > new_key) {
-          addKey(new_key, new_value, i);
+          addKey(new_key, i);
           return;
         };
       };
       // Sorts at the end
-      addKey(new_key, new_value, keys.options.length);
+      addKey(new_key, keys.options.length);
     },
   };
 
   var debug = new cosmopolite.Client(callbacks);
 
   document.getElementById('set').addEventListener('click', function() {
-    debug.setValue(keys.value, value.value);
+    debug.setValue(keys.value, value.value, is_public.checked);
   });
 
   document.getElementById('add').addEventListener('click', function() {
@@ -80,7 +92,10 @@ window.addEventListener('load', function() {
   });
 
   document.getElementById('keys').addEventListener('change', function() {
-    value.value = debug.getValue(keys.value);
+    var value_obj = debug.getValue(keys.value);
+    value.value = value_obj.value;
+    last_set.innerHTML = (new Date(value_obj.last_set * 1000)).toString();
+    is_public.checked = value_obj['public'];
   });
 });
     </script>

@@ -19,6 +19,8 @@ import logging
 from google.appengine.api import channel
 from google.appengine.ext import db
 
+import utils
+
 
 # Profile
 # ↳ Client
@@ -94,7 +96,7 @@ class Client(db.Model):
     return cls.FromProfile(profile)
 
   def SendMessage(self, msg):
-    channel.send_message(str(self.key()), json.dumps(msg))
+    channel.send_message(str(self.key()), json.dumps(msg, default=utils.EncodeJSON))
 
 
 class StateEntry(db.Model):
@@ -103,12 +105,15 @@ class StateEntry(db.Model):
   last_set = db.DateTimeProperty(required=True, auto_now=True)
   entry_key = db.StringProperty(required=True)
   entry_value = db.StringProperty()
+  public = db.BooleanProperty(required=True, default=False)
 
   def ToMessage(self):
     return {
       'message_type': 'state',
-      'key': self.entry_key,
-      'value': self.entry_value,
+      'key':          self.entry_key,
+      'value':        self.entry_value,
+      'last_set':     self.last_set,
+      'public':       self.public,
     }
 
 

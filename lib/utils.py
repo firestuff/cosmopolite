@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import functools
 import json
 import random
+import time
 
 from google.appengine.api import namespace_manager
 
@@ -27,7 +29,7 @@ def returns_json(handler):
 
   @functools.wraps(handler)
   def SerializeResult(self):
-    json.dump(handler(self), self.response.out)
+    json.dump(handler(self), self.response.out, default=EncodeJSON)
 
   return SerializeResult
 
@@ -54,3 +56,9 @@ def local_namespace(handler):
     return handler(self)
 
   return SetNamespace
+
+
+def EncodeJSON(o):
+  if isinstance(o, datetime.datetime):
+    return time.mktime(o.timetuple())
+  return json.JSONEncoder.default(o)

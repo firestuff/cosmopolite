@@ -144,10 +144,11 @@ cosmopolite.Client.prototype.getUser_ = function() {
   });
 };
 
-cosmopolite.Client.prototype.setValue = function(key, value) {
+cosmopolite.Client.prototype.setValue = function(key, value, is_public) {
   this.sendRPC_('setValue', {
     'key': key,
     'value': value,
+    'public': is_public,
   })
   // Provide immediate feedback without waiting for a round trip.
   // We'll also get a response from the server, so this should be eventually
@@ -200,14 +201,20 @@ cosmopolite.Client.prototype.onServerMessage_ = function(msg) {
   switch (msg.message_type) {
     case 'state':
       var key = msg['key'];
-      var value = msg['value'];
-      if (this.stateCache_[key] == value) {
+      if (this.stateCache_[key] &&
+	  this.stateCache_[key]['value'] == msg['value'] &&
+          this.stateCache_[key]['last_set'] == msg['last_set'] &&
+	  this.stateCache_[key]['public'] == msg['public']) {
         // Duplicate message.
         break;
       }
-      this.stateCache_[key] = value;
+      this.stateCache_[key] = {
+          'value':    msg['value'],
+	  'last_set': msg['last_set'],
+	  'public':   msg['public'],
+      }
       if ('onStateChange' in this.callbacks_) {
-        this.callbacks_['onStateChange'](key, value);
+        this.callbacks_['onStateChange'](key, this.stateCache_[key]);
       }
       break;
     default:
