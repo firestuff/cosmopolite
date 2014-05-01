@@ -26,20 +26,6 @@ from cosmopolite.lib import utils
 import config
 
 
-class GetUser(webapp2.RequestHandler):
-  @utils.chaos_monkey
-  @utils.returns_json
-  @utils.local_namespace
-  @security.google_user_xsrf_protection
-  @security.weak_security_checks
-  @session.session_required
-  def post(self):
-    ret = {}
-    if self.verified_google_user:
-      ret['google_user'] = self.verified_google_user.email()
-    return ret
-
-
 class SetValue(webapp2.RequestHandler):
   @utils.chaos_monkey
   @utils.returns_json
@@ -89,15 +75,25 @@ class CreateChannel(webapp2.RequestHandler):
     token = channel.create_channel(
         client_id=str(self.client.key()),
         duration_minutes=config.CHANNEL_DURATION_SECONDS / 60)
+    messages = [x.ToMessage()
+                for x in self.client.parent().GetStateEntries()]
+    if self.verified_google_user:
+      messages.append({
+          'message_type': 'login',
+          'google_user':  self.verified_google_user.email(),
+      })
+    else:
+      messages.append({
+          'message_type': 'logout',
+      })
+
     return {
       'token': token,
-      'messages': [x.ToMessage()
-                   for x in self.client.parent().GetStateEntries()],
+      'messages': messages,
     }
 
 
 app = webapp2.WSGIApplication([
   (config.URL_PREFIX + '/api/createChannel', CreateChannel),
-  (config.URL_PREFIX + '/api/getUser', GetUser),
   (config.URL_PREFIX + '/api/setValue', SetValue),
 ])

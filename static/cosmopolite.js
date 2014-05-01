@@ -42,7 +42,6 @@ cosmopolite.Client.prototype.onLoad_ = function() {
   }
   this.$ = jQuery.noConflict(true);
   this.registerMessageHandlers_();
-  this.getUser_();
   this.createChannel_();
 };
 
@@ -50,16 +49,16 @@ cosmopolite.Client.prototype.onLoad_ = function() {
 cosmopolite.Client.prototype.onReceiveMessage_ = function(data) {
   switch (data) {
     case 'login_complete':
-      this.getUser_();
+      this.socket.close();
       break;
     case 'logout_complete':
       localStorage.removeItem(this.namespace_ + ':client_id');
       localStorage.removeItem(this.namespace_ + ':google_user_id');
       this.$('#google_user').empty();
-      this.getUser_();
+      this.socket.close();
       break;
     default:
-      console.log('Unknown message type');
+      console.log('Unknown message type: ' + data);
       break;
   }
 };
@@ -215,6 +214,19 @@ cosmopolite.Client.prototype.onServerMessage_ = function(msg) {
       }
       if ('onStateChange' in this.callbacks_) {
         this.callbacks_['onStateChange'](key, this.stateCache_[key]);
+      }
+      break;
+    case 'login':
+      if ('onLogin' in this.callbacks_) {
+        this.callbacks_['onLogin'](
+          msg.google_user,
+	  this.urlPrefix_ + '/auth/logout');
+      }
+      break;
+    case 'logout':
+      if ('onLogout' in this.callbacks_) {
+        this.callbacks_['onLogout'](
+          this.urlPrefix_ + '/auth/login');
       }
       break;
     default:
