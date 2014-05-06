@@ -136,6 +136,9 @@ cosmopolite.Client.prototype.sendRPCs_ = function(commands, delay) {
           this.$.proxy(commands[i]['onSuccess'], this)(data.responses[i]);
         }
       }
+      // Handle messages that were immediately available as if they came over the
+      // channel.
+      data['messages'].forEach(this.onServerMessage_, this);
     })
     .fail(function(xhr) {
       var intDelay =
@@ -181,9 +184,6 @@ cosmopolite.Client.prototype.onCreateChannel_ = function(data) {
     onmessage: this.$.proxy(this.onSocketMessage_, this),
     onerror: this.$.proxy(this.onSocketError_, this),
   });
-  // Handle messages that were immediately available as if they came over the
-  // channel.
-  data['messages'].forEach(this.onServerMessage_, this);
 };
 
 cosmopolite.Client.prototype.onSocketOpen_ = function() {

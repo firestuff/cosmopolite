@@ -75,10 +75,7 @@ def session_required(handler):
     else:
       self.client = models.Client.FromGoogleUser(self.verified_google_user)
 
-    ret = {
-        'status': 'ok',
-        'responses': handler(self),
-    }
+    ret = handler(self)
     if client_key != self.client.key():
       # Tell the client that this changed
       ret['client_id'] = auth.Sign(self.client.key())

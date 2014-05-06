@@ -94,11 +94,21 @@ class APIWrapper(webapp2.RequestHandler):
   @security.weak_security_checks
   @session.session_required
   def post(self):
-    ret = []
+    ret = {
+        'status': 'ok',
+        'responses': [],
+        'messages': [],
+    }
     for command in self.request_json['commands']:
       callback = self._COMMANDS[command['command']]
-      result = callback(self.verified_google_user, self.client, command.get('arguments', {}))
-      ret.append(result)
+      result = callback(
+          self.verified_google_user,
+          self.client,
+          command.get('arguments', {}))
+      # Magic: if result contains "messages", haul them up a level so the
+      # client can see them as a single stream.
+      ret['messages'].extend(result.pop('messages', []))
+      ret['responses'].append(result)
     return ret
 
 
