@@ -75,17 +75,39 @@ cosmopolite.Client.prototype.registerMessageHandlers_ = function() {
   }, this));
 };
 
-cosmopolite.Client.prototype.sendRPC_ = function(command, data, onSuccess, delay) {
+cosmopolite.Client.prototype.sendRPC_ = function(command, args, onSuccess) {
+  this.sendRPCs_([
+    {
+      'command': command,
+      'arguments': args,
+      'onSuccess': onSuccess,
+    }
+  ]);
+};
+
+cosmopolite.Client.prototype.sendRPCs_ = function(commands, delay) {
+  var request = {
+    'commands': [],
+  };
+  commands.forEach(function(command) {
+    var request_command = {
+      'command': command['command'],
+    };
+    if ('arguments' in command) {
+      request_command['arguments'] = command['arguments'];
+    }
+    request.commands.push(request_command);
+  });
   if (this.namespace_ + ':client_id' in localStorage) {
-    data['client_id'] = localStorage[this.namespace_ + ':client_id'];
+    request['client_id'] = localStorage[this.namespace_ + ':client_id'];
   }
   if (this.namespace_ + ':google_user_id' in localStorage) {
-    data['google_user_id'] = localStorage[this.namespace_ + ':google_user_id'];
+    request['google_user_id'] = localStorage[this.namespace_ + ':google_user_id'];
   }
   this.$.ajax({
-    url: this.urlPrefix_ + '/api/' + command,
+    url: this.urlPrefix_ + '/api',
     type: 'post',
-    data: data,
+    data: JSON.stringify(request),
     dataType: 'json',
     context: this,
   })
@@ -99,7 +121,7 @@ cosmopolite.Client.prototype.sendRPC_ = function(command, data, onSuccess, delay
       }
       if (data['status'] == 'retry') {
         // Discard delay
-        this.sendRPC_(command, data, onSuccess);
+        this.sendRPCs_(commands, onSuccess);
         return;
       }
       if (data['status'] != 'ok') {
@@ -109,8 +131,10 @@ cosmopolite.Client.prototype.sendRPC_ = function(command, data, onSuccess, delay
         // TODO(flamingcow): Refresh the page? Show an alert?
         return;
       }
-      if (onSuccess) {
-      	this.$.proxy(onSuccess, this)(data.response);
+      for (var i = 0; i < data.responses.length; i++) {
+        if (commands[i]['onSuccess']) {
+          this.$.proxy(commands[i]['onSuccess'], this)(data.responses[i]);
+        }
       }
     })
     .fail(function(xhr) {
@@ -118,29 +142,12 @@ cosmopolite.Client.prototype.sendRPC_ = function(command, data, onSuccess, delay
         xhr.getResponseHeader('Retry-After') ||
         Math.min(32, Math.max(2, delay || 2));
       console.log(
-        'RPC ' + command + ' failed. Will retry in ' + intDelay + ' seconds');
+        'RPC failed. Will retry in ' + intDelay + ' seconds');
       function retry() {
-        this.sendRPC_(command, data, onSuccess, Math.pow(intDelay, 2));
+        this.sendRPCs_(commands, Math.pow(intDelay, 2));
       }
       window.setTimeout(this.$.proxy(retry, this), intDelay * 1000);
     });
-};
-
-cosmopolite.Client.prototype.getUser_ = function() {
-  this.sendRPC_('getUser', {}, function(data) {
-    if ('google_user' in data) {
-      if ('onLogin' in this.callbacks_) {
-        this.callbacks_['onLogin'](
-          data['google_user'],
-	  this.urlPrefix_ + '/auth/logout');
-      }
-    } else {
-      if ('onLogout' in this.callbacks_) {
-        this.callbacks_['onLogout'](
-          this.urlPrefix_ + '/auth/login');
-      }
-    }
-  });
 };
 
 cosmopolite.Client.prototype.setValue = function(key, value, is_public) {

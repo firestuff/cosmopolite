@@ -36,7 +36,7 @@ def google_user_xsrf_protection(handler):
     if not google_user:
       return handler(self)
 
-    google_user_id = auth.Parse(self.request.get('google_user_id', None))
+    google_user_id = auth.Parse(self.request_json.get('google_user_id', None))
     if (not google_user_id or 
         google_user_id != google_user.user_id()):
       return {

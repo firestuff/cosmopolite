@@ -65,7 +65,7 @@ def session_required(handler):
 
   @functools.wraps(handler)
   def FindOrCreateSession(self):
-    client_key = auth.ParseKey(self.request.get('client_id', None))
+    client_key = auth.ParseKey(self.request_json.get('client_id', None))
 
     # The hunt for a Profile begins.
     if client_key:
@@ -77,7 +77,7 @@ def session_required(handler):
 
     ret = {
         'status': 'ok',
-        'response': handler(self),
+        'responses': handler(self),
     }
     if client_key != self.client.key():
       # Tell the client that this changed

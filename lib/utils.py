@@ -25,6 +25,16 @@ from cosmopolite import config
 from cosmopolite.lib import auth
 
 
+def expects_json(handler):
+
+  @functools.wraps(handler)
+  def ParseInput(self):
+    self.request_json = json.load(self.request.body_file)
+    return handler(self)
+
+  return ParseInput
+
+
 def returns_json(handler):
 
   @functools.wraps(handler)
