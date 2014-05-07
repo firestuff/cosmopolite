@@ -79,7 +79,7 @@ class Profile(db.Model):
 
 
 class Client(db.Model):
-  # Parent: Profile
+  # parent=Profile
 
   first_seen = db.DateTimeProperty(required=True, auto_now_add=True)
   channel_active = db.BooleanProperty(required=True, default=False)
@@ -96,11 +96,15 @@ class Client(db.Model):
     return cls.FromProfile(profile)
 
   def SendMessage(self, msg):
-    channel.send_message(str(self.key()), json.dumps(msg, default=utils.EncodeJSON))
+    self.SendByKey(self.key(), msg)
+
+  @staticmethod
+  def SendByKey(key, msg):
+    channel.send_message(str(key), json.dumps(msg, default=utils.EncodeJSON))
 
 
 class StateEntry(db.Model):
-  # Parent: Profile
+  # parent=Profile
 
   last_set = db.DateTimeProperty(required=True, auto_now=True)
   entry_key = db.StringProperty(required=True)
@@ -118,10 +122,67 @@ class StateEntry(db.Model):
 
 
 class Subject(db.Model):
-  name = db.StringProperty(required=True)
+  # key_name=name
+
+  @classmethod
+  def FindOrCreate(cls, name):
+    subject = cls.get_by_key_name(name)
+    if subject:
+      return subject
+    return cls(key_name=name).put()
+
+  @db.transactional()
+  def RecentMessages(self, num_messages):
+    query = (
+        Message.all()
+        .ancestor(self)
+        .order('-created'))
+    if num_messages <= 0:
+      num_messages = None
+    return query.run(limit=num_messages)
+
+  @db.transactional()
+  def SendMessage(self, message):
+    obj = Message(parent=self, message=message)
+    obj.put()
+
+    json_message = obj.ToMessage()
+
+    for subscription in Subscription.all().ancestor(self):
+      Client.SendByKey(Subscription.client.get_value_for_datastore(subscription), json_message)
 
 
 class Subscription(db.Model):
-  # Parent: Subject
+  # parent=Subject
 
   client = db.ReferenceProperty(reference_class=Client)
+
+  @classmethod
+  @db.transactional()
+  def FindOrCreate(cls, subject, client, messages):
+    subscriptions = (
+        cls.all(keys_only=True)
+        .ancestor(subject)
+        .filter('client =', client)
+        .fetch(1))
+    if not subscriptions:
+      logging.info('no subscriptions found')
+      cls(parent=subject, client=client).put()
+    if messages == 0:
+      return []
+    return [m.ToMessage() for m in subject.RecentMessages(messages)]
+
+
+class Message(db.Model):
+  # parent=Subject
+
+  created = db.DateTimeProperty(required=True, auto_now_add=True)
+  message = db.TextProperty(required=True)
+
+  def ToMessage(self):
+    return {
+      'message_type': 'message',
+      'subject':      self.parent_key().name(),
+      'created':      self.created,
+      'message':      self.message,
+    }

@@ -26,6 +26,37 @@ from cosmopolite.lib import utils
 import config
 
 
+def CreateChannel(google_user, client, args):
+  token = channel.create_channel(
+      client_id=str(client.key()),
+      duration_minutes=config.CHANNEL_DURATION_SECONDS / 60)
+  messages = [x.ToMessage()
+              for x in client.parent().GetStateEntries()]
+  if google_user:
+    messages.append({
+      'message_type': 'login',
+      'google_user':  google_user.email(),
+    })
+  else:
+    messages.append({
+      'message_type': 'logout',
+    })
+
+  return {
+    'token': token,
+    'messages': messages,
+  }
+
+
+def SendMessage(google_user, client, args):
+  subject = args['subject']
+  message = args['message']
+
+  models.Subject.FindOrCreate(subject).SendMessage(message)
+
+  return {}
+
+
 @db.transactional()
 def SetValue(google_user, client, args):
   entry_key = args['key']
@@ -57,25 +88,12 @@ def SetValue(google_user, client, args):
   return {}
 
 
-def CreateChannel(google_user, client, args):
-  token = channel.create_channel(
-      client_id=str(client.key()),
-      duration_minutes=config.CHANNEL_DURATION_SECONDS / 60)
-  messages = [x.ToMessage()
-              for x in client.parent().GetStateEntries()]
-  if google_user:
-    messages.append({
-        'message_type': 'login',
-        'google_user':  google_user.email(),
-    })
-  else:
-    messages.append({
-        'message_type': 'logout',
-    })
+def Subscribe(google_user, client, args):
+  subject = models.Subject.FindOrCreate(args['subject'])
+  messages = args.get('messages', 0)
 
   return {
-    'token': token,
-    'messages': messages,
+    'messages': models.Subscription.FindOrCreate(subject, client, messages),
   }
 
 
@@ -83,7 +101,9 @@ class APIWrapper(webapp2.RequestHandler):
 
   _COMMANDS = {
       'createChannel': CreateChannel,
+      'sendMessage': SendMessage,
       'setValue': SetValue,
+      'subscribe': Subscribe,
   }
 
   @utils.chaos_monkey

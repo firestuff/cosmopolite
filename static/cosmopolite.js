@@ -58,7 +58,7 @@ cosmopolite.Client.prototype.onReceiveMessage_ = function(data) {
       this.socket.close();
       break;
     default:
-      console.log('Unknown message type: ' + data);
+      console.log('Unknown event type:', data);
       break;
   }
 };
@@ -67,10 +67,10 @@ cosmopolite.Client.prototype.registerMessageHandlers_ = function() {
   this.$(window).on('message', this.$.proxy(function(e) {
     if (e.originalEvent.origin != window.location.origin) {
       console.log(
-        'Received message from bad origin: ' + e.originalEvent.origin);
+        'Received message from bad origin:', e.originalEvent.origin);
       return;
     }
-    console.log('Received message: ' + e.originalEvent.data);
+    console.log('Received message:', e.originalEvent.data);
     this.onReceiveMessage_(e.originalEvent.data);
   }, this));
 };
@@ -125,9 +125,7 @@ cosmopolite.Client.prototype.sendRPCs_ = function(commands, delay) {
         return;
       }
       if (data['status'] != 'ok') {
-        console.log(
-            'Server returned unknown status (' + data['status'] + ') for RPC '
-            + command);
+        console.log('Server returned unknown status:', data['status']);
         // TODO(flamingcow): Refresh the page? Show an alert?
         return;
       }
@@ -172,7 +170,27 @@ cosmopolite.Client.prototype.getValue = function(key) {
 };
 
 cosmopolite.Client.prototype.createChannel_ = function() {
-  this.sendRPC_('createChannel', {}, this.onCreateChannel_);
+  this.sendRPCs_([
+      {
+        'command': 'createChannel',
+        'onSuccess': this.onCreateChannel_,
+      },
+      // TODO(flamingcow): Remove debugging below.
+      {
+        'command': 'subscribe',
+        'arguments': {
+          'subject': 'books',
+          'messages': 5,
+        }
+      },
+      {
+        'command': 'sendMessage',
+        'arguments': {
+          'subject': 'books',
+          'message': 'foobar',
+        }
+      },
+  ]);
 };
 
 cosmopolite.Client.prototype.onCreateChannel_ = function(data) {
@@ -238,12 +256,12 @@ cosmopolite.Client.prototype.onServerMessage_ = function(msg) {
       break;
     default:
       // Client out of date? Force refresh?
-      console.log('Unknown message type: ' + msg.message_type);
+      console.log('Unknown channel message:', msg);
       break;
   }
 };
 
 cosmopolite.Client.prototype.onSocketError_ = function(msg) {
-  console.log('Socket error: ' + msg);
+  console.log('Socket error:', msg);
   this.socket.close();
 };
