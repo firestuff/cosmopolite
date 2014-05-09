@@ -111,9 +111,9 @@ class StateEntry(db.Model):
   entry_value = db.StringProperty()
   public = db.BooleanProperty(required=True, default=False)
 
-  def ToMessage(self):
+  def ToEvent(self):
     return {
-      'message_type': 'state',
+      'event_type':   'state',
       'key':          self.entry_key,
       'value':        self.entry_value,
       'last_set':     self.last_set,
@@ -146,10 +146,10 @@ class Subject(db.Model):
     obj = Message(parent=self, message=message)
     obj.put()
 
-    json_message = obj.ToMessage()
+    event = obj.ToEvent()
 
     for subscription in Subscription.all().ancestor(self):
-      Client.SendByKey(Subscription.client.get_value_for_datastore(subscription), json_message)
+      Client.SendByKey(Subscription.client.get_value_for_datastore(subscription), event)
 
 
 class Subscription(db.Model):
@@ -170,7 +170,7 @@ class Subscription(db.Model):
       cls(parent=subject, client=client).put()
     if messages == 0:
       return []
-    return [m.ToMessage() for m in subject.RecentMessages(messages)]
+    return [m.ToEvent() for m in subject.RecentMessages(messages)]
 
 
 class Message(db.Model):
@@ -179,9 +179,9 @@ class Message(db.Model):
   created = db.DateTimeProperty(required=True, auto_now_add=True)
   message = db.TextProperty(required=True)
 
-  def ToMessage(self):
+  def ToEvent(self):
     return {
-      'message_type': 'message',
+      'event_type':   'message',
       'subject':      self.parent_key().name(),
       'created':      self.created,
       'message':      self.message,

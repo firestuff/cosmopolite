@@ -30,21 +30,20 @@ def CreateChannel(google_user, client, args):
   token = channel.create_channel(
       client_id=str(client.key()),
       duration_minutes=config.CHANNEL_DURATION_SECONDS / 60)
-  messages = [x.ToMessage()
-              for x in client.parent().GetStateEntries()]
+  events = [x.ToEvent() for x in client.parent().GetStateEntries()]
   if google_user:
-    messages.append({
-      'message_type': 'login',
+    events.append({
+      'event_type':   'login',
       'google_user':  google_user.email(),
     })
   else:
-    messages.append({
-      'message_type': 'logout',
+    events.append({
+      'event_type': 'logout',
     })
 
   return {
     'token': token,
-    'messages': messages,
+    'events': events,
   }
 
 
@@ -79,11 +78,11 @@ def SetValue(google_user, client, args):
         public=public)
 
   entry.put()
-  msg = entry.ToMessage()
+  event = entry.ToEvent()
   clients = (models.Client.all()
              .ancestor(client.parent_key()))
   for client in clients:
-    client.SendMessage(msg)
+    client.SendEvent(event)
 
   return {}
 
@@ -93,7 +92,7 @@ def Subscribe(google_user, client, args):
   messages = args.get('messages', 0)
 
   return {
-    'messages': models.Subscription.FindOrCreate(subject, client, messages),
+    'events': models.Subscription.FindOrCreate(subject, client, messages),
   }
 
 
@@ -117,7 +116,7 @@ class APIWrapper(webapp2.RequestHandler):
     ret = {
         'status': 'ok',
         'responses': [],
-        'messages': [],
+        'events': [],
     }
     for command in self.request_json['commands']:
       callback = self._COMMANDS[command['command']]
@@ -125,9 +124,9 @@ class APIWrapper(webapp2.RequestHandler):
           self.verified_google_user,
           self.client,
           command.get('arguments', {}))
-      # Magic: if result contains "messages", haul them up a level so the
+      # Magic: if result contains "events", haul them up a level so the
       # client can see them as a single stream.
-      ret['messages'].extend(result.pop('messages', []))
+      ret['events'].extend(result.pop('events', []))
       ret['responses'].append(result)
     return ret
 

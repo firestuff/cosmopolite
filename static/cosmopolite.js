@@ -70,7 +70,7 @@ cosmopolite.Client.prototype.registerMessageHandlers_ = function() {
         'Received message from bad origin:', e.originalEvent.origin);
       return;
     }
-    console.log('Received message:', e.originalEvent.data);
+    console.log('Received browser message:', e.originalEvent.data);
     this.onReceiveMessage_(e.originalEvent.data);
   }, this));
 };
@@ -134,9 +134,9 @@ cosmopolite.Client.prototype.sendRPCs_ = function(commands, delay) {
           this.$.proxy(commands[i]['onSuccess'], this)(data.responses[i]);
         }
       }
-      // Handle messages that were immediately available as if they came over the
+      // Handle events that were immediately available as if they came over the
       // channel.
-      data['messages'].forEach(this.onServerMessage_, this);
+      data['events'].forEach(this.onServerEvent_, this);
     })
     .fail(function(xhr) {
       var intDelay =
@@ -218,24 +218,24 @@ cosmopolite.Client.prototype.onSocketClose_ = function() {
 };
 
 cosmopolite.Client.prototype.onSocketMessage_ = function(msg) {
-  this.onServerMessage_(JSON.parse(msg.data));
+  this.onServerEvent_(JSON.parse(msg.data));
 };
 
-cosmopolite.Client.prototype.onServerMessage_ = function(msg) {
-  switch (msg.message_type) {
+cosmopolite.Client.prototype.onServerEvent_ = function(e) {
+  switch (e.event_type) {
     case 'state':
-      var key = msg['key'];
+      var key = e['key'];
       if (this.stateCache_[key] &&
-	  this.stateCache_[key]['value'] == msg['value'] &&
-          this.stateCache_[key]['last_set'] == msg['last_set'] &&
-	  this.stateCache_[key]['public'] == msg['public']) {
-        // Duplicate message.
+          this.stateCache_[key]['value'] == e['value'] &&
+          this.stateCache_[key]['last_set'] == e['last_set'] &&
+          this.stateCache_[key]['public'] == e['public']) {
+        // Duplicate event.
         break;
       }
       this.stateCache_[key] = {
-          'value':    msg['value'],
-	  'last_set': msg['last_set'],
-	  'public':   msg['public'],
+        'value':    e['value'],
+        'last_set': e['last_set'],
+        'public':   e['public'],
       }
       if ('onStateChange' in this.callbacks_) {
         this.callbacks_['onStateChange'](key, this.stateCache_[key]);
@@ -244,8 +244,8 @@ cosmopolite.Client.prototype.onServerMessage_ = function(msg) {
     case 'login':
       if ('onLogin' in this.callbacks_) {
         this.callbacks_['onLogin'](
-          msg.google_user,
-	  this.urlPrefix_ + '/auth/logout');
+            e.google_user,
+            this.urlPrefix_ + '/auth/logout');
       }
       break;
     case 'logout':
@@ -256,7 +256,7 @@ cosmopolite.Client.prototype.onServerMessage_ = function(msg) {
       break;
     default:
       // Client out of date? Force refresh?
-      console.log('Unknown channel message:', msg);
+      console.log('Unknown channel event:', e);
       break;
   }
 };
