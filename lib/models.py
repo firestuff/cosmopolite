@@ -139,7 +139,7 @@ class Subject(db.Model):
         .order('-created'))
     if num_messages <= 0:
       num_messages = None
-    return query.run(limit=num_messages)
+    return reversed(query.fetch(limit=num_messages))
 
   @db.transactional()
   def SendMessage(self, message, sender):

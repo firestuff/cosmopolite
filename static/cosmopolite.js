@@ -284,20 +284,20 @@ cosmopolite.Client.prototype.onServerEvent_ = function(e) {
       }
       break;
     case 'message':
+      if (!(e['subject'] in this.subscriptions_)) {
+        console.log('Message from unrecognized subject:', e);
+        break;
+      }
+      var subscription = this.subscriptions_[e['subject']];
+      var duplicate = subscription.messages.some(function(message) {
+        return message['id'] == e.id;
+      });
+      if (duplicate) {
+        console.log('Duplicate message:', e);
+        break;
+      }
+      subscription.messages.push(e);
       if ('onMessage' in this.callbacks_) {
-        if (!(e['subject'] in this.subscriptions_)) {
-          console.log('Message from unrecognized subject:', e);
-          break;
-        }
-        var subscription = this.subscriptions_[e['subject']];
-        var duplicate = subscription.messages.some(function(message) {
-          return message['id'] == e.id;
-        });
-        if (duplicate) {
-          console.log('Duplicate message:', e);
-          break;
-        }
-        subscription.messages.push(e);
         this.callbacks_['onMessage'](e);
       }
       break;
