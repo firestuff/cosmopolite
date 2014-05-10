@@ -22,6 +22,7 @@ cosmopolite.Client = function(opt_callbacks, opt_urlPrefix, opt_namespace) {
   this.namespace_ = opt_namespace || 'cosmopolite';
 
   this.stateCache_ = {};
+  this.subscriptions_ = {};
 
   var scriptUrls = [
     'https://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js',
@@ -34,6 +35,56 @@ cosmopolite.Client = function(opt_callbacks, opt_urlPrefix, opt_namespace) {
     script.onload = this.onLoad_.bind(this);
     document.body.appendChild(script);
   }, this);
+};
+
+cosmopolite.Client.prototype.setValue = function(key, value, is_public) {
+  this.sendRPC_('setValue', {
+    'key': key,
+    'value': value,
+    'public': is_public,
+  });
+  // Provide immediate feedback without waiting for a round trip.
+  // We'll also get a response from the server, so this should be eventually
+  // consistent.
+  if ('onStateChange' in this.callbacks_) {
+    this.callbacks_['onStateChange'](key, value);
+  }
+};
+
+cosmopolite.Client.prototype.getValue = function(key) {
+  return this.stateCache_[key];
+};
+
+cosmopolite.Client.prototype.subscribe = function(subject, messages) {
+  if (subject in this.subscriptions_) {
+    console.log('Not sending duplication subscription request for subject:', subject);
+    return;
+  }
+  this.subscriptions_[subject] = {
+    'messages': [],
+  };
+  this.sendRPC_('subscribe', {
+    'subject': subject,
+    'messages': messages,
+  });
+};
+
+cosmopolite.Client.prototype.unsubscribe = function(subject) {
+  delete this.subscriptions_[subject];
+  this.sendRPC_('unsubscribe', {
+    'subject': subject,
+  });
+};
+
+cosmopolite.Client.prototype.sendMessage = function(subject, message) {
+  this.sendRPC_('sendMessage', {
+    'subject': subject,
+    'message': message,
+  });
+};
+
+cosmopolite.Client.prototype.getMessages = function(subject) {
+  return this.subscriptions_[subject].messages;
 };
 
 cosmopolite.Client.prototype.onLoad_ = function() {
@@ -151,46 +202,24 @@ cosmopolite.Client.prototype.sendRPCs_ = function(commands, delay) {
     });
 };
 
-cosmopolite.Client.prototype.setValue = function(key, value, is_public) {
-  this.sendRPC_('setValue', {
-    'key': key,
-    'value': value,
-    'public': is_public,
-  })
-  // Provide immediate feedback without waiting for a round trip.
-  // We'll also get a response from the server, so this should be eventually
-  // consistent.
-  if ('onStateChange' in this.callbacks_) {
-    this.callbacks_['onStateChange'](key, value);
-  }
-};
-
-cosmopolite.Client.prototype.getValue = function(key) {
-  return this.stateCache_[key];
-};
-
 cosmopolite.Client.prototype.createChannel_ = function() {
-  this.sendRPCs_([
-      {
-        'command': 'createChannel',
-        'onSuccess': this.onCreateChannel_,
-      },
-      // TODO(flamingcow): Remove debugging below.
-      {
-        'command': 'subscribe',
-        'arguments': {
-          'subject': 'books',
-          'messages': 5,
-        }
-      },
-      {
-        'command': 'sendMessage',
-        'arguments': {
-          'subject': 'books',
-          'message': 'foobar',
-        }
-      },
-  ]);
+  var rpcs = [
+    {
+      'command':   'createChannel',
+      'onSuccess': this.onCreateChannel_,
+    },
+  ];
+  // TODO(flamingcow): Need to restart from the latest message.
+  for (var subject in this.subscriptions_) {
+    rpcs.push({
+      'command': 'subscribe',
+      'arguments': {
+        'subject':  subject,
+        'messages': 0,
+      }
+    });
+  }
+  this.sendRPCs_(rpcs);
 };
 
 cosmopolite.Client.prototype.onCreateChannel_ = function(data) {
@@ -244,7 +273,7 @@ cosmopolite.Client.prototype.onServerEvent_ = function(e) {
     case 'login':
       if ('onLogin' in this.callbacks_) {
         this.callbacks_['onLogin'](
-            e.google_user,
+            e['google_user'],
             this.urlPrefix_ + '/auth/logout');
       }
       break;
@@ -252,6 +281,24 @@ cosmopolite.Client.prototype.onServerEvent_ = function(e) {
       if ('onLogout' in this.callbacks_) {
         this.callbacks_['onLogout'](
           this.urlPrefix_ + '/auth/login');
+      }
+      break;
+    case 'message':
+      if ('onMessage' in this.callbacks_) {
+        if (!(e['subject'] in this.subscriptions_)) {
+          console.log('Message from unrecognized subject:', e);
+          break;
+        }
+        var subscription = this.subscriptions_[e['subject']];
+        var duplicate = subscription.messages.some(function(message) {
+          return message['id'] == e.id;
+        });
+        if (duplicate) {
+          console.log('Duplicate message:', e);
+          break;
+        }
+        subscription.messages.push(e);
+        this.callbacks_['onMessage'](e);
       }
       break;
     default:

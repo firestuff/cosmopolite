@@ -51,7 +51,7 @@ def SendMessage(google_user, client, args):
   subject = args['subject']
   message = args['message']
 
-  models.Subject.FindOrCreate(subject).SendMessage(message)
+  models.Subject.FindOrCreate(subject).SendMessage(message, client.parent_key())
 
   return {}
 
@@ -96,6 +96,13 @@ def Subscribe(google_user, client, args):
   }
 
 
+def Unsubscribe(google_user, client, args):
+  subject = models.Subject.FindOrCreate(args['subject'])
+  models.Subscription.Remove(subject, client)
+
+  return {}
+
+
 class APIWrapper(webapp2.RequestHandler):
 
   _COMMANDS = {
@@ -103,6 +110,7 @@ class APIWrapper(webapp2.RequestHandler):
       'sendMessage': SendMessage,
       'setValue': SetValue,
       'subscribe': Subscribe,
+      'unsubscribe': Unsubscribe,
   }
 
   @utils.chaos_monkey

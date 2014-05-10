@@ -28,11 +28,32 @@ a {
         <textarea id="value" rows="10" cols="40"></textarea>
       </div>
     </div>
+    <hr>
+    <div>
+      <div>
+        Subject:
+        <input type="text" id="subject">
+        <input type="button" id="subscribe" value="Subscribe">
+      </div>
+      <div>
+        <select id="subscriptions"></select>
+        <input type="button" id="unsubscribe" value="Unsubscribe">
+      </div>
+      <div>
+        <input type="text" id="message">
+        <input type="button" id="send" value="Send">
+      </div>
+      <div id="messages"></div>
     <script>
 var keys = document.getElementById('keys');
 var value = document.getElementById('value');
 var last_set = document.getElementById('last_set');
 var is_public = document.getElementById('public');
+
+var subject = document.getElementById('subject');
+var subscriptions = document.getElementById('subscriptions');
+var messages = document.getElementById('messages');
+var message = document.getElementById('message');
 
 var selectKey = function(new_key) {
   keys.value = new_key;
@@ -46,6 +67,16 @@ var addKey = function(new_key, index) {
   if (keys.options.length == 1) {
     selectKey(new_key);
   }
+};
+
+var addMessage = function(message) {
+  var messageDiv = document.createElement('div');
+  messageDiv.innerHTML = (
+    (new Date(message['created'] * 1000)).toString() +
+    ' &lt;' + message['sender'] + '&gt; ' +
+    message['message']
+  );
+  messages.appendChild(messageDiv);
 };
 
 window.addEventListener('load', function() {
@@ -74,6 +105,12 @@ window.addEventListener('load', function() {
       // Sorts at the end
       addKey(new_key, keys.options.length);
     },
+    onMessage: function(message) {
+      if (subscriptions.value != message['subject']) {
+        return;
+      }
+      addMessage(message);
+    },
   };
 
   var debug = new cosmopolite.Client(callbacks);
@@ -97,6 +134,33 @@ window.addEventListener('load', function() {
     last_set.innerHTML = (new Date(value_obj.last_set * 1000)).toString();
     is_public.checked = value_obj['public'];
   });
+
+  document.getElementById('subscribe').addEventListener('click', function() {
+    debug.subscribe(subject.value, -1);
+    var option = document.createElement('option');
+    option.text = subject.value;
+    subscriptions.options.add(option);
+    subscriptions.dispatchEvent(new CustomEvent('change'));
+  });
+
+  document.getElementById('unsubscribe').addEventListener('click', function() {
+    debug.unsubscribe(subscriptions.value);
+    subscriptions.options.remove(subscriptions.options.selectedIndex);
+    subscriptions.dispatchEvent(new CustomEvent('change'));
+  });
+
+  document.getElementById('send').addEventListener('click', function() {
+    debug.sendMessage(subscriptions.value, message.value);
+  });
+
+  document.getElementById('subscriptions').addEventListener('change', function() {
+    messages.innerHTML = '';
+    if (!subscriptions.value) {
+      return;
+    }
+    debug.getMessages(subscriptions.value).forEach(addMessage);
+  });
+
 });
     </script>
   </body>

@@ -142,8 +142,8 @@ class Subject(db.Model):
     return query.run(limit=num_messages)
 
   @db.transactional()
-  def SendMessage(self, message):
-    obj = Message(parent=self, message=message)
+  def SendMessage(self, message, sender):
+    obj = Message(parent=self, message=message, sender=sender)
     obj.put()
 
     event = obj.ToEvent()
@@ -166,11 +166,20 @@ class Subscription(db.Model):
         .filter('client =', client)
         .fetch(1))
     if not subscriptions:
-      logging.info('no subscriptions found')
       cls(parent=subject, client=client).put()
     if messages == 0:
       return []
     return [m.ToEvent() for m in subject.RecentMessages(messages)]
+
+  @classmethod
+  @db.transactional()
+  def Remove(cls, subject, client):
+    subscriptions = (
+        cls.all()
+        .ancestor(subject)
+        .filter('client =', client))
+    for subscription in subscriptions:
+      subscription.delete()
 
 
 class Message(db.Model):
@@ -178,10 +187,13 @@ class Message(db.Model):
 
   created = db.DateTimeProperty(required=True, auto_now_add=True)
   message = db.TextProperty(required=True)
+  sender = db.ReferenceProperty(required=True, reference_class=Profile)
 
   def ToEvent(self):
     return {
       'event_type':   'message',
+      'id':           self.key().id(),
+      'sender':       str(Message.sender.get_value_for_datastore(self)),
       'subject':      self.parent_key().name(),
       'created':      self.created,
       'message':      self.message,
