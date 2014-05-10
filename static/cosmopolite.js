@@ -14,6 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// We use long keys in many places. Provide a method to trim those down for
+// human readability.
+String.prototype.hashCode = function() {
+  var hash = 0;
+  for (i = 0; i < this.length; i++) {
+    var char = this.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return hash;
+};
+
 var cosmopolite = {};
 
 cosmopolite.Client = function(opt_callbacks, opt_urlPrefix, opt_namespace) {

@@ -73,7 +73,7 @@ var addMessage = function(message) {
   var messageDiv = document.createElement('div');
   messageDiv.innerHTML = (
     (new Date(message['created'] * 1000)).toString() +
-    ' &lt;' + message['sender'] + '&gt; ' +
+    ' &lt;????-' + (Math.abs(message['sender'].hashCode()) % 10000) + '&gt; ' +
     message['message']
   );
   messages.appendChild(messageDiv);
