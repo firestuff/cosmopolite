@@ -11,25 +11,6 @@ a {
     <div>Google user: <span id="google_user"></span></div>
 
     <div>
-      Key:
-      <select id="keys"></select>
-      <input type="button" id="set" value="Set">
-      <input type="button" id="add" value="Add">
-    </div>
-    <div>
-      Last set:
-      <span id="last_set"></span>
-    </div>
-    <div>
-      <input type="checkbox" id="public"> Public
-    </div>
-    <div>
-      <textarea id="value" rows="10" cols="40"></textarea>
-    </div>
-
-    <hr>
-
-    <div>
       Subject: <input type="text" id="subject">
       <input type="button" id="subscribe" value="Subscribe">
     </div>
@@ -52,35 +33,22 @@ a {
 
     <hr>
 
+    <div id="keys"></div>
+
+    <hr>
+
     <div id="messages"></div>
 
     <script>
-var keys = document.getElementById('keys');
-var value = document.getElementById('value');
-var last_set = document.getElementById('last_set');
-var is_public = document.getElementById('public');
-
 var subject = document.getElementById('subject');
 var subscriptions = document.getElementById('subscriptions');
 
 var message = document.getElementById('message');
 var key = document.getElementById('key');
 
+var keys = document.getElementById('keys');
+
 var messages = document.getElementById('messages');
-
-var selectKey = function(new_key) {
-  keys.value = new_key;
-  keys.dispatchEvent(new CustomEvent('change'));
-};
-
-var addKey = function(new_key, index) {
-  var option = document.createElement('option');
-  option.text = new_key;
-  keys.options.add(option, index);
-  if (keys.options.length == 1) {
-    selectKey(new_key);
-  }
-};
 
 var addMessage = function(message) {
   var messageDiv = document.createElement('div');
@@ -105,48 +73,35 @@ window.addEventListener('load', function() {
       googleUser.innerHTML =
         '<a href="' + login_url + '" target="_blank">(log in)</a>';
     },
-    onStateChange: function(new_key, new_value) {
-      for (var i = 0; i < keys.options.length; ++i) {
-        if (keys.options[i].value == new_key) {
-          return;
-        };
-        if (keys.options[i].value > new_key) {
-          addKey(new_key, i);
-          return;
-        };
-      };
-      // Sorts at the end
-      addKey(new_key, keys.options.length);
-    },
     onMessage: function(message) {
       if (subscriptions.value != message['subject']) {
         return;
       }
       addMessage(message);
+      if (message['key']) {
+        var i;
+        for (i = 0; i < keys.childNodes.length; i++) {
+          var key = keys.childNodes[i];
+          if (key.message['key'] == message['key']) {
+            // Overwrite
+            key.replaceChild(
+              document.createTextNode(message['message']),
+              key.childNodes[1]);
+            break;
+          }
+        }
+        if (i == keys.childNodes.length) {
+          var keyDiv = document.createElement('div');
+          keyDiv.appendChild(document.createTextNode(message['key'] + ' = '));
+          keyDiv.appendChild(document.createTextNode(message['message']));
+          keyDiv.message = message;
+          keys.appendChild(keyDiv);
+        }
+      }
     },
   };
 
   var debug = new cosmopolite.Client(callbacks);
-
-  document.getElementById('set').addEventListener('click', function() {
-    debug.setValue(keys.value, value.value, is_public.checked);
-  });
-
-  document.getElementById('add').addEventListener('click', function() {
-    var new_key = prompt('New key name:');
-    if (new_key === null) {
-      return;
-    }
-    debug.setValue(new_key, '');
-    selectKey(new_key);
-  });
-
-  document.getElementById('keys').addEventListener('change', function() {
-    var value_obj = debug.getValue(keys.value);
-    value.value = value_obj.value;
-    last_set.innerHTML = (new Date(value_obj.last_set * 1000)).toString();
-    is_public.checked = value_obj['public'];
-  });
 
   document.getElementById('subscribe').addEventListener('click', function() {
     debug.subscribe(subject.value, -1);

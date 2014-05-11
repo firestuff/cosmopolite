@@ -33,7 +33,6 @@ cosmopolite.Client = function(opt_callbacks, opt_urlPrefix, opt_namespace) {
   this.urlPrefix_ = opt_urlPrefix || '/cosmopolite';
   this.namespace_ = opt_namespace || 'cosmopolite';
 
-  this.stateCache_ = {};
   this.subscriptions_ = {};
 
   var scriptUrls = [
@@ -49,25 +48,8 @@ cosmopolite.Client = function(opt_callbacks, opt_urlPrefix, opt_namespace) {
   }, this);
 };
 
-cosmopolite.Client.prototype.setValue = function(key, value, is_public) {
-  this.sendRPC_('setValue', {
-    'key': key,
-    'value': value,
-    'public': is_public,
-  });
-  // Provide immediate feedback without waiting for a round trip.
-  // We'll also get a response from the server, so this should be eventually
-  // consistent.
-  if ('onStateChange' in this.callbacks_) {
-    this.callbacks_['onStateChange'](key, value);
-  }
-};
-
-cosmopolite.Client.prototype.getValue = function(key) {
-  return this.stateCache_[key];
-};
-
-cosmopolite.Client.prototype.subscribe = function(subject, messages) {
+cosmopolite.Client.prototype.subscribe = function(subject, messages, keys) {
+  keys = keys || [];
   if (subject in this.subscriptions_) {
     console.log('Not sending duplication subscription request for subject:', subject);
     return;
@@ -78,6 +60,7 @@ cosmopolite.Client.prototype.subscribe = function(subject, messages) {
   this.sendRPC_('subscribe', {
     'subject': subject,
     'messages': messages,
+    'keys': keys,
   });
 };
 
@@ -268,24 +251,6 @@ cosmopolite.Client.prototype.onSocketMessage_ = function(msg) {
 
 cosmopolite.Client.prototype.onServerEvent_ = function(e) {
   switch (e.event_type) {
-    case 'state':
-      var key = e['key'];
-      if (this.stateCache_[key] &&
-          this.stateCache_[key]['value'] == e['value'] &&
-          this.stateCache_[key]['last_set'] == e['last_set'] &&
-          this.stateCache_[key]['public'] == e['public']) {
-        // Duplicate event.
-        break;
-      }
-      this.stateCache_[key] = {
-        'value':    e['value'],
-        'last_set': e['last_set'],
-        'public':   e['public'],
-      }
-      if ('onStateChange' in this.callbacks_) {
-        this.callbacks_['onStateChange'](key, this.stateCache_[key]);
-      }
-      break;
     case 'login':
       if ('onLogin' in this.callbacks_) {
         this.callbacks_['onLogin'](

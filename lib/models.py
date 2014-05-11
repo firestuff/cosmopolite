@@ -24,7 +24,6 @@ import utils
 
 # Profile
 # ↳ Client
-# ↳ StateEntry
 #
 # Subject
 # ↳ Message
@@ -54,6 +53,7 @@ class Profile(db.Model):
   def MergeFrom(self, source_profile):
     # Merge from another profile into this one, using last_set time as the
     # arbiter.
+    # TODO: this is totally broken
     my_states = {}
     for state_entry in self.GetStateEntries():
       my_states[state_entry.entry_key] = state_entry
@@ -73,10 +73,6 @@ class Profile(db.Model):
             entry_key=state_entry.entry_key,
             entry_value=state_entry.entry_value
             ).put()
-
-  @db.transactional()
-  def GetStateEntries(self):
-    return StateEntry.all().ancestor(self)
 
 
 class Client(db.Model):
@@ -102,24 +98,6 @@ class Client(db.Model):
   @staticmethod
   def SendByKey(key, msg):
     channel.send_message(str(key), json.dumps(msg, default=utils.EncodeJSON))
-
-
-class StateEntry(db.Model):
-  # parent=Profile
-
-  last_set = db.DateTimeProperty(required=True, auto_now=True)
-  entry_key = db.StringProperty(required=True)
-  entry_value = db.StringProperty()
-  public = db.BooleanProperty(required=True, default=False)
-
-  def ToEvent(self):
-    return {
-      'event_type':   'state',
-      'key':          self.entry_key,
-      'value':        self.entry_value,
-      'last_set':     self.last_set,
-      'public':       self.public,
-    }
 
 
 class Subject(db.Model):

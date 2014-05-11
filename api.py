@@ -30,7 +30,7 @@ def CreateChannel(google_user, client, args):
   token = channel.create_channel(
       client_id=str(client.key()),
       duration_minutes=config.CHANNEL_DURATION_SECONDS / 60)
-  events = [x.ToEvent() for x in client.parent().GetStateEntries()]
+  events = []
   if google_user:
     events.append({
       'event_type':   'login',
@@ -53,37 +53,6 @@ def SendMessage(google_user, client, args):
   key = args.get('key', None)
 
   models.Subject.FindOrCreate(subject).SendMessage(message, client.parent_key(), key)
-
-  return {}
-
-
-@db.transactional()
-def SetValue(google_user, client, args):
-  entry_key = args['key']
-  entry_value = args['value']
-  public = (args['public'] == 'true')
-
-  entries = (models.StateEntry.all()
-             .ancestor(client.parent_key())
-             .filter('entry_key =', entry_key)
-             .fetch(1))
-  if entries:
-    entry = entries[0]
-    entry.entry_value = entry_value
-    entry.public = public
-  else:
-    entry = models.StateEntry(
-        parent=client.parent_key(),
-        entry_key=entry_key,
-        entry_value=entry_value,
-        public=public)
-
-  entry.put()
-  event = entry.ToEvent()
-  clients = (models.Client.all()
-             .ancestor(client.parent_key()))
-  for client in clients:
-    client.SendEvent(event)
 
   return {}
 
@@ -115,7 +84,6 @@ class APIWrapper(webapp2.RequestHandler):
   _COMMANDS = {
       'createChannel': CreateChannel,
       'sendMessage': SendMessage,
-      'setValue': SetValue,
       'subscribe': Subscribe,
       'unsubscribe': Unsubscribe,
   }
