@@ -50,8 +50,9 @@ def CreateChannel(google_user, client, args):
 def SendMessage(google_user, client, args):
   subject = args['subject']
   message = args['message']
+  key = args.get('key', None)
 
-  models.Subject.FindOrCreate(subject).SendMessage(message, client.parent_key())
+  models.Subject.FindOrCreate(subject).SendMessage(message, client.parent_key(), key)
 
   return {}
 
@@ -90,10 +91,16 @@ def SetValue(google_user, client, args):
 def Subscribe(google_user, client, args):
   subject = models.Subject.FindOrCreate(args['subject'])
   messages = args.get('messages', 0)
+  keys = args.get('keys', [])
 
-  return {
+  ret = {
     'events': models.Subscription.FindOrCreate(subject, client, messages),
   }
+  for key in keys:
+    message = models.Subject.GetKey(key)
+    if message:
+      ret['events'].append(message)
+  return ret
 
 
 def Unsubscribe(google_user, client, args):

@@ -88,11 +88,15 @@ cosmopolite.Client.prototype.unsubscribe = function(subject) {
   });
 };
 
-cosmopolite.Client.prototype.sendMessage = function(subject, message) {
-  this.sendRPC_('sendMessage', {
+cosmopolite.Client.prototype.sendMessage = function(subject, message, key) {
+  args = {
     'subject': subject,
     'message': message,
-  });
+  };
+  if (key) {
+    args['key'] = key;
+  }
+  this.sendRPC_('sendMessage', args);
 };
 
 cosmopolite.Client.prototype.getMessages = function(subject) {

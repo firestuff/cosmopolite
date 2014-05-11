@@ -11,39 +11,49 @@ a {
     <div>Google user: <span id="google_user"></span></div>
 
     <div>
-      <div>
-        Key:
-        <select id="keys"></select>
-        <input type="button" id="set" value="Set">
-        <input type="button" id="add" value="Add">
-      </div>
-      <div>
-        Last set:
-        <span id="last_set"></span>
-      </div>
-      <div>
-        <input type="checkbox" id="public"> Public
-      </div>
-      <div>
-        <textarea id="value" rows="10" cols="40"></textarea>
-      </div>
+      Key:
+      <select id="keys"></select>
+      <input type="button" id="set" value="Set">
+      <input type="button" id="add" value="Add">
     </div>
-    <hr>
     <div>
-      <div>
-        Subject:
-        <input type="text" id="subject">
-        <input type="button" id="subscribe" value="Subscribe">
-      </div>
-      <div>
-        <select id="subscriptions"></select>
-        <input type="button" id="unsubscribe" value="Unsubscribe">
-      </div>
-      <div>
-        <input type="text" id="message">
-        <input type="button" id="send" value="Send">
-      </div>
-      <div id="messages"></div>
+      Last set:
+      <span id="last_set"></span>
+    </div>
+    <div>
+      <input type="checkbox" id="public"> Public
+    </div>
+    <div>
+      <textarea id="value" rows="10" cols="40"></textarea>
+    </div>
+
+    <hr>
+
+    <div>
+      Subject: <input type="text" id="subject">
+      <input type="button" id="subscribe" value="Subscribe">
+    </div>
+    <div>
+      <select id="subscriptions"></select>
+      <input type="button" id="unsubscribe" value="Unsubscribe">
+    </div>
+
+    <hr>
+
+    <div>
+      Message: <input type="text" id="message">
+    </div>
+    <div>
+      Key: <input type="text" id="key">
+    </div>
+    <div>
+      <input type="button" id="send" value="Send">
+    </div>
+
+    <hr>
+
+    <div id="messages"></div>
+
     <script>
 var keys = document.getElementById('keys');
 var value = document.getElementById('value');
@@ -52,8 +62,11 @@ var is_public = document.getElementById('public');
 
 var subject = document.getElementById('subject');
 var subscriptions = document.getElementById('subscriptions');
-var messages = document.getElementById('messages');
+
 var message = document.getElementById('message');
+var key = document.getElementById('key');
+
+var messages = document.getElementById('messages');
 
 var selectKey = function(new_key) {
   keys.value = new_key;
@@ -150,7 +163,7 @@ window.addEventListener('load', function() {
   });
 
   document.getElementById('send').addEventListener('click', function() {
-    debug.sendMessage(subscriptions.value, message.value);
+    debug.sendMessage(subscriptions.value, message.value, key.value);
   });
 
   document.getElementById('subscriptions').addEventListener('change', function() {

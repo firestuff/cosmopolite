@@ -27,6 +27,7 @@ import utils
 # ↳ StateEntry
 #
 # Subject
+# ↳ Message
 # ↳ Subscription (⤴︎ Client)
 
 
@@ -132,7 +133,7 @@ class Subject(db.Model):
     return cls(key_name=name).put()
 
   @db.transactional()
-  def RecentMessages(self, num_messages):
+  def GetRecentMessages(self, num_messages):
     query = (
         Message.all()
         .ancestor(self)
@@ -142,8 +143,20 @@ class Subject(db.Model):
     return reversed(query.fetch(limit=num_messages))
 
   @db.transactional()
-  def SendMessage(self, message, sender):
-    obj = Message(parent=self, message=message, sender=sender)
+  def GetKey(self, key):
+    messages = (
+        Message.all()
+        .ancestor(self)
+        .filter('key_ =', key)
+        .order('-created')
+        .fetch(1))
+    if messages:
+      return messages[0]
+    return None
+
+  @db.transactional()
+  def SendMessage(self, message, sender, key=None):
+    obj = Message(parent=self, message=message, sender=sender, key_=key)
     obj.put()
 
     event = obj.ToEvent()
@@ -169,7 +182,7 @@ class Subscription(db.Model):
       cls(parent=subject, client=client).put()
     if messages == 0:
       return []
-    return [m.ToEvent() for m in subject.RecentMessages(messages)]
+    return [m.ToEvent() for m in subject.GetRecentMessages(messages)]
 
   @classmethod
   @db.transactional()
@@ -188,9 +201,11 @@ class Message(db.Model):
   created = db.DateTimeProperty(required=True, auto_now_add=True)
   message = db.TextProperty(required=True)
   sender = db.ReferenceProperty(required=True, reference_class=Profile)
+  # key and key_name are reserved
+  key_ = db.StringProperty()
 
   def ToEvent(self):
-    return {
+    ret = {
       'event_type':   'message',
       'id':           self.key().id(),
       'sender':       str(Message.sender.get_value_for_datastore(self)),
@@ -198,3 +213,6 @@ class Message(db.Model):
       'created':      self.created,
       'message':      self.message,
     }
+    if self.key_:
+      ret['key'] = self.key_
+    return ret
