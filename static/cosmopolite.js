@@ -97,13 +97,13 @@ Cosmopolite.prototype.unsubscribe = function(subject) {
  * Post a message to the given subject, storing it and notifying all listeners.
  *
  * @param {!string} subject Subject name
- * @param {!string} message Message string
+ * @param {!*} message Message string or object
  * @param {string=} key Key name to associate this message with
  */
 Cosmopolite.prototype.sendMessage = function(subject, message, key) {
   args = {
     'subject': subject,
-    'message': message,
+    'message': JSON.stringify(message),
   };
   if (key) {
     args['key'] = key;
@@ -357,11 +357,11 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
       }
       break;
     case 'message':
-      if (!(e['subject'] in this.subscriptions_)) {
+      var subscription = this.subscriptions_[e['subject']];
+      if (!subscription) {
         console.log('Message from unrecognized subject:', e);
         break;
       }
-      var subscription = this.subscriptions_[e['subject']];
       var duplicate = subscription.messages.some(function(message) {
         return message['id'] == e.id;
       });
@@ -369,6 +369,7 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
         console.log('Duplicate message:', e);
         break;
       }
+      e['message'] = JSON.parse(e['message']);
       subscription.messages.push(e);
       if ('onMessage' in this.callbacks_) {
         this.callbacks_['onMessage'](e);
