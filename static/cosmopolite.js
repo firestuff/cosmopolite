@@ -70,6 +70,7 @@ Cosmopolite.prototype.subscribe = function(subject, messages, keys) {
   }
   this.subscriptions_[subject] = {
     'messages': [],
+    'keys': {},
   };
   this.sendRPC_('subscribe', {
     'subject': subject,
@@ -115,9 +116,21 @@ Cosmopolite.prototype.sendMessage = function(subject, message, key) {
  * Fetch all received messages for a subject
  *
  * @param {!string} subject Subject name
+ * @const
  */
 Cosmopolite.prototype.getMessages = function(subject) {
   return this.subscriptions_[subject].messages;
+};
+
+/**
+ * Fetch the most recent message that defined a key
+ *
+ * @param {!string} subject Subject name
+ * @param {!string} key Key name
+ * @const
+ */
+Cosmopolite.prototype.getKeyMessage = function(subject, key) {
+  return this.subscriptions_[subject].keys[key];
 };
 
 /**
@@ -371,6 +384,9 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
       }
       e['message'] = JSON.parse(e['message']);
       subscription.messages.push(e);
+      if (e['key']) {
+        subscription.keys[e['key']] = e;
+      }
       if ('onMessage' in this.callbacks_) {
         this.callbacks_['onMessage'](e);
       }
