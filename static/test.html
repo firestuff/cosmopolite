@@ -1,0 +1,88 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Cosmopolite tests</title>
+  <link rel="stylesheet" href="https://code.jquery.com/qunit/qunit-git.css">
+</head>
+<body>
+  <div id="qunit"></div>
+  <div id="qunit-fixture"></div>
+  <script src="https://code.jquery.com/qunit/qunit-git.js"></script>
+  <script src="/cosmopolite/static/cosmopolite.js" charset="UTF-8"></script>
+  <script>
+
+QUnit.begin(localStorage.clear.bind(localStorage));
+QUnit.done(localStorage.clear.bind(localStorage));
+
+var randstring = function() {
+  var ret = [];
+  for (var i = 0; i < 16; i++) {
+    var ran = (Math.random() * 16) | 0;
+    ret.push(ran.toString(16));
+  }
+  return ret.join('');
+};
+
+test('Construct/shutdown', function() {
+  expect(2);
+  var cosmo = new Cosmopolite({});
+  ok(true, 'new Cosmopolite() succeeds');
+  cosmo.shutdown();
+  ok(true, 'shutdown() succeeds');
+});
+
+asyncTest('onLogin or onLogout', function() {
+  expect(1);
+  var callbacks = {
+    'onLogin': function(user, logout_url) {
+      ok(true, 'onLogin fired');
+      cosmo.shutdown();
+      start();
+    },
+    'onLogout': function(login_url) {
+      ok(true, 'onLogout fired');
+      cosmo.shutdown();
+      start();
+    }
+  };
+  var cosmo = new Cosmopolite(callbacks);
+});
+
+asyncTest('Message round trip', function() {
+  expect(2);
+
+  var subject = randstring();
+  var message = randstring();
+
+  console.log('subject:', subject);
+  console.log('message:', message);
+
+  var callbacks1 = {
+    'onReady': function() {
+      console.log('onReady 1');
+      cosmo1.sendMessage(subject, message);
+    },
+  };
+
+  var callbacks2 = {
+    'onReady': function() {
+      console.log('onReady 2');
+      cosmo2.subscribe(subject, -1);
+    },
+    'onMessage': function(e) {
+      console.log('onMessage');
+      equal(e['subject'], subject, 'subject matches');
+      equal(e['message'], message, 'message matches');
+      cosmo1.shutdown();
+      cosmo2.shutdown();
+      start();
+    },
+  };
+
+  var cosmo1 = new Cosmopolite(callbacks1, null, randstring());
+  var cosmo2 = new Cosmopolite(callbacks2, null, randstring());
+});
+
+  </script>
+</body>
+</html>

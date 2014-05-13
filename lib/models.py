@@ -108,7 +108,9 @@ class Subject(db.Model):
     subject = cls.get_by_key_name(name)
     if subject:
       return subject
-    return cls(key_name=name).put()
+    subject = cls(key_name=name)
+    subject.put()
+    return subject
 
   @db.transactional()
   def GetRecentMessages(self, num_messages):

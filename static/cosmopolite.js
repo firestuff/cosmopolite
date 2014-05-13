@@ -38,6 +38,8 @@ Cosmopolite = function(callbacks, urlPrefix, namespace) {
   this.urlPrefix_ = urlPrefix || '/cosmopolite';
   this.namespace_ = namespace || 'cosmopolite';
 
+  this.shutdown_ = false;
+
   this.subscriptions_ = {};
 
   var scriptUrls = [
@@ -51,6 +53,18 @@ Cosmopolite = function(callbacks, urlPrefix, namespace) {
     script.onload = this.onLoad_.bind(this);
     document.body.appendChild(script);
   }, this);
+};
+
+Cosmopolite.prototype.shutdown = function() {
+  this.shutdown_ = true;
+  if (this.socket_) {
+    var socket = this.socket_;
+    this.socket_ = null;
+    socket.close();
+  }
+  if (this.$) {
+    this.$('window').off('message');
+  }
 };
 
 /**
@@ -141,8 +155,15 @@ Cosmopolite.prototype.onLoad_ = function() {
     return;
   }
   this.$ = jQuery.noConflict(true);
+  if (this.shutdown_) {
+    // Shutdown during startup
+    return;
+  }
   this.registerMessageHandlers_();
   this.createChannel_();
+  if ('onReady' in this.callbacks_) {
+    this.callbacks_['onReady']();
+  };
 };
 
 /**
@@ -153,13 +174,13 @@ Cosmopolite.prototype.onLoad_ = function() {
 Cosmopolite.prototype.onReceiveMessage_ = function(data) {
   switch (data) {
     case 'login_complete':
-      this.socket.close();
+      this.socket_.close();
       break;
     case 'logout_complete':
       localStorage.removeItem(this.namespace_ + ':client_id');
       localStorage.removeItem(this.namespace_ + ':google_user_id');
       this.$('#google_user').empty();
-      this.socket.close();
+      this.socket_.close();
       break;
     default:
       console.log('Unknown event type:', data);
@@ -311,9 +332,12 @@ Cosmopolite.prototype.createChannel_ = function() {
  * @param {!Object} data Server response including channel token
  */
 Cosmopolite.prototype.onCreateChannel_ = function(data) {
+  if (this.shutdown_) {
+    return;
+  }
   var channel = new goog.appengine.Channel(data['token']);
   console.log('Opening channel...');
-  this.socket = channel.open({
+  this.socket_ = channel.open({
     onopen: this.$.proxy(this.onSocketOpen_, this),
     onclose: this.$.proxy(this.onSocketClose_, this),
     onmessage: this.$.proxy(this.onSocketMessage_, this),
@@ -332,11 +356,11 @@ Cosmopolite.prototype.onSocketOpen_ = function() {
  * Callback from channel library for closure; reopen.
  */
 Cosmopolite.prototype.onSocketClose_ = function() {
-  if (!this.socket) {
+  if (!this.socket_) {
     return;
   }
   console.log('Channel closed');
-  this.socket = null;
+  this.socket_ = null;
   this.createChannel_();
 };
 
@@ -405,7 +429,7 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
  */
 Cosmopolite.prototype.onSocketError_ = function(msg) {
   console.log('Socket error:', msg);
-  this.socket.close();
+  this.socket_.close();
 };
 
 /* Exported values */
