@@ -1,18 +1,19 @@
-/*
-Copyright 2014, Ian Gulliver
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+/**
+ * @license
+ * Copyright 2014, Ian Gulliver
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 // We use long keys in many places. Provide a method to trim those down for
 // human readability.
@@ -26,12 +27,16 @@ String.prototype.hashCode = function() {
   return hash;
 };
 
-var cosmopolite = {};
-
-cosmopolite.Client = function(opt_callbacks, opt_urlPrefix, opt_namespace) {
-  this.callbacks_ = opt_callbacks || {};
-  this.urlPrefix_ = opt_urlPrefix || '/cosmopolite';
-  this.namespace_ = opt_namespace || 'cosmopolite';
+/**
+ * @constructor
+ * @param {Object=} callbacks Callback dictionary
+ * @param {string=} urlPrefix Absolute URL prefix for generating API URL
+ * @param {string=} namespace Prefix for localStorage entries.
+ */
+Cosmopolite = function(callbacks, urlPrefix, namespace) {
+  this.callbacks_ = callbacks || {};
+  this.urlPrefix_ = urlPrefix || '/cosmopolite';
+  this.namespace_ = namespace || 'cosmopolite';
 
   this.subscriptions_ = {};
 
@@ -48,7 +53,16 @@ cosmopolite.Client = function(opt_callbacks, opt_urlPrefix, opt_namespace) {
   }, this);
 };
 
-cosmopolite.Client.prototype.subscribe = function(subject, messages, keys) {
+/**
+ * Subscribe to a subject.
+ *
+ * Start receiving messages sent to this subject via the onMessage callback.
+ *
+ * @param {!string} subject Subject name
+ * @param {!number} messages Number of recent messages to request; 0 for none, -1 for all
+ * @param {Array.<string>=} keys Key names to ensure we receive at least 1 message defining
+ */
+Cosmopolite.prototype.subscribe = function(subject, messages, keys) {
   keys = keys || [];
   if (subject in this.subscriptions_) {
     console.log('Not sending duplication subscription request for subject:', subject);
@@ -64,14 +78,29 @@ cosmopolite.Client.prototype.subscribe = function(subject, messages, keys) {
   });
 };
 
-cosmopolite.Client.prototype.unsubscribe = function(subject) {
+/**
+ * Unsubscribe from a subject and destroy all listeners.
+ *
+ * Note that no reference counting is done, so a single call to unsubscribe()
+ * undoes multiple calls to subscribe().
+ *
+ * @param {!string} subject Subject name, as passed to subscribe()
+ */
+Cosmopolite.prototype.unsubscribe = function(subject) {
   delete this.subscriptions_[subject];
   this.sendRPC_('unsubscribe', {
     'subject': subject,
   });
 };
 
-cosmopolite.Client.prototype.sendMessage = function(subject, message, key) {
+/**
+ * Post a message to the given subject, storing it and notifying all listeners.
+ *
+ * @param {!string} subject Subject name
+ * @param {!string} message Message string
+ * @param {string=} key Key name to associate this message with
+ */
+Cosmopolite.prototype.sendMessage = function(subject, message, key) {
   args = {
     'subject': subject,
     'message': message,
@@ -82,11 +111,19 @@ cosmopolite.Client.prototype.sendMessage = function(subject, message, key) {
   this.sendRPC_('sendMessage', args);
 };
 
-cosmopolite.Client.prototype.getMessages = function(subject) {
+/**
+ * Fetch all received messages for a subject
+ *
+ * @param {!string} subject Subject name
+ */
+Cosmopolite.prototype.getMessages = function(subject) {
   return this.subscriptions_[subject].messages;
 };
 
-cosmopolite.Client.prototype.onLoad_ = function() {
+/**
+ * Callback when a script loads.
+ */
+Cosmopolite.prototype.onLoad_ = function() {
   if (--this.numScriptsToLoad_ > 0) {
     return;
   }
@@ -95,8 +132,12 @@ cosmopolite.Client.prototype.onLoad_ = function() {
   this.createChannel_();
 };
 
-// Message from another browser window
-cosmopolite.Client.prototype.onReceiveMessage_ = function(data) {
+/**
+ * Callback for a message from another browser window
+ *
+ * @param {!string} data Message contents
+ */
+Cosmopolite.prototype.onReceiveMessage_ = function(data) {
   switch (data) {
     case 'login_complete':
       this.socket.close();
@@ -113,7 +154,13 @@ cosmopolite.Client.prototype.onReceiveMessage_ = function(data) {
   }
 };
 
-cosmopolite.Client.prototype.registerMessageHandlers_ = function() {
+/**
+ * Register onReceiveMessage to receive callbacks
+ *
+ * Note that we share this bus with at least the channel code, so spurious
+ * messages are normal.
+ */
+Cosmopolite.prototype.registerMessageHandlers_ = function() {
   this.$(window).on('message', this.$.proxy(function(e) {
     if (e.originalEvent.origin != window.location.origin) {
       console.log(
@@ -125,7 +172,16 @@ cosmopolite.Client.prototype.registerMessageHandlers_ = function() {
   }, this));
 };
 
-cosmopolite.Client.prototype.sendRPC_ = function(command, args, onSuccess) {
+/**
+ * Send a single RPC to the server.
+ *
+ * See sendRPCs_()
+ *
+ * @param {!string} command Command name to call
+ * @param {!Object} args Arguments to pass to server
+ * @param {function(Object)=} onSuccess Success callback function
+ */
+Cosmopolite.prototype.sendRPC_ = function(command, args, onSuccess) {
   this.sendRPCs_([
     {
       'command': command,
@@ -135,7 +191,17 @@ cosmopolite.Client.prototype.sendRPC_ = function(command, args, onSuccess) {
   ]);
 };
 
-cosmopolite.Client.prototype.sendRPCs_ = function(commands, delay) {
+/**
+ * Send one or more RPCs to the server.
+ *
+ * Wraps handling of authentication to the server, even in cases where we need
+ * to retry with more data. Also retries in cases of failure with exponential
+ * backoff.
+ *
+ * @param {!Array.<{command:string, arguments:Object, onSuccess:function(Object)}>} commands List of commands to execute
+ * @param {number=} delay Seconds waited before executing this call (for backoff)
+ */
+Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
   var request = {
     'commands': [],
   };
@@ -179,9 +245,9 @@ cosmopolite.Client.prototype.sendRPCs_ = function(commands, delay) {
         // TODO(flamingcow): Refresh the page? Show an alert?
         return;
       }
-      for (var i = 0; i < data.responses.length; i++) {
+      for (var i = 0; i < data['responses'].length; i++) {
         if (commands[i]['onSuccess']) {
-          this.$.proxy(commands[i]['onSuccess'], this)(data.responses[i]);
+          this.$.proxy(commands[i]['onSuccess'], this)(data['responses'][i]);
         }
       }
       // Handle events that were immediately available as if they came over the
@@ -201,7 +267,10 @@ cosmopolite.Client.prototype.sendRPCs_ = function(commands, delay) {
     });
 };
 
-cosmopolite.Client.prototype.createChannel_ = function() {
+/**
+ * Send RPCs to create a server -> client channel and (re-)subscribe to subjects
+ */
+Cosmopolite.prototype.createChannel_ = function() {
   var rpcs = [
     {
       'command':   'createChannel',
@@ -221,7 +290,14 @@ cosmopolite.Client.prototype.createChannel_ = function() {
   this.sendRPCs_(rpcs);
 };
 
-cosmopolite.Client.prototype.onCreateChannel_ = function(data) {
+/**
+ * Callback for channel creation on the server side
+ *
+ * @suppress {missingProperties}
+ *
+ * @param {!Object} data Server response including channel token
+ */
+Cosmopolite.prototype.onCreateChannel_ = function(data) {
   var channel = new goog.appengine.Channel(data['token']);
   console.log('Opening channel...');
   this.socket = channel.open({
@@ -232,11 +308,17 @@ cosmopolite.Client.prototype.onCreateChannel_ = function(data) {
   });
 };
 
-cosmopolite.Client.prototype.onSocketOpen_ = function() {
+/**
+ * Callback from channel library for successful open
+ */
+Cosmopolite.prototype.onSocketOpen_ = function() {
   console.log('Channel opened');
 };
 
-cosmopolite.Client.prototype.onSocketClose_ = function() {
+/**
+ * Callback from channel library for closure; reopen.
+ */
+Cosmopolite.prototype.onSocketClose_ = function() {
   if (!this.socket) {
     return;
   }
@@ -245,12 +327,22 @@ cosmopolite.Client.prototype.onSocketClose_ = function() {
   this.createChannel_();
 };
 
-cosmopolite.Client.prototype.onSocketMessage_ = function(msg) {
+/**
+ * Callback from channel library for message reception over channel
+ *
+ * @param {!Object} msg Message contents
+ */
+Cosmopolite.prototype.onSocketMessage_ = function(msg) {
   this.onServerEvent_(JSON.parse(msg.data));
 };
 
-cosmopolite.Client.prototype.onServerEvent_ = function(e) {
-  switch (e.event_type) {
+/**
+ * Callback for Cosmopolite event (received via channel or pseudo-channel)
+ *
+ * @param {!Object} e Deserialized event object
+ */
+Cosmopolite.prototype.onServerEvent_ = function(e) {
+  switch (e['event_type']) {
     case 'login':
       if ('onLogin' in this.callbacks_) {
         this.callbacks_['onLogin'](
@@ -289,7 +381,15 @@ cosmopolite.Client.prototype.onServerEvent_ = function(e) {
   }
 };
 
-cosmopolite.Client.prototype.onSocketError_ = function(msg) {
+/**
+ * Callback from channel library for error on channel
+ *
+ * @param {!string} msg Descriptive text
+ */
+Cosmopolite.prototype.onSocketError_ = function(msg) {
   console.log('Socket error:', msg);
   this.socket.close();
 };
+
+/* Exported values */
+window.Cosmopolite = Cosmopolite;
