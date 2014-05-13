@@ -101,7 +101,7 @@ window.addEventListener('load', function() {
     },
   };
 
-  var debug = new cosmopolite.Client(callbacks);
+  var debug = new Cosmopolite(callbacks);
 
   document.getElementById('subscribe').addEventListener('click', function() {
     debug.subscribe(subject.value, -1);
