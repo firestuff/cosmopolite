@@ -34,8 +34,15 @@ var randstring = function() {
   return ret.join('');
 };
 
-QUnit.begin(localStorage.clear.bind(localStorage));
-QUnit.done(localStorage.clear.bind(localStorage));
+QUnit.testStart(localStorage.clear.bind(localStorage));
+QUnit.testDone(localStorage.clear.bind(localStorage));
+
+QUnit.testStart(function() {
+  // Log us out.
+  var req = new XMLHttpRequest();
+  req.open('GET', '/cosmopolite/auth/logout', false);
+  req.send();
+});
 
 module('General');
 
@@ -47,14 +54,9 @@ test('Construct/shutdown', function() {
   ok(true, 'shutdown() succeeds');
 });
 
-asyncTest('onLogin or onLogout', function() {
+asyncTest('onLogout fires', function() {
   expect(1);
   var callbacks = {
-    'onLogin': function(user, logout_url) {
-      ok(true, 'onLogin fired');
-      cosmo.shutdown();
-      start();
-    },
     'onLogout': function(login_url) {
       ok(true, 'onLogout fired');
       cosmo.shutdown();
