@@ -25,9 +25,6 @@ server interactions are complex and tests should be structured to verify them,
 not to verify the behavior of a simulation.
 */
 
-QUnit.begin(localStorage.clear.bind(localStorage));
-QUnit.done(localStorage.clear.bind(localStorage));
-
 var randstring = function() {
   var ret = [];
   for (var i = 0; i < 16; i++) {
@@ -36,6 +33,11 @@ var randstring = function() {
   }
   return ret.join('');
 };
+
+QUnit.begin(localStorage.clear.bind(localStorage));
+QUnit.done(localStorage.clear.bind(localStorage));
+
+module('General');
 
 test('Construct/shutdown', function() {
   expect(2);
@@ -131,6 +133,44 @@ asyncTest('Overwrite key', function() {
       }
       equal(e['message'], message2, 'message #2 matches');
       equal(cosmo2.getKeyMessage(subject, key)['message'], message2, 'message #2 matches by key')
+      cosmo1.shutdown();
+      cosmo2.shutdown();
+      start();
+    },
+  };
+
+  var cosmo1 = new Cosmopolite(callbacks1, null, randstring());
+  var cosmo2 = new Cosmopolite(callbacks2, null, randstring());
+});
+
+asyncTest('Complex object', function() {
+  expect(2);
+
+  var subject = randstring();
+  var message = {
+    'foo': 'bar',
+    5: 'zig',
+    'zag': [16, 22, 59, 76],
+    'boo': {
+      'nested': 'object',
+      10: 100,
+    },
+    'unicode': '☠☣☃𠜎',
+  };
+
+  var callbacks1 = {
+    'onReady': function() {
+      cosmo1.sendMessage(subject, message);
+    },
+  };
+
+  var callbacks2 = {
+    'onReady': function() {
+      cosmo2.subscribe(subject, -1);
+    },
+    'onMessage': function(e) {
+      equal(e['subject'], subject, 'subject matches');
+      deepEqual(e['message'], message, 'message matches');
       cosmo1.shutdown();
       cosmo2.shutdown();
       start();
