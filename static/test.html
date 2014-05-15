@@ -77,6 +77,56 @@ asyncTest('Message round trip', function() {
   var cosmo2 = new Cosmopolite(callbacks2, null, randstring());
 });
 
+asyncTest('Overwrite key', function() {
+  expect(8);
+
+  var subject = randstring();
+  var message1 = randstring();
+  var message2 = randstring();
+  var key = randstring();
+
+  var messages1 = 0;
+
+  var callbacks1 = {
+    'onReady': function() {
+      cosmo1.subscribe(subject, -1);
+      cosmo1.sendMessage(subject, message1, key);
+    },
+    'onMessage': function(e) {
+      messages1++;
+      if (messages1 == 1) {
+        cosmo1.sendMessage(subject, message2, key);
+      }
+    },
+  };
+
+  var messages2 = 0;
+
+  var callbacks2 = {
+    'onReady': function() {
+      cosmo2.subscribe(subject, -1);
+    },
+    'onMessage': function(e) {
+      messages2++;
+      equal(e['subject'], subject, 'subject matches');
+      equal(e['key'], key, 'key matches');
+      if (messages2 == 1) {
+        equal(e['message'], message1, 'message #1 matches');
+        equal(cosmo2.getKeyMessage(subject, key)['message'], message1, 'message #1 matches by key')
+        return;
+      }
+      equal(e['message'], message2, 'message #2 matches');
+      equal(cosmo2.getKeyMessage(subject, key)['message'], message2, 'message #2 matches by key')
+      cosmo1.shutdown();
+      cosmo2.shutdown();
+      start();
+    },
+  };
+
+  var cosmo1 = new Cosmopolite(callbacks1, null, randstring());
+  var cosmo2 = new Cosmopolite(callbacks2, null, randstring());
+});
+
   </script>
 </body>
 </html>

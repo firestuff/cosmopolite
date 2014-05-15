@@ -135,14 +135,26 @@ class Subject(db.Model):
     return None
 
   @db.transactional()
-  def SendMessage(self, message, sender, key=None):
+  def PutMessage(self, message, sender, key=None):
+    """Internal helper for SendMessage().
+
+    Unless/until channel.send_message becomes transactional, we have to finish
+    the datastore work (and any retries) before we start transmitting to
+    channels.
+    """
     obj = Message(parent=self, message=message, sender=sender, key_=key)
     obj.put()
 
-    event = obj.ToEvent()
+    return (
+        obj,
+        [Subscription.client.get_value_for_datastore(subscription)
+         for subscription in Subscription.all().ancestor(self)])
 
-    for subscription in Subscription.all().ancestor(self):
-      Client.SendByKey(Subscription.client.get_value_for_datastore(subscription), event)
+  def SendMessage(self, message, sender, key=None):
+    obj, subscriptions = self.PutMessage(message, sender, key)
+    event = obj.ToEvent()
+    for subscription in subscriptions:
+      Client.SendByKey(subscription, event)
 
 
 class Subscription(db.Model):

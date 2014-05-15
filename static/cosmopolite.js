@@ -448,7 +448,9 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
  */
 Cosmopolite.prototype.onSocketError_ = function(msg) {
   console.log('cosmopolite: socket error:', msg);
-  this.socket_.close();
+  if (this.socket_) {
+    this.socket_.close();
+  }
 };
 
 /* Exported values */
