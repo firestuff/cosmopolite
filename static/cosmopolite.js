@@ -187,13 +187,17 @@ Cosmopolite.prototype.onLoad_ = function() {
 Cosmopolite.prototype.onReceiveMessage_ = function(data) {
   switch (data) {
     case 'login_complete':
-      this.socket_.close();
+      if (this.socket_) {
+        this.socket_.close();
+      }
       break;
     case 'logout_complete':
       localStorage.removeItem(this.namespace_ + ':client_id');
       localStorage.removeItem(this.namespace_ + ':google_user_id');
       this.$('#google_user').empty();
-      this.socket_.close();
+      if (this.socket_) {
+        this.socket_.close();
+      }
       break;
     default:
       console.log('cosmopolite: unknown event type:', data);
@@ -284,7 +288,7 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
       }
       if (data['status'] == 'retry') {
         // Discard delay
-        this.sendRPCs_(commands, onSuccess);
+        this.sendRPCs_(commands);
         return;
       }
       if (data['status'] != 'ok') {

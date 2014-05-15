@@ -54,25 +54,7 @@ class Profile(db.Model):
     # Merge from another profile into this one, using last_set time as the
     # arbiter.
     # TODO: this is totally broken
-    my_states = {}
-    for state_entry in self.GetStateEntries():
-      my_states[state_entry.entry_key] = state_entry
-
-    for state_entry in (StateEntry.all()
-                        .ancestor(source_profile)
-                        .run()):
-      my_state_entry = my_states.get(state_entry.entry_key, None)
-      if my_state_entry:
-        if state_entry.last_set > my_state_entry.last_set:
-          # newer, merge in
-          my_state_entry.entry_value = state_entry.entry_value
-          my_state_entry.put()
-      else:
-        # entirely new, add
-        StateEntry(parent=self,
-            entry_key=state_entry.entry_key,
-            entry_value=state_entry.entry_value
-            ).put()
+    pass
 
 
 class Client(db.Model):

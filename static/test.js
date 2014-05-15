@@ -182,3 +182,23 @@ asyncTest('Complex object', function() {
   var cosmo1 = new Cosmopolite(callbacks1, null, randstring());
   var cosmo2 = new Cosmopolite(callbacks2, null, randstring());
 });
+
+
+module('dev_appserver only');
+
+asyncTest('Login', function() {
+  expect(2);
+  var callbacks = {
+    'onLogin': function(login_url) {
+      ok(true, 'onLogin fired');
+      cosmo.shutdown();
+      start();
+    },
+    'onLogout': function(login_url) {
+      ok(true, 'onLogout fired');
+      // Entirely magic URL that sets the login cookie and redirects.
+      window.open('/_ah/login?email=test%40example.com&action=Login&continue=/cosmopolite/static/login_complete.html');
+    }
+  };
+  var cosmo = new Cosmopolite(callbacks);
+});
