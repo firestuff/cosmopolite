@@ -57,15 +57,13 @@ Cosmopolite = function(callbacks, urlPrefix, namespace) {
 };
 
 Cosmopolite.prototype.shutdown = function() {
+  console.log(this.loggingPrefix_(), 'shutdown');
   this.shutdown_ = true;
   if (this.socket_) {
-    var socket = this.socket_;
-    this.socket_ = null;
-    socket.close();
+    this.socket_.close();
   }
   if (this.messageHandler_) {
     window.removeEventListener('message', this.messageHandler_);
-    this.messageHandler_ = null;
   }
 };
 
@@ -84,7 +82,9 @@ Cosmopolite.prototype.subscribe = function(subject, messages, keys) {
   }
   keys = keys || [];
   if (subject in this.subscriptions_) {
-    console.log('cosmopolite: not sending duplication subscription request for subject:', subject);
+    console.log(
+      this.loggingPrefix_(),
+      'not sending duplication subscription request for subject:', subject);
     return;
   }
   this.subscriptions_[subject] = {
@@ -164,6 +164,10 @@ Cosmopolite.prototype.getKeyMessage = function(subject, key) {
   return this.subscriptions_[subject].keys[key];
 };
 
+Cosmopolite.prototype.loggingPrefix_ = function() {
+  return 'cosmopolite (' + this.namespace_ + '):';
+};
+
 /**
  * Callback when a script loads.
  */
@@ -204,7 +208,7 @@ Cosmopolite.prototype.onReceiveMessage_ = function(data) {
       }
       break;
     default:
-      console.log('cosmopolite: unknown event type:', data);
+      console.log(this.loggingPrefix_(), 'unknown event type:', data);
       break;
   }
 };
@@ -218,10 +222,10 @@ Cosmopolite.prototype.onReceiveMessage_ = function(data) {
 Cosmopolite.prototype.registerMessageHandlers_ = function() {
   this.messageHandler_ = function(e) {
     if (e.origin != window.location.origin) {
-      console.log('cosmopolite: received message from bad origin:', e.origin);
+      console.log(this.loggingPrefix_(), 'received message from bad origin:', e.origin);
       return;
     }
-    console.log('cosmopolite: received browser message:', e.data);
+    console.log(this.loggingPrefix_(), 'received browser message:', e.data);
     this.onReceiveMessage_(e.data);
   }.bind(this);
   window.addEventListener('message', this.messageHandler_);
@@ -296,7 +300,8 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
         return;
       }
       if (data['status'] != 'ok') {
-        console.log('cosmopolite: server returned unknown status:', data['status']);
+        console.log(this.loggingPrefix_(),
+          'server returned unknown status:', data['status']);
         // TODO(flamingcow): Refresh the page? Show an alert?
         return;
       }
@@ -314,7 +319,8 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
         xhr.getResponseHeader('Retry-After') ||
         Math.min(32, Math.max(2, delay || 2));
       console.log(
-        'cosmopolite: RPC failed; will retry in ' + intDelay + ' seconds');
+        this.loggingPrefix_(),
+        'RPC failed; will retry in ' + intDelay + ' seconds');
       function retry() {
         this.sendRPCs_(commands, Math.pow(intDelay, 2));
       }
@@ -363,7 +369,7 @@ Cosmopolite.prototype.onCreateChannel_ = function(data) {
     }
   }
   var channel = new goog.appengine.Channel(data['token']);
-  console.log('cosmopolite: opening channel:', data['token']);
+  console.log(this.loggingPrefix_(), 'opening channel:', data['token']);
   this.socket_ = channel.open({
     onopen: this.onSocketOpen_.bind(this),
     onclose: this.onSocketClose_.bind(this),
@@ -376,18 +382,20 @@ Cosmopolite.prototype.onCreateChannel_ = function(data) {
  * Callback from channel library for successful open
  */
 Cosmopolite.prototype.onSocketOpen_ = function() {
-  console.log('cosmopolite: channel opened');
+  console.log(this.loggingPrefix_(), 'channel opened');
+  if (this.shutdown_ && this.socket_) {
+    this.socket_.close();
+  };
 };
 
 /**
  * Callback from channel library for closure; reopen.
  */
 Cosmopolite.prototype.onSocketClose_ = function() {
-  if (!this.socket_) {
+  console.log(this.loggingPrefix_(), 'channel closed');
+  if (this.shutdown_) {
     return;
   }
-  console.log('cosmopolite: channel closed');
-  this.socket_ = null;
   this.createChannel_();
 };
 
@@ -426,14 +434,16 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
     case 'message':
       var subscription = this.subscriptions_[e['subject']];
       if (!subscription) {
-        console.log('cosmopolite: message from unrecognized subject:', e);
+        console.log(
+          this.loggingPrefix_(),
+          'message from unrecognized subject:', e);
         break;
       }
       var duplicate = subscription.messages.some(function(message) {
         return message['id'] == e.id;
       });
       if (duplicate) {
-        console.log('cosmopolite: duplicate message:', e);
+        console.log(this.loggingPrefix_(), 'duplicate message:', e);
         break;
       }
       e['message'] = JSON.parse(e['message']);
@@ -447,7 +457,7 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
       break;
     default:
       // Client out of date? Force refresh?
-      console.log('cosmopolite: unknown channel event:', e);
+      console.log(this.loggingPrefix_(), 'unknown channel event:', e);
       break;
   }
 };
@@ -458,7 +468,7 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
  * @param {!string} msg Descriptive text
  */
 Cosmopolite.prototype.onSocketError_ = function(msg) {
-  console.log('cosmopolite: socket error:', msg);
+  console.log(this.loggingPrefix_(), 'socket error:', msg);
   if (this.socket_) {
     this.socket_.close();
   }
