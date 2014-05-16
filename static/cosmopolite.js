@@ -56,6 +56,11 @@ Cosmopolite = function(callbacks, urlPrefix, namespace) {
   }, this);
 };
 
+/**
+ * Shutdown this instance.
+ *
+ * No callbacks will fire after this returns.
+ */
 Cosmopolite.prototype.shutdown = function() {
   console.log(this.loggingPrefix_(), 'shutdown');
   this.shutdown_ = true;
@@ -164,6 +169,22 @@ Cosmopolite.prototype.getKeyMessage = function(subject, key) {
   return this.subscriptions_[subject].keys[key];
 };
 
+/**
+ * Return our current profile ID, if known.
+ *
+ * @return {?string} Profile ID.
+ * @const
+ */
+Cosmopolite.prototype.profile = function() {
+  return this.profile_ || null;
+};
+
+/**
+ * Generate a string identifying us to be included in log messages.
+ *
+ * @return {string} Log line prefix.
+ * @const
+ */
 Cosmopolite.prototype.loggingPrefix_ = function() {
   return 'cosmopolite (' + this.namespace_ + '):';
 };
@@ -416,6 +437,9 @@ Cosmopolite.prototype.onSocketMessage_ = function(msg) {
 Cosmopolite.prototype.onServerEvent_ = function(e) {
   if (this.shutdown_) {
     return;
+  }
+  if (e['profile']) {
+    this.profile_ = e['profile'];
   }
   switch (e['event_type']) {
     case 'login':

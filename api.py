@@ -35,11 +35,13 @@ def CreateChannel(google_user, client, args):
   if google_user:
     events.append({
       'event_type':   'login',
+      'profile':      str(client.parent_key()),
       'google_user':  google_user.email(),
     })
   else:
     events.append({
       'event_type': 'logout',
+      'profile':      str(client.parent_key()),
     })
 
   return {
