@@ -53,9 +53,17 @@ def CreateChannel(google_user, client, args):
 def SendMessage(google_user, client, args):
   subject = args['subject']
   message = args['message']
+  sender_message_id = args['sender_message_id']
   key = args.get('key', None)
 
-  models.Subject.FindOrCreate(subject).SendMessage(message, client.parent_key(), key)
+  try:
+    models.Subject.FindOrCreate(subject).SendMessage(
+        message, client.parent_key(), sender_message_id, key)
+  except models.DuplicateMessage:
+    logging.exception('Duplicate message: %s', sender_message_id)
+    # We still return success since we assume that the message was already
+    # delivered. If it's really a client ID generation bug, we just swallowed
+    # a message.
 
   return {}
 

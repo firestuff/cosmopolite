@@ -133,8 +133,9 @@ Cosmopolite.prototype.sendMessage = function(subject, message, key) {
     throw "cosmopolite: not ready";
   }
   var args = {
-    'subject': subject,
-    'message': JSON.stringify(message),
+    'subject':           subject,
+    'message':           JSON.stringify(message),
+    'sender_message_id': this.uuid_(),
   };
   if (key) {
     args['key'] = key;
@@ -187,6 +188,23 @@ Cosmopolite.prototype.profile = function() {
  */
 Cosmopolite.prototype.loggingPrefix_ = function() {
   return 'cosmopolite (' + this.namespace_ + '):';
+};
+
+/**
+ * Generate a v4 UUID.
+ *
+ * @return {string} A universally-unique random value.
+ * @const
+ */
+Cosmopolite.prototype.uuid_ = function() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = (Math.random() * 16) | 0;
+    if (c == 'x') {
+      return r.toString(16);
+    } else {
+      return (r & (0x03 | 0x08)).toString(16);
+    }
+  });
 };
 
 /**

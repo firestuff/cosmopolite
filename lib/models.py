@@ -30,6 +30,10 @@ import utils
 # ↳ Subscription (⤴︎ Client)
 
 
+class DuplicateMessage(Exception):
+  pass
+
+
 class Profile(db.Model):
   google_user = db.UserProperty()
 
@@ -119,14 +123,29 @@ class Subject(db.Model):
     return None
 
   @db.transactional()
-  def PutMessage(self, message, sender, key=None):
+  def PutMessage(self, message, sender, sender_message_id, key=None):
     """Internal helper for SendMessage().
 
     Unless/until channel.send_message becomes transactional, we have to finish
     the datastore work (and any retries) before we start transmitting to
     channels.
     """
-    obj = Message(parent=self, message=message, sender=sender, key_=key)
+    # sender_message_id should be universal across all subjects, but we check
+    # it within just this subject to allow in-transaction verification.
+    messages = (
+        Message.all()
+        .ancestor(self)
+        .filter('sender_message_id =', sender_message_id)
+        .fetch(1))
+    if messages:
+      raise DuplicateMessage(sender_message_id)
+
+    obj = Message(
+        parent=self,
+        message=message,
+        sender=sender,
+        sender_message_id=sender_message_id,
+        key_=key)
     obj.put()
 
     return (
@@ -134,8 +153,8 @@ class Subject(db.Model):
         [Subscription.client.get_value_for_datastore(subscription)
          for subscription in Subscription.all().ancestor(self)])
 
-  def SendMessage(self, message, sender, key=None):
-    obj, subscriptions = self.PutMessage(message, sender, key)
+  def SendMessage(self, message, sender, sender_message_id, key=None):
+    obj, subscriptions = self.PutMessage(message, sender, sender_message_id, key)
     event = obj.ToEvent()
     for subscription in subscriptions:
       Client.SendByKey(subscription, event)
@@ -177,6 +196,7 @@ class Message(db.Model):
   created = db.DateTimeProperty(required=True, auto_now_add=True)
   message = db.TextProperty(required=True)
   sender = db.ReferenceProperty(required=True, reference_class=Profile)
+  sender_message_id = db.StringProperty(required=True)
   # key and key_name are reserved
   key_ = db.StringProperty()
 
