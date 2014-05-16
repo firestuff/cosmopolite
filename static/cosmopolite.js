@@ -171,6 +171,10 @@ Cosmopolite.prototype.onLoad_ = function() {
   if (--this.numScriptsToLoad_ > 0) {
     return;
   }
+  // jQuery.noConflict() doesn't actually remove window.$ and window.jQuery,
+  // it just sets them back to undefined. This angers QUnit's globals
+  // detection. goog.appengine.Channel doesn't even provide a noConflict()
+  // equivalent.
   this.$ = jQuery.noConflict(true);
   if (this.shutdown_) {
     // Shutdown during startup

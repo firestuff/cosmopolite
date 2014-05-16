@@ -25,6 +25,17 @@ server interactions are complex and tests should be structured to verify them,
 not to verify the behavior of a simulation.
 */
 
+/*
+These tests break if you turn on global pollution detection because of at
+least:
+
+* $, jQuery: jQuery's noConflict() doesn't actually delete $ or jQuery; it
+    sets them to undefined.
+* goog: goog.appengine.Channel doesn't provide any kind of noConflict()
+    equivalent.
+* closure_lm_*: The Channel code has a bug that puts this in globals.
+*/
+
 var randstring = function() {
   var ret = [];
   for (var i = 0; i < 16; i++) {
