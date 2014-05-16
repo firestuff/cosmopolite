@@ -49,12 +49,14 @@ class Profile(db.Model):
       profile.put()
       return profile
 
-  @db.transactional(xg=True)
   def MergeFrom(self, source_profile):
-    # Merge from another profile into this one, using last_set time as the
-    # arbiter.
-    # TODO: this is totally broken
-    pass
+    # This is non-transactional and racy (new messages can be introduced by the
+    # old client after we start). This is hard to solve because a) we're not in
+    # a single hierarchy and b) we don't revoke the old client ID, so it can
+    # still be used.
+    for message in Message.all().filter('sender =', source_profile):
+      message.sender = self;
+      message.put()
 
 
 class Client(db.Model):

@@ -181,21 +181,62 @@ asyncTest('Complex object', function() {
 module('dev_appserver only');
 
 asyncTest('Login', function() {
-  expect(2);
+  expect(3);
+
+  var anonymousProfile;
 
   logout(function() {
     var callbacks = {
+      'onLogout': function(login_url) {
+        ok(true, 'onLogout fired');
+        anonymousProfile = cosmo.profile();
+        // Entirely magic URL that sets the login cookie and redirects.
+        window.open('/_ah/login?email=test%40example.com&action=Login&continue=/cosmopolite/static/login_complete.html');
+      },
       'onLogin': function(login_url) {
         ok(true, 'onLogin fired');
+        notEqual(anonymousProfile, cosmo.profile(), 'profile changed');
         cosmo.shutdown();
         logout();
         start();
       },
-      'onLogout': function(login_url) {
-        ok(true, 'onLogout fired');
-        // Entirely magic URL that sets the login cookie and redirects.
-        window.open('/_ah/login?email=test%40example.com&action=Login&continue=/cosmopolite/static/login_complete.html');
-      }
+    };
+    var cosmo = new Cosmopolite(callbacks);
+  });
+});
+
+asyncTest('Profile merge', function() {
+  expect(6);
+
+  var subject = randstring();
+  var message = randstring();
+
+  var messages = 0;
+
+  logout(function() {
+    var callbacks = {
+      'onReady': function() {
+        cosmo.sendMessage(subject, message);
+        cosmo.subscribe(subject, -1);
+      },
+      'onMessage': function(msg) {
+        messages++;
+        equal(msg['subject'], subject);
+        equal(msg['message'], message);
+        equal(msg['sender'], cosmo.profile());
+        if (messages == 1) {
+          cosmo.unsubscribe(subject);
+          // Entirely magic URL that sets the login cookie and redirects.
+          window.open('/_ah/login?email=test%40example.com&action=Login&continue=/cosmopolite/static/login_complete.html');
+        }
+        if (messages == 2) {
+          cosmo.shutdown();
+          start();
+        }
+      },
+      'onLogin': function(logout_url) {
+        cosmo.subscribe(subject, -1);
+      },
     };
     var cosmo = new Cosmopolite(callbacks);
   });
