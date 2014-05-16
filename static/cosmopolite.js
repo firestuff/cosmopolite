@@ -222,7 +222,7 @@ Cosmopolite.prototype.onReceiveMessage_ = function(data) {
 Cosmopolite.prototype.registerMessageHandlers_ = function() {
   this.messageHandler_ = function(e) {
     if (e.origin != window.location.origin) {
-      console.log(this.loggingPrefix_(), 'received message from bad origin:', e.origin);
+      // Probably talkgadget
       return;
     }
     console.log(this.loggingPrefix_(), 'received browser message:', e.data);
