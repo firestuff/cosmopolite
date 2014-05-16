@@ -63,8 +63,9 @@ Cosmopolite.prototype.shutdown = function() {
     this.socket_ = null;
     socket.close();
   }
-  if (this.$) {
-    this.$('window').off('message');
+  if (this.messageHandler_) {
+    window.removeEventListener('message', this.messageHandler_);
+    this.messageHandler_ = null;
   }
 };
 
@@ -212,15 +213,15 @@ Cosmopolite.prototype.onReceiveMessage_ = function(data) {
  * messages are normal.
  */
 Cosmopolite.prototype.registerMessageHandlers_ = function() {
-  this.$(window).on('message', this.$.proxy(function(e) {
-    if (e.originalEvent.origin != window.location.origin) {
-      console.log(
-        'cosmopolite: received message from bad origin:', e.originalEvent.origin);
+  this.messageHandler_ = function(e) {
+    if (e.origin != window.location.origin) {
+      console.log('cosmopolite: received message from bad origin:', e.origin);
       return;
     }
-    console.log('cosmopolite: received browser message:', e.originalEvent.data);
-    this.onReceiveMessage_(e.originalEvent.data);
-  }, this));
+    console.log('cosmopolite: received browser message:', e.data);
+    this.onReceiveMessage_(e.data);
+  }.bind(this);
+  window.addEventListener('message', this.messageHandler_);
 };
 
 /**
