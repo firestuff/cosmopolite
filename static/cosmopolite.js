@@ -195,7 +195,6 @@ Cosmopolite.prototype.onReceiveMessage_ = function(data) {
     case 'logout_complete':
       localStorage.removeItem(this.namespace_ + ':client_id');
       localStorage.removeItem(this.namespace_ + ':google_user_id');
-      this.$('#google_user').empty();
       if (this.socket_) {
         this.socket_.close();
       }
@@ -299,7 +298,7 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
       }
       for (var i = 0; i < data['responses'].length; i++) {
         if (commands[i]['onSuccess']) {
-          this.$.proxy(commands[i]['onSuccess'], this)(data['responses'][i]);
+          commands[i]['onSuccess'].bind(this)(data['responses'][i]);
         }
       }
       // Handle events that were immediately available as if they came over the
@@ -315,7 +314,7 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
       function retry() {
         this.sendRPCs_(commands, Math.pow(intDelay, 2));
       }
-      window.setTimeout(this.$.proxy(retry, this), intDelay * 1000);
+      window.setTimeout(retry.bind(this), intDelay * 1000);
     });
 };
 
@@ -362,10 +361,10 @@ Cosmopolite.prototype.onCreateChannel_ = function(data) {
   var channel = new goog.appengine.Channel(data['token']);
   console.log('cosmopolite: opening channel:', data['token']);
   this.socket_ = channel.open({
-    onopen: this.$.proxy(this.onSocketOpen_, this),
-    onclose: this.$.proxy(this.onSocketClose_, this),
-    onmessage: this.$.proxy(this.onSocketMessage_, this),
-    onerror: this.$.proxy(this.onSocketError_, this),
+    onopen: this.onSocketOpen_.bind(this),
+    onclose: this.onSocketClose_.bind(this),
+    onmessage: this.onSocketMessage_.bind(this),
+    onerror: this.onSocketError_.bind(this),
   });
 };
 
