@@ -221,9 +221,9 @@ asyncTest('Profile merge', function() {
       },
       'onMessage': function(msg) {
         messages++;
-        equal(msg['subject'], subject);
-        equal(msg['message'], message);
-        equal(msg['sender'], cosmo.profile());
+        equal(msg['subject'], subject, 'message #' + messages + ': subject matches');
+        equal(msg['message'], message, 'message #' + messages + ': message matches');
+        equal(msg['sender'], cosmo.profile(), 'message #' + messages + ': profile matches');
         if (messages == 1) {
           cosmo.unsubscribe(subject);
           // Entirely magic URL that sets the login cookie and redirects.
