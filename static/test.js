@@ -34,17 +34,26 @@ var randstring = function() {
   return ret.join('');
 };
 
+var logout = function(callback) {
+  var innerCallback = function(e) {
+    window.removeEventListener('message', innerCallback);
+    if (e.origin != window.location.origin ||
+        e.data != 'logout_complete') {
+      return;
+    }
+    if (callback) {
+      callback();
+    }
+  };
+
+  window.addEventListener('message', innerCallback);
+  window.open('/cosmopolite/auth/logout');
+};
+
 QUnit.testStart(localStorage.clear.bind(localStorage));
 QUnit.testDone(localStorage.clear.bind(localStorage));
 
-QUnit.testStart(function() {
-  // Log us out.
-  var req = new XMLHttpRequest();
-  req.open('GET', '/cosmopolite/auth/logout', false);
-  req.send();
-});
-
-module('General');
+module('All platforms');
 
 test('Construct/shutdown', function() {
   expect(2);
@@ -56,14 +65,17 @@ test('Construct/shutdown', function() {
 
 asyncTest('onLogout fires', function() {
   expect(1);
-  var callbacks = {
-    'onLogout': function(login_url) {
-      ok(true, 'onLogout fired');
-      cosmo.shutdown();
-      start();
-    }
-  };
-  var cosmo = new Cosmopolite(callbacks);
+
+  logout(function() {
+    var callbacks = {
+      'onLogout': function(login_url) {
+        ok(true, 'onLogout fired');
+        cosmo.shutdown();
+        start();
+      }
+    };
+    var cosmo = new Cosmopolite(callbacks);
+  });
 });
 
 asyncTest('Message round trip', function() {
@@ -188,17 +200,21 @@ module('dev_appserver only');
 
 asyncTest('Login', function() {
   expect(2);
-  var callbacks = {
-    'onLogin': function(login_url) {
-      ok(true, 'onLogin fired');
-      cosmo.shutdown();
-      start();
-    },
-    'onLogout': function(login_url) {
-      ok(true, 'onLogout fired');
-      // Entirely magic URL that sets the login cookie and redirects.
-      window.open('/_ah/login?email=test%40example.com&action=Login&continue=/cosmopolite/static/login_complete.html');
-    }
-  };
-  var cosmo = new Cosmopolite(callbacks);
+
+  logout(function() {
+    var callbacks = {
+      'onLogin': function(login_url) {
+        ok(true, 'onLogin fired');
+        cosmo.shutdown();
+        logout();
+        start();
+      },
+      'onLogout': function(login_url) {
+        ok(true, 'onLogout fired');
+        // Entirely magic URL that sets the login cookie and redirects.
+        window.open('/_ah/login?email=test%40example.com&action=Login&continue=/cosmopolite/static/login_complete.html');
+      }
+    };
+    var cosmo = new Cosmopolite(callbacks);
+  });
 });

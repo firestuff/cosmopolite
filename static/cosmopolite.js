@@ -402,6 +402,9 @@ Cosmopolite.prototype.onSocketMessage_ = function(msg) {
  * @param {!Object} e Deserialized event object
  */
 Cosmopolite.prototype.onServerEvent_ = function(e) {
+  if (this.shutdown_) {
+    return;
+  }
   switch (e['event_type']) {
     case 'login':
       if ('onLogin' in this.callbacks_) {
