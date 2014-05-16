@@ -95,27 +95,20 @@ asyncTest('Message round trip', function() {
   var subject = randstring();
   var message = randstring();
 
-  var callbacks1 = {
+  var callbacks = {
     'onReady': function() {
-      cosmo1.sendMessage(subject, message);
-    },
-  };
-
-  var callbacks2 = {
-    'onReady': function() {
-      cosmo2.subscribe(subject, -1);
+      cosmo.sendMessage(subject, message);
+      cosmo.subscribe(subject, -1);
     },
     'onMessage': function(e) {
       equal(e['subject'], subject, 'subject matches');
       equal(e['message'], message, 'message matches');
-      cosmo1.shutdown();
-      cosmo2.shutdown();
+      cosmo.shutdown();
       start();
     },
   };
 
-  var cosmo1 = new Cosmopolite(callbacks1, null, randstring());
-  var cosmo2 = new Cosmopolite(callbacks2, null, randstring());
+  var cosmo = new Cosmopolite(callbacks, null, randstring());
 });
 
 asyncTest('Overwrite key', function() {
@@ -126,46 +119,31 @@ asyncTest('Overwrite key', function() {
   var message2 = randstring();
   var key = randstring();
 
-  var messages1 = 0;
+  var messages = 0;
 
-  var callbacks1 = {
+  var callbacks = {
     'onReady': function() {
-      cosmo1.subscribe(subject, -1);
-      cosmo1.sendMessage(subject, message1, key);
+      cosmo.subscribe(subject, -1);
+      cosmo.sendMessage(subject, message1, key);
     },
     'onMessage': function(e) {
-      messages1++;
-      if (messages1 == 1) {
-        cosmo1.sendMessage(subject, message2, key);
-      }
-    },
-  };
-
-  var messages2 = 0;
-
-  var callbacks2 = {
-    'onReady': function() {
-      cosmo2.subscribe(subject, -1);
-    },
-    'onMessage': function(e) {
-      messages2++;
+      messages++;
       equal(e['subject'], subject, 'subject matches');
       equal(e['key'], key, 'key matches');
-      if (messages2 == 1) {
+      if (messages == 1) {
         equal(e['message'], message1, 'message #1 matches');
-        equal(cosmo2.getKeyMessage(subject, key)['message'], message1, 'message #1 matches by key')
+        equal(cosmo.getKeyMessage(subject, key)['message'], message1, 'message #1 matches by key')
+        cosmo.sendMessage(subject, message2, key);
         return;
       }
       equal(e['message'], message2, 'message #2 matches');
-      equal(cosmo2.getKeyMessage(subject, key)['message'], message2, 'message #2 matches by key')
-      cosmo1.shutdown();
-      cosmo2.shutdown();
+      equal(cosmo.getKeyMessage(subject, key)['message'], message2, 'message #2 matches by key')
+      cosmo.shutdown();
       start();
     },
   };
 
-  var cosmo1 = new Cosmopolite(callbacks1, null, randstring());
-  var cosmo2 = new Cosmopolite(callbacks2, null, randstring());
+  var cosmo = new Cosmopolite(callbacks, null, randstring());
 });
 
 asyncTest('Complex object', function() {
@@ -183,27 +161,20 @@ asyncTest('Complex object', function() {
     'unicode': '☠☣☃𠜎',
   };
 
-  var callbacks1 = {
+  var callbacks = {
     'onReady': function() {
-      cosmo1.sendMessage(subject, message);
-    },
-  };
-
-  var callbacks2 = {
-    'onReady': function() {
-      cosmo2.subscribe(subject, -1);
+      cosmo.sendMessage(subject, message);
+      cosmo.subscribe(subject, -1);
     },
     'onMessage': function(e) {
       equal(e['subject'], subject, 'subject matches');
       deepEqual(e['message'], message, 'message matches');
-      cosmo1.shutdown();
-      cosmo2.shutdown();
+      cosmo.shutdown();
       start();
     },
   };
 
-  var cosmo1 = new Cosmopolite(callbacks1, null, randstring());
-  var cosmo2 = new Cosmopolite(callbacks2, null, randstring());
+  var cosmo = new Cosmopolite(callbacks, null, randstring());
 });
 
 
