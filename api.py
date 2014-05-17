@@ -77,9 +77,9 @@ def Subscribe(google_user, client, args):
     'events': models.Subscription.FindOrCreate(subject, client, messages),
   }
   for key in keys:
-    message = models.Subject.GetKey(key)
+    message = subject.GetKey(key)
     if message:
-      ret['events'].append(message)
+      ret['events'].append(message.ToEvent())
   return ret
 
 

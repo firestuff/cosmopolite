@@ -199,6 +199,38 @@ asyncTest('subscribe/unsubscribe Promise', function() {
   });
 });
 
+asyncTest('Duplicate message suppression', function() {
+  expect(3);
+
+  var subject = randstring();
+  var key = randstring();
+  var message1 = randstring();
+  var message2 = randstring();
+
+  var callbacks = {
+    'onMessage': function (msg) {
+      equal(msg['subject'], subject, 'subject matches');
+      equal(msg['key'], key, 'key matches');
+      equal(msg['message'], message1, 'message matches');
+      cosmo.shutdown();
+      start();
+    },
+  };
+
+  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  // Break cosmo's UUID generator so that it generates duplicate values.
+  cosmo.uuid_ = function() {
+    return '4';
+    // chosen by fair dice roll.
+    // guaranteed to be random.
+  };
+  cosmo.sendMessage(subject, message1, key).then(function() {
+    cosmo.sendMessage(subject, message2, key).then(function() {
+      cosmo.subscribe(subject, 0, [key]);
+    });
+  });
+});
+
 
 module('dev_appserver only');
 
