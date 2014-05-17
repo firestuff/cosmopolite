@@ -44,7 +44,6 @@ Cosmopolite = function(callbacks, urlPrefix, namespace) {
   this.subscriptions_ = {};
 
   var scriptUrls = [
-    'https://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js',
     '/_ah/channel/jsapi',
   ];
   this.numScriptsToLoad_ = scriptUrls.length;
@@ -214,11 +213,6 @@ Cosmopolite.prototype.onLoad_ = function() {
   if (--this.numScriptsToLoad_ > 0) {
     return;
   }
-  // jQuery.noConflict() doesn't actually remove window.$ and window.jQuery,
-  // it just sets them back to undefined. This angers QUnit's globals
-  // detection. goog.appengine.Channel doesn't even provide a noConflict()
-  // equivalent.
-  this.$ = jQuery.noConflict(true);
   if (this.shutdown_) {
     // Shutdown during startup
     return;
@@ -318,53 +312,60 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
   if (this.namespace_ + ':google_user_id' in localStorage) {
     request['google_user_id'] = localStorage[this.namespace_ + ':google_user_id'];
   }
-  this.$.ajax({
-    url: this.urlPrefix_ + '/api',
-    type: 'post',
-    data: JSON.stringify(request),
-    dataType: 'json',
-    context: this,
-  })
-    .done(function(data, stat, xhr) {
-      if ('google_user_id' in data) {
-        localStorage[this.namespace_ + ':google_user_id'] =
-          data['google_user_id'];
+
+  var xhr = new XMLHttpRequest();
+  xhr.responseType = 'json';
+
+  var retryAfterDelay = function() {
+    var intDelay =
+      xhr.getResponseHeader('Retry-After') ||
+      Math.min(32, Math.max(2, delay || 2));
+    console.log(
+      this.loggingPrefix_(),
+      'RPC failed; will retry in ' + intDelay + ' seconds');
+    var retry = function() {
+      this.sendRPCs_(commands, Math.pow(intDelay, 2));
+    }.bind(this);
+    window.setTimeout(retry, intDelay * 1000);
+  }.bind(this);
+
+  xhr.addEventListener('load', function(e) {
+    if (xhr.status != 200) {
+      retryAfterDelay();
+      return;
+    }
+    var data = xhr.response;
+    if ('google_user_id' in data) {
+      localStorage[this.namespace_ + ':google_user_id'] =
+        data['google_user_id'];
+    }
+    if ('client_id' in data) {
+      localStorage[this.namespace_ + ':client_id'] = data['client_id'];
+    }
+    if (data['status'] == 'retry') {
+      // Discard delay
+      this.sendRPCs_(commands);
+      return;
+    }
+    if (data['status'] != 'ok') {
+      console.log(this.loggingPrefix_(),
+        'server returned unknown status:', data['status']);
+      // TODO(flamingcow): Refresh the page? Show an alert?
+      return;
+    }
+    for (var i = 0; i < data['responses'].length; i++) {
+      if (commands[i]['onSuccess']) {
+        commands[i]['onSuccess'].bind(this)(data['responses'][i]);
       }
-      if ('client_id' in data) {
-        localStorage[this.namespace_ + ':client_id'] = data['client_id'];
-      }
-      if (data['status'] == 'retry') {
-        // Discard delay
-        this.sendRPCs_(commands);
-        return;
-      }
-      if (data['status'] != 'ok') {
-        console.log(this.loggingPrefix_(),
-          'server returned unknown status:', data['status']);
-        // TODO(flamingcow): Refresh the page? Show an alert?
-        return;
-      }
-      for (var i = 0; i < data['responses'].length; i++) {
-        if (commands[i]['onSuccess']) {
-          commands[i]['onSuccess'].bind(this)(data['responses'][i]);
-        }
-      }
-      // Handle events that were immediately available as if they came over the
-      // channel.
-      data['events'].forEach(this.onServerEvent_, this);
-    })
-    .fail(function(xhr) {
-      var intDelay =
-        xhr.getResponseHeader('Retry-After') ||
-        Math.min(32, Math.max(2, delay || 2));
-      console.log(
-        this.loggingPrefix_(),
-        'RPC failed; will retry in ' + intDelay + ' seconds');
-      function retry() {
-        this.sendRPCs_(commands, Math.pow(intDelay, 2));
-      }
-      window.setTimeout(retry.bind(this), intDelay * 1000);
-    });
+    }
+    // Handle events that were immediately available as if they came over the
+    // channel.
+    data['events'].forEach(this.onServerEvent_, this);
+  }.bind(this));
+
+  xhr.addEventListener('error', retryAfterDelay);
+  xhr.open('POST', this.urlPrefix_ + '/api');
+  xhr.send(JSON.stringify(request));
 };
 
 /**

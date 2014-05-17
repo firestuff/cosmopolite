@@ -29,10 +29,7 @@ not to verify the behavior of a simulation.
 These tests break if you turn on global pollution detection because of at
 least:
 
-* $, jQuery: jQuery's noConflict() doesn't actually delete $ or jQuery; it
-    sets them to undefined.
-* goog: goog.appengine.Channel doesn't provide any kind of noConflict()
-    equivalent.
+* goog: goog.appengine.Channel seems to always be global.
 * closure_lm_*: The Channel code has a bug that puts this in globals.
 */
 
