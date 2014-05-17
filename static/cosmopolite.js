@@ -84,22 +84,26 @@ Cosmopolite.prototype.subscribe = function(subject, messages, keys) {
   if (!this.ready_) {
     throw "cosmopolite: not ready";
   }
-  keys = keys || [];
-  if (subject in this.subscriptions_) {
-    console.log(
-      this.loggingPrefix_(),
-      'not sending duplication subscription request for subject:', subject);
-    return;
-  }
-  this.subscriptions_[subject] = {
-    'messages': [],
-    'keys': {},
-  };
-  this.sendRPC_('subscribe', {
-    'subject': subject,
-    'messages': messages,
-    'keys': keys,
-  });
+
+  return new Promise(function(resolve, reject) {
+    keys = keys || [];
+    if (subject in this.subscriptions_) {
+      console.log(
+        this.loggingPrefix_(),
+        'not sending duplication subscription request for subject:', subject);
+      resolve();
+    }
+    this.subscriptions_[subject] = {
+      'messages': [],
+      'keys': {},
+    };
+    var args = {
+      'subject': subject,
+      'messages': messages,
+      'keys': keys,
+    };
+    this.sendRPC_('subscribe', args, resolve);
+  }.bind(this));
 };
 
 /**
@@ -114,10 +118,14 @@ Cosmopolite.prototype.unsubscribe = function(subject) {
   if (!this.ready_) {
     throw "cosmopolite: not ready";
   }
-  delete this.subscriptions_[subject];
-  this.sendRPC_('unsubscribe', {
-    'subject': subject,
-  });
+
+  return new Promise(function(resolve, reject) {
+    delete this.subscriptions_[subject];
+    var args = {
+      'subject': subject,
+    }
+    this.sendRPC_('unsubscribe', args, resolve);
+  }.bind(this));
 };
 
 /**
@@ -131,15 +139,18 @@ Cosmopolite.prototype.sendMessage = function(subject, message, key) {
   if (!this.ready_) {
     throw "cosmopolite: not ready";
   }
-  var args = {
-    'subject':           subject,
-    'message':           JSON.stringify(message),
-    'sender_message_id': this.uuid_(),
-  };
-  if (key) {
-    args['key'] = key;
-  }
-  this.sendRPC_('sendMessage', args);
+
+  return new Promise(function(resolve, reject) {
+    var args = {
+      'subject':           subject,
+      'message':           JSON.stringify(message),
+      'sender_message_id': this.uuid_(),
+    };
+    if (key) {
+      args['key'] = key;
+    }
+    this.sendRPC_('sendMessage', args, resolve);
+  }.bind(this));
 };
 
 /**

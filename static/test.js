@@ -174,6 +174,47 @@ asyncTest('Complex object', function() {
   var cosmo = new Cosmopolite(callbacks, null, randstring());
 });
 
+asyncTest('sendMessage Promise', function() {
+  expect(1);
+
+  var subject = randstring();
+  var message = randstring();
+
+  var callbacks = {
+    'onReady': function() {
+      cosmo.sendMessage(subject, message).then(function() {
+        ok(true, 'sendMessage Promise fulfilled');
+        cosmo.shutdown();
+        start();
+      });
+    },
+  };
+
+  var cosmo = new Cosmopolite(callbacks, null, randstring());
+});
+
+asyncTest('subscribe/unsubscribe Promise', function() {
+  expect(2);
+
+  var subject = randstring();
+  var message = randstring();
+
+  var callbacks = {
+    'onReady': function() {
+      cosmo.subscribe(subject).then(function() {
+        ok(true, 'subscribe Promise fulfilled');
+        cosmo.unsubscribe(subject).then(function() {
+          ok(true, 'unsubscribe Promise fulfilled');
+          cosmo.shutdown();
+          start();
+        });
+      });
+    },
+  };
+
+  var cosmo = new Cosmopolite(callbacks, null, randstring());
+});
+
 
 module('dev_appserver only');
 
