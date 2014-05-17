@@ -89,14 +89,15 @@ class Client(db.Model):
 
 
 class Subject(db.Model):
-  # key_name=name
+
+  name = db.StringProperty(required=True)
 
   @classmethod
   def FindOrCreate(cls, name):
-    subject = cls.get_by_key_name(name)
-    if subject:
-      return subject
-    subject = cls(key_name=name)
+    subjects = cls.all().filter('name =', name).fetch(1)
+    if subjects:
+      return subjects[0]
+    subject = cls(name=name)
     subject.put()
     return subject
 
@@ -205,7 +206,7 @@ class Message(db.Model):
       'event_type':   'message',
       'id':           self.key().id(),
       'sender':       str(Message.sender.get_value_for_datastore(self)),
-      'subject':      self.parent_key().name(),
+      'subject':      self.parent().name,
       'created':      self.created,
       'message':      self.message,
     }
