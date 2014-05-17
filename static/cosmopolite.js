@@ -38,9 +38,9 @@ Cosmopolite = function(callbacks, urlPrefix, namespace) {
   this.urlPrefix_ = urlPrefix || '/cosmopolite';
   this.namespace_ = namespace || 'cosmopolite';
 
-  this.ready_ = false;
   this.shutdown_ = false;
 
+  this.rpcQueue_ = [];
   this.subscriptions_ = {};
 
   var scriptUrls = [
@@ -81,10 +81,6 @@ Cosmopolite.prototype.shutdown = function() {
  * @param {Array.<string>=} keys Key names to ensure we receive at least 1 message defining
  */
 Cosmopolite.prototype.subscribe = function(subject, messages, keys) {
-  if (!this.ready_) {
-    throw "cosmopolite: not ready";
-  }
-
   return new Promise(function(resolve, reject) {
     keys = keys || [];
     if (subject in this.subscriptions_) {
@@ -115,10 +111,6 @@ Cosmopolite.prototype.subscribe = function(subject, messages, keys) {
  * @param {!string} subject Subject name, as passed to subscribe()
  */
 Cosmopolite.prototype.unsubscribe = function(subject) {
-  if (!this.ready_) {
-    throw "cosmopolite: not ready";
-  }
-
   return new Promise(function(resolve, reject) {
     delete this.subscriptions_[subject];
     var args = {
@@ -136,10 +128,6 @@ Cosmopolite.prototype.unsubscribe = function(subject) {
  * @param {string=} key Key name to associate this message with
  */
 Cosmopolite.prototype.sendMessage = function(subject, message, key) {
-  if (!this.ready_) {
-    throw "cosmopolite: not ready";
-  }
-
   return new Promise(function(resolve, reject) {
     var args = {
       'subject':           subject,
@@ -160,9 +148,6 @@ Cosmopolite.prototype.sendMessage = function(subject, message, key) {
  * @const
  */
 Cosmopolite.prototype.getMessages = function(subject) {
-  if (!this.ready_) {
-    throw "cosmopolite: not ready";
-  }
   return this.subscriptions_[subject].messages;
 };
 
@@ -174,9 +159,6 @@ Cosmopolite.prototype.getMessages = function(subject) {
  * @const
  */
 Cosmopolite.prototype.getKeyMessage = function(subject, key) {
-  if (!this.ready_) {
-    throw "cosmopolite: not ready";
-  }
   return this.subscriptions_[subject].keys[key];
 };
 
@@ -285,13 +267,17 @@ Cosmopolite.prototype.registerMessageHandlers_ = function() {
  * @param {function(Object)=} onSuccess Success callback function
  */
 Cosmopolite.prototype.sendRPC_ = function(command, args, onSuccess) {
-  this.sendRPCs_([
-    {
-      'command': command,
-      'arguments': args,
-      'onSuccess': onSuccess,
-    }
-  ]);
+  var rpc = {
+    'command': command,
+    'arguments': args,
+    'onSuccess': onSuccess,
+  };
+  if (this.namespace_ + ':client_id' in localStorage) {
+    this.sendRPCs_([rpc]);
+  } else {
+    // Initial RPC hasn't returned. Queue instead of sending.
+    this.rpcQueue_.push(rpc);
+  }
 };
 
 /**
@@ -352,6 +338,11 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
     }
     if ('client_id' in data) {
       localStorage[this.namespace_ + ':client_id'] = data['client_id'];
+      // We may have queued RPCs for lack of a client_id.
+      if (this.rpcQueue_.length) {
+        this.sendRPCs_(this.rpcQueue_);
+        this.rpcQueue_ = [];
+      }
     }
     if (data['status'] == 'retry') {
       // Discard delay
@@ -412,12 +403,6 @@ Cosmopolite.prototype.createChannel_ = function() {
 Cosmopolite.prototype.onCreateChannel_ = function(data) {
   if (this.shutdown_) {
     return;
-  }
-  if (!this.ready_) {
-    this.ready_ = true;
-    if ('onReady' in this.callbacks_) {
-      this.callbacks_['onReady']();
-    }
   }
   var channel = new goog.appengine.Channel(data['token']);
   console.log(this.loggingPrefix_(), 'opening channel:', data['token']);

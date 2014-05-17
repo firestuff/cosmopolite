@@ -93,10 +93,6 @@ asyncTest('Message round trip', function() {
   var message = randstring();
 
   var callbacks = {
-    'onReady': function() {
-      cosmo.sendMessage(subject, message);
-      cosmo.subscribe(subject, -1);
-    },
     'onMessage': function(e) {
       equal(e['subject'], subject, 'subject matches');
       equal(e['message'], message, 'message matches');
@@ -106,6 +102,8 @@ asyncTest('Message round trip', function() {
   };
 
   var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.sendMessage(subject, message);
+  cosmo.subscribe(subject, -1);
 });
 
 asyncTest('Overwrite key', function() {
@@ -119,10 +117,6 @@ asyncTest('Overwrite key', function() {
   var messages = 0;
 
   var callbacks = {
-    'onReady': function() {
-      cosmo.subscribe(subject, -1);
-      cosmo.sendMessage(subject, message1, key);
-    },
     'onMessage': function(e) {
       messages++;
       equal(e['subject'], subject, 'subject matches');
@@ -141,6 +135,8 @@ asyncTest('Overwrite key', function() {
   };
 
   var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.subscribe(subject, -1);
+  cosmo.sendMessage(subject, message1, key);
 });
 
 asyncTest('Complex object', function() {
@@ -159,10 +155,6 @@ asyncTest('Complex object', function() {
   };
 
   var callbacks = {
-    'onReady': function() {
-      cosmo.sendMessage(subject, message);
-      cosmo.subscribe(subject, -1);
-    },
     'onMessage': function(e) {
       equal(e['subject'], subject, 'subject matches');
       deepEqual(e['message'], message, 'message matches');
@@ -172,6 +164,8 @@ asyncTest('Complex object', function() {
   };
 
   var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.sendMessage(subject, message);
+  cosmo.subscribe(subject, -1);
 });
 
 asyncTest('sendMessage Promise', function() {
@@ -180,17 +174,12 @@ asyncTest('sendMessage Promise', function() {
   var subject = randstring();
   var message = randstring();
 
-  var callbacks = {
-    'onReady': function() {
-      cosmo.sendMessage(subject, message).then(function() {
-        ok(true, 'sendMessage Promise fulfilled');
-        cosmo.shutdown();
-        start();
-      });
-    },
-  };
-
-  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  var cosmo = new Cosmopolite({}, null, randstring());
+  cosmo.sendMessage(subject, message).then(function() {
+    ok(true, 'sendMessage Promise fulfilled');
+    cosmo.shutdown();
+    start();
+  });
 });
 
 asyncTest('subscribe/unsubscribe Promise', function() {
@@ -199,20 +188,15 @@ asyncTest('subscribe/unsubscribe Promise', function() {
   var subject = randstring();
   var message = randstring();
 
-  var callbacks = {
-    'onReady': function() {
-      cosmo.subscribe(subject).then(function() {
-        ok(true, 'subscribe Promise fulfilled');
-        cosmo.unsubscribe(subject).then(function() {
-          ok(true, 'unsubscribe Promise fulfilled');
-          cosmo.shutdown();
-          start();
-        });
-      });
-    },
-  };
-
-  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  var cosmo = new Cosmopolite({}, null, randstring());
+  cosmo.subscribe(subject).then(function() {
+    ok(true, 'subscribe Promise fulfilled');
+    cosmo.unsubscribe(subject).then(function() {
+      ok(true, 'unsubscribe Promise fulfilled');
+      cosmo.shutdown();
+      start();
+    });
+  });
 });
 
 
@@ -253,10 +237,6 @@ asyncTest('Profile merge', function() {
 
   logout(function() {
     var callbacks = {
-      'onReady': function() {
-        cosmo.sendMessage(subject, message);
-        cosmo.subscribe(subject, -1);
-      },
       'onMessage': function(msg) {
         messages++;
         equal(msg['subject'], subject, 'message #' + messages + ': subject matches');
@@ -277,5 +257,7 @@ asyncTest('Profile merge', function() {
       },
     };
     var cosmo = new Cosmopolite(callbacks);
+    cosmo.sendMessage(subject, message);
+    cosmo.subscribe(subject, -1);
   });
 });
