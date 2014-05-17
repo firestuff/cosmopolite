@@ -43,6 +43,21 @@ Cosmopolite = function(callbacks, urlPrefix, namespace) {
   this.rpcQueue_ = [];
   this.subscriptions_ = {};
 
+  this.messageQueueKey_ = this.namespace_ + ':message_queue';
+  if (this.messageQueueKey_ in localStorage) {
+    var messages = JSON.parse(localStorage[this.messageQueueKey_]);
+    if (messages.length) {
+      console.log(
+          this.loggingPrefix_(), '(re-)sending queued messages:', messages);
+    }
+    messages.forEach(function(message) {
+      this.sendRPC_(
+        'sendMessage', message, this.onMessageSent_.bind(this, message, null));
+    }.bind(this));
+  } else {
+    localStorage[this.messageQueueKey_] = JSON.stringify([]);
+  }
+
   var scriptUrls = [
     '/_ah/channel/jsapi',
   ];
@@ -89,16 +104,18 @@ Cosmopolite.prototype.subscribe = function(subject, messages, keys) {
         'not sending duplication subscription request for subject:', subject);
       resolve();
     }
-    this.subscriptions_[subject] = {
-      'messages': [],
-      'keys': {},
-    };
     var args = {
       'subject': subject,
       'messages': messages,
       'keys': keys,
     };
-    this.sendRPC_('subscribe', args, resolve);
+    this.sendRPC_('subscribe', args, function() {
+      this.subscriptions_[subject] = {
+        'messages': [],
+        'keys': {},
+      };
+      resolve();
+    }.bind(this));
   }.bind(this));
 };
 
@@ -137,7 +154,14 @@ Cosmopolite.prototype.sendMessage = function(subject, message, key) {
     if (key) {
       args['key'] = key;
     }
-    this.sendRPC_('sendMessage', args, resolve);
+
+    // No message left behind.
+    var messageQueue = JSON.parse(localStorage[this.messageQueueKey_]);
+    messageQueue.push(args);
+    localStorage[this.messageQueueKey_] = JSON.stringify(messageQueue);
+
+    this.sendRPC_(
+      'sendMessage', args, this.onMessageSent_.bind(this, args, resolve));
   }.bind(this));
 };
 
@@ -258,6 +282,24 @@ Cosmopolite.prototype.registerMessageHandlers_ = function() {
 };
 
 /**
+ * Callback for a sendMessage RPC ack by the server.
+ *
+ * @param {Object} message Message details.
+ * @param {function()=} resolve Promise resolution callback.
+ */
+Cosmopolite.prototype.onMessageSent_ = function(message, resolve) {
+  // No message left behind.
+  var messageQueue = JSON.parse(localStorage[this.messageQueueKey_]);
+  messageQueue = messageQueue.filter(function(queuedMessage) {
+    return message['sender_message_id'] != queuedMessage['sender_message_id'];
+  });
+  localStorage[this.messageQueueKey_] = JSON.stringify(messageQueue);
+  if (resolve) {
+    resolve();
+  }
+};
+
+/**
  * Send a single RPC to the server.
  *
  * See sendRPCs_()
@@ -291,6 +333,9 @@ Cosmopolite.prototype.sendRPC_ = function(command, args, onSuccess) {
  * @param {number=} delay Seconds waited before executing this call (for backoff)
  */
 Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
+  if (this.shutdown_) {
+    return;
+  }
   var request = {
     'commands': [],
   };

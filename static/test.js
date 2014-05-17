@@ -231,6 +231,32 @@ asyncTest('Duplicate message suppression', function() {
   });
 });
 
+asyncTest('Message persistence', function() {
+  expect(2);
+
+  var subject = randstring();
+  var message = randstring();
+  var namespace = randstring();
+
+  // Send a message and shut down too fast for it to hit the wire.
+  var cosmo1 = new Cosmopolite({}, null, namespace);
+  cosmo1.sendMessage(subject, message);
+  cosmo1.shutdown();
+
+  var callbacks = {
+    'onMessage': function(msg) {
+      equal(msg['subject'], subject, 'subject matches');
+      equal(msg['message'], message, 'message matches');
+      cosmo2.shutdown();
+      start();
+    },
+  };
+
+  var cosmo2 = new Cosmopolite(callbacks, null, namespace);
+  cosmo2.subscribe(subject, -1);
+  // Should pick up the message from the persistent queue.
+});
+
 
 module('dev_appserver only');
 
