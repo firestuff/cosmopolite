@@ -91,6 +91,10 @@ class Client(db.Model):
 class Subject(db.Model):
 
   name = db.StringProperty(required=True)
+  readable_only_by = db.ReferenceProperty(
+      reference_class=Profile, collection_name='readable_subject_set')
+  writable_only_by = db.ReferenceProperty(
+      reference_class=Profile, collection_name='writable_subject_set')
 
   @classmethod
   def FindOrCreate(cls, name):
@@ -206,7 +210,9 @@ class Message(db.Model):
       'event_type':   'message',
       'id':           self.key().id(),
       'sender':       str(Message.sender.get_value_for_datastore(self)),
-      'subject':      self.parent().name,
+      'subject':      {
+          'name':         self.parent().name,
+      },
       'created':      self.created,
       'message':      self.message,
     }

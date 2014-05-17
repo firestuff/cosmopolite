@@ -94,7 +94,7 @@ asyncTest('Message round trip', function() {
 
   var callbacks = {
     'onMessage': function(e) {
-      equal(e['subject'], subject, 'subject matches');
+      equal(e['subject']['name'], subject, 'subject matches');
       equal(e['message'], message, 'message matches');
       cosmo.shutdown();
       start();
@@ -119,7 +119,7 @@ asyncTest('Overwrite key', function() {
   var callbacks = {
     'onMessage': function(e) {
       messages++;
-      equal(e['subject'], subject, 'subject matches');
+      equal(e['subject']['name'], subject, 'subject matches');
       equal(e['key'], key, 'key matches');
       if (messages == 1) {
         equal(e['message'], message1, 'message #1 matches');
@@ -156,7 +156,7 @@ asyncTest('Complex object', function() {
 
   var callbacks = {
     'onMessage': function(e) {
-      equal(e['subject'], subject, 'subject matches');
+      equal(e['subject']['name'], subject, 'subject matches');
       deepEqual(e['message'], message, 'message matches');
       cosmo.shutdown();
       start();
@@ -209,7 +209,7 @@ asyncTest('Duplicate message suppression', function() {
 
   var callbacks = {
     'onMessage': function (msg) {
-      equal(msg['subject'], subject, 'subject matches');
+      equal(msg['subject']['name'], subject, 'subject matches');
       equal(msg['key'], key, 'key matches');
       equal(msg['message'], message1, 'message matches');
       cosmo.shutdown();
@@ -245,7 +245,7 @@ asyncTest('Message persistence', function() {
 
   var callbacks = {
     'onMessage': function(msg) {
-      equal(msg['subject'], subject, 'subject matches');
+      equal(msg['subject']['name'], subject, 'subject matches');
       equal(msg['message'], message, 'message matches');
       cosmo2.shutdown();
       start();
@@ -297,9 +297,12 @@ asyncTest('Profile merge', function() {
     var callbacks = {
       'onMessage': function(msg) {
         messages++;
-        equal(msg['subject'], subject, 'message #' + messages + ': subject matches');
-        equal(msg['message'], message, 'message #' + messages + ': message matches');
-        equal(msg['sender'], cosmo.profile(), 'message #' + messages + ': profile matches');
+        equal(msg['subject']['name'], subject,
+              'message #' + messages + ': subject matches');
+        equal(msg['message'], message,
+              'message #' + messages + ': message matches');
+        equal(msg['sender'], cosmo.profile(),
+              'message #' + messages + ': profile matches');
         if (messages == 1) {
           cosmo.unsubscribe(subject);
           // Entirely magic URL that sets the login cookie and redirects.

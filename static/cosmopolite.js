@@ -110,10 +110,15 @@ Cosmopolite.prototype.subscribe = function(subject, messages, keys) {
       'keys': keys,
     };
     this.sendRPC_('subscribe', args, function() {
-      this.subscriptions_[subject] = {
-        'messages': [],
-        'keys': {},
-      };
+      if (subject in this.subscriptions_) {
+        console.log(
+          this.loggingPrefix_(), 'duplicate subject subscriptions:', subject);
+      } else {
+        this.subscriptions_[subject] = {
+          'messages': [],
+          'keys': {},
+        };
+      }
       resolve();
     }.bind(this));
   }.bind(this));
@@ -516,7 +521,7 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
       }
       break;
     case 'message':
-      var subscription = this.subscriptions_[e['subject']];
+      var subscription = this.subscriptions_[e['subject']['name']];
       if (!subscription) {
         console.log(
           this.loggingPrefix_(),
