@@ -423,13 +423,17 @@ Cosmopolite.prototype.createChannel_ = function() {
       'onSuccess': this.onCreateChannel_,
     },
   ];
-  // TODO(flamingcow): Need to restart from the latest message.
   for (var subject in this.subscriptions_) {
+    var subscription = this.subscriptions_[subject];
+    var last_id = 0;
+    if (subscription.messages.length > 0) {
+      last_id = subscription.messages[subscription.messages.length - 1]['id'];
+    }
     rpcs.push({
       'command': 'subscribe',
       'arguments': {
         'subject':  subject,
-        'messages': 0,
+        'last_id':  last_id,
       }
     });
   }

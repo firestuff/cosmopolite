@@ -118,6 +118,15 @@ class Subject(db.Model):
     return reversed(query.fetch(limit=num_messages))
 
   @db.transactional()
+  def GetMessagesSince(self, last_id):
+    query = (
+        Message.all()
+        .ancestor(self)
+        .filter('id_ >', last_id)
+        .order('id_'))
+    return list(query)
+
+  @db.transactional()
   def GetKey(self, key):
     messages = (
         Message.all()
@@ -179,7 +188,7 @@ class Subscription(db.Model):
 
   @classmethod
   @db.transactional()
-  def FindOrCreate(cls, subject, client, messages):
+  def FindOrCreate(cls, subject, client, messages=0, last_id=None):
     subscriptions = (
         cls.all(keys_only=True)
         .ancestor(subject)
@@ -187,9 +196,12 @@ class Subscription(db.Model):
         .fetch(1))
     if not subscriptions:
       cls(parent=subject, client=client).put()
-    if messages == 0:
-      return []
-    return [m.ToEvent() for m in subject.GetRecentMessages(messages)]
+    events = []
+    if messages:
+      events.extend(m.ToEvent() for m in subject.GetRecentMessages(messages))
+    if last_id:
+      events.extend(m.ToEvent() for m in subject.GetMessagesSince(last_id))
+    return events
 
   @classmethod
   @db.transactional()

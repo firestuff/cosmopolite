@@ -71,10 +71,11 @@ def SendMessage(google_user, client, args):
 def Subscribe(google_user, client, args):
   subject = models.Subject.FindOrCreate(args['subject'])
   messages = args.get('messages', 0)
+  last_id = args.get('last_id', None)
   keys = args.get('keys', [])
 
   ret = {
-    'events': models.Subscription.FindOrCreate(subject, client, messages),
+    'events': models.Subscription.FindOrCreate(subject, client, messages, last_id),
   }
   for key in keys:
     message = subject.GetKey(key)
