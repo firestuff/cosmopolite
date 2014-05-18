@@ -307,14 +307,48 @@ asyncTest('resubscribe', function() {
     cosmo.subscribe(subject).then(function() {
       equal(cosmo.getMessages(subject).length, 0, 'zero messages');
       cosmo.subscribe(subject, -1).then(function() {
-        equal(cosmo.getMessages(subject).length, 1, 'one message');
-        equal(cosmo.getMessages(subject)[0]['subject']['name'], subject, 'subject matches');
-        equal(cosmo.getMessages(subject)[0]['message'], message, 'message matches');
+        var messages = cosmo.getMessages(subject);
+        equal(messages.length, 1, 'one message');
+        equal(messages[0]['subject']['name'], subject, 'subject matches');
+        equal(messages[0]['message'], message, 'message matches');
         cosmo.shutdown();
         start();
       });
     });
   });
+});
+
+asyncTest('Message ordering', function() {
+  expect(5);
+
+  var subject = randstring();
+  var messages = [ 'A', 'B', 'C', 'D', 'E', 'F' ];
+  var keys = [ null, 'X', 'X', null, null, null ];
+
+  var cosmo = new Cosmopolite({}, null, randstring());
+
+  var sendNextMessage = function() {
+    if (messages.length) {
+      cosmo.sendMessage(subject, messages.shift(), keys.shift()).then(sendNextMessage);
+    } else {
+      cosmo.subscribe(subject, 1).then(function() {
+        cosmo.subscribe(subject, 2).then(function() {
+          cosmo.subscribe(subject, 0, null, ['X']).then(function() {
+            var fetched = cosmo.getMessages(subject);
+            equal(fetched.length, 3, 'three messages');
+            equal(fetched[0]['message'], 'C', 'message 0: C matches');
+            equal(fetched[1]['message'], 'E', 'message 1: E matches');
+            equal(fetched[2]['message'], 'F', 'message 2: F matches');
+            equal(cosmo.getKeyMessage(subject, 'X')['message'], 'C', 'key X matches');
+            cosmo.shutdown();
+            start();
+          });
+        });
+      });
+    }
+  };
+
+  sendNextMessage();
 });
 
 

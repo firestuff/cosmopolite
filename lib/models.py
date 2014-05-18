@@ -146,22 +146,26 @@ class Subject(db.Model):
     the datastore work (and any retries) before we start transmitting to
     channels.
     """
+    # We have to reload the Subject inside the transaction to get transactional
+    # ID generation
+    subject = Subject.get(self.key())
+
     # sender_message_id should be universal across all subjects, but we check
     # it within just this subject to allow in-transaction verification.
     messages = (
         Message.all()
-        .ancestor(self)
+        .ancestor(subject)
         .filter('sender_message_id =', sender_message_id)
         .fetch(1))
     if messages:
       raise DuplicateMessage(sender_message_id)
 
-    message_id = self.next_message_id
-    self.next_message_id += 1
-    self.put()
+    message_id = subject.next_message_id
+    subject.next_message_id += 1
+    subject.put()
 
     obj = Message(
-        parent=self,
+        parent=subject,
         message=message,
         sender=sender,
         sender_message_id=sender_message_id,
@@ -172,7 +176,7 @@ class Subject(db.Model):
     return (
         obj,
         [Subscription.client.get_value_for_datastore(subscription)
-         for subscription in Subscription.all().ancestor(self)])
+         for subscription in Subscription.all().ancestor(subject)])
 
   def SendMessage(self, message, sender, sender_message_id, key=None):
     obj, subscriptions = self.PutMessage(message, sender, sender_message_id, key)

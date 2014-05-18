@@ -627,7 +627,7 @@ Cosmopolite.prototype.onMessage_ = function(e) {
   // likely be at the end.
   var insertAfter;
   for (var insertAfter = subscription.messages.length - 1;
-       insertAfter >= 0; insertAfter++) {
+       insertAfter >= 0; insertAfter--) {
     var message = subscription.messages[insertAfter];
     if (message['id'] < e['message']['id']) {
       break;
