@@ -96,6 +96,8 @@ class Subject(db.Model):
   writable_only_by = db.ReferenceProperty(
       reference_class=Profile, collection_name='writable_subject_set')
 
+  next_message_id = db.IntegerProperty(required=True, default=1)
+
   @classmethod
   def FindOrCreate(cls, name):
     subjects = cls.all().filter('name =', name).fetch(1)
@@ -110,7 +112,7 @@ class Subject(db.Model):
     query = (
         Message.all()
         .ancestor(self)
-        .order('-created'))
+        .order('-id_'))
     if num_messages <= 0:
       num_messages = None
     return reversed(query.fetch(limit=num_messages))
@@ -121,7 +123,7 @@ class Subject(db.Model):
         Message.all()
         .ancestor(self)
         .filter('key_ =', key)
-        .order('-created')
+        .order('-id_')
         .fetch(1))
     if messages:
       return messages[0]
@@ -145,11 +147,16 @@ class Subject(db.Model):
     if messages:
       raise DuplicateMessage(sender_message_id)
 
+    message_id = self.next_message_id
+    self.next_message_id += 1
+    self.put()
+
     obj = Message(
         parent=self,
         message=message,
         sender=sender,
         sender_message_id=sender_message_id,
+        id_=message_id,
         key_=key)
     obj.put()
 
@@ -202,13 +209,15 @@ class Message(db.Model):
   message = db.TextProperty(required=True)
   sender = db.ReferenceProperty(required=True, reference_class=Profile)
   sender_message_id = db.StringProperty(required=True)
+  # id is reserved
+  id_ = db.IntegerProperty(required=True)
   # key and key_name are reserved
   key_ = db.StringProperty()
 
   def ToEvent(self):
     ret = {
       'event_type':   'message',
-      'id':           self.key().id(),
+      'id':           self.id_,
       'sender':       str(Message.sender.get_value_for_datastore(self)),
       'subject':      {
           'name':         self.parent().name,
