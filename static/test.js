@@ -226,7 +226,7 @@ asyncTest('Duplicate message suppression', function() {
   };
   cosmo.sendMessage(subject, message1, key).then(function() {
     cosmo.sendMessage(subject, message2, key).then(function() {
-      cosmo.subscribe(subject, 0, [key]);
+      cosmo.subscribe(subject, 0, null, [key]);
     });
   });
 });
