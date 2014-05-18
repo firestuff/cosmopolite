@@ -629,7 +629,7 @@ Cosmopolite.prototype.onMessage_ = function(e) {
   for (var insertAfter = subscription.messages.length - 1;
        insertAfter >= 0; insertAfter--) {
     var message = subscription.messages[insertAfter];
-    if (message['id'] < e['message']['id']) {
+    if (message['id'] < e['id']) {
       break;
     }
   }

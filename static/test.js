@@ -332,8 +332,8 @@ asyncTest('Message ordering', function() {
       cosmo.sendMessage(subject, messages.shift(), keys.shift()).then(sendNextMessage);
     } else {
       cosmo.subscribe(subject, 1).then(function() {
-        cosmo.subscribe(subject, 2).then(function() {
-          cosmo.subscribe(subject, 0, null, ['X']).then(function() {
+        cosmo.subscribe(subject, 0, null, ['X']).then(function() {
+          cosmo.subscribe(subject, 2).then(function() {
             var fetched = cosmo.getMessages(subject);
             equal(fetched.length, 3, 'three messages');
             equal(fetched[0]['message'], 'C', 'message 0: C matches');
