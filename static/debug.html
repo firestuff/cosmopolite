@@ -74,7 +74,7 @@ window.addEventListener('load', function() {
         '<a href="' + login_url + '" target="_blank">(log in)</a>';
     },
     onMessage: function(message) {
-      if (subscriptions.value != message['subject']) {
+      if (subscriptions.value != message['subject']['name']) {
         return;
       }
       addMessage(message);

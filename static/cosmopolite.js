@@ -109,18 +109,11 @@ Cosmopolite.prototype.subscribe = function(subject, messages, keys) {
       'messages': messages,
       'keys': keys,
     };
-    this.sendRPC_('subscribe', args, function() {
-      if (subject in this.subscriptions_) {
-        console.log(
-          this.loggingPrefix_(), 'duplicate subject subscriptions:', subject);
-      } else {
-        this.subscriptions_[subject] = {
-          'messages': [],
-          'keys': {},
-        };
-      }
-      resolve();
-    }.bind(this));
+    this.subscriptions_[subject] = {
+      'messages': [],
+      'keys': {},
+    };
+    this.sendRPC_('subscribe', args, resolve);
   }.bind(this));
 };
 
