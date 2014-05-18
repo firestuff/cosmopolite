@@ -33,11 +33,12 @@ String.prototype.hashCode = function() {
  * @param {string=} urlPrefix Absolute URL prefix for generating API URL
  * @param {string=} namespace Prefix for localStorage entries.
  */
-Cosmopolite = function(callbacks, urlPrefix, namespace) {
+var Cosmopolite = function(callbacks, urlPrefix, namespace) {
   this.callbacks_ = callbacks || {};
   this.urlPrefix_ = urlPrefix || '/cosmopolite';
   this.namespace_ = namespace || 'cosmopolite';
 
+  this.channelState_ = this.ChannelState.DOWN;
   this.shutdown_ = false;
 
   this.rpcQueue_ = [];
@@ -69,6 +70,20 @@ Cosmopolite = function(callbacks, urlPrefix, namespace) {
     document.body.appendChild(script);
   }, this);
 };
+
+
+/**
+ * Channel states
+ * @enum {number}
+ * @const
+ * @private
+ */
+Cosmopolite.prototype.ChannelState = {
+  DOWN: 1,
+  PENDING: 2,
+  UP: 3,
+};
+
 
 /**
  * Shutdown this instance.
@@ -417,6 +432,12 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
  * Send RPCs to create a server -> client channel and (re-)subscribe to subjects
  */
 Cosmopolite.prototype.createChannel_ = function() {
+  if (this.channelState_ == this.ChannelState.DOWN) {
+    this.channelState_ = this.ChannelState.PENDING;
+  } else {
+    return;
+  }
+
   var rpcs = [
     {
       'command':   'createChannel',
@@ -451,6 +472,13 @@ Cosmopolite.prototype.onCreateChannel_ = function(data) {
   if (this.shutdown_) {
     return;
   }
+
+  if (this.channelState_ == this.ChannelState.PENDING) {
+    this.channelState_ = this.ChannelState.OPEN;
+  } else {
+    return;
+  }
+
   var channel = new goog.appengine.Channel(data['token']);
   console.log(this.loggingPrefix_(), 'opening channel:', data['token']);
   this.socket_ = channel.open({
@@ -476,9 +504,17 @@ Cosmopolite.prototype.onSocketOpen_ = function() {
  */
 Cosmopolite.prototype.onSocketClose_ = function() {
   console.log(this.loggingPrefix_(), 'channel closed');
+
   if (this.shutdown_) {
     return;
   }
+
+  if (this.channelState_ == this.ChannelState.OPEN) {
+    this.channelState_ = this.ChannelState.DOWN;
+  } else {
+    return;
+  }
+
   this.createChannel_();
 };
 
@@ -489,6 +525,18 @@ Cosmopolite.prototype.onSocketClose_ = function() {
  */
 Cosmopolite.prototype.onSocketMessage_ = function(msg) {
   this.onServerEvent_(JSON.parse(msg.data));
+};
+
+/**
+ * Callback from channel library for error on channel
+ *
+ * @param {!string} msg Descriptive text
+ */
+Cosmopolite.prototype.onSocketError_ = function(msg) {
+  console.log(this.loggingPrefix_(), 'socket error:', msg);
+  if (this.socket_) {
+    this.socket_.close();
+  }
 };
 
 /**
@@ -572,18 +620,6 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
       // Client out of date? Force refresh?
       console.log(this.loggingPrefix_(), 'unknown channel event:', e);
       break;
-  }
-};
-
-/**
- * Callback from channel library for error on channel
- *
- * @param {!string} msg Descriptive text
- */
-Cosmopolite.prototype.onSocketError_ = function(msg) {
-  console.log(this.loggingPrefix_(), 'socket error:', msg);
-  if (this.socket_) {
-    this.socket_.close();
   }
 };
 
