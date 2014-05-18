@@ -492,6 +492,61 @@ Cosmopolite.prototype.onSocketMessage_ = function(msg) {
 };
 
 /**
+ * Callback on receiving a 'login' event from the server
+ *
+ * @param {!Object} e Event object
+ */
+Cosmopolite.prototype.onLogin_ = function(e) {
+  if ('onLogin' in this.callbacks_) {
+    this.callbacks_['onLogin'](
+        e['google_user'],
+        this.urlPrefix_ + '/auth/logout');
+  }
+};
+
+/**
+ * Callback on receiving a 'logout' event from the server
+ *
+ * @param {!Object} e Event object
+ */
+Cosmopolite.prototype.onLogout_ = function(e) {
+  if ('onLogout' in this.callbacks_) {
+    this.callbacks_['onLogout'](
+      this.urlPrefix_ + '/auth/login');
+  }
+};
+
+/**
+ * Callback on receiving a 'message' event from the server
+ *
+ * @param {!Object} e Event object
+ */
+Cosmopolite.prototype.onMessage_ = function(e) {
+  var subscription = this.subscriptions_[e['subject']['name']];
+  if (!subscription) {
+    console.log(
+      this.loggingPrefix_(),
+      'message from unrecognized subject:', e);
+    return;
+  }
+  var duplicate = subscription.messages.some(function(message) {
+    return message['id'] == e.id;
+  });
+  if (duplicate) {
+    console.log(this.loggingPrefix_(), 'duplicate message:', e);
+    return;
+  }
+  e['message'] = JSON.parse(e['message']);
+  subscription.messages.push(e);
+  if (e['key']) {
+    subscription.keys[e['key']] = e;
+  }
+  if ('onMessage' in this.callbacks_) {
+    this.callbacks_['onMessage'](e);
+  }
+};
+
+/**
  * Callback for Cosmopolite event (received via channel or pseudo-channel)
  *
  * @param {!Object} e Deserialized event object
@@ -505,41 +560,13 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
   }
   switch (e['event_type']) {
     case 'login':
-      if ('onLogin' in this.callbacks_) {
-        this.callbacks_['onLogin'](
-            e['google_user'],
-            this.urlPrefix_ + '/auth/logout');
-      }
+      this.onLogin_(e);
       break;
     case 'logout':
-      if ('onLogout' in this.callbacks_) {
-        this.callbacks_['onLogout'](
-          this.urlPrefix_ + '/auth/login');
-      }
+      this.onLogout_(e);
       break;
     case 'message':
-      var subscription = this.subscriptions_[e['subject']['name']];
-      if (!subscription) {
-        console.log(
-          this.loggingPrefix_(),
-          'message from unrecognized subject:', e);
-        break;
-      }
-      var duplicate = subscription.messages.some(function(message) {
-        return message['id'] == e.id;
-      });
-      if (duplicate) {
-        console.log(this.loggingPrefix_(), 'duplicate message:', e);
-        break;
-      }
-      e['message'] = JSON.parse(e['message']);
-      subscription.messages.push(e);
-      if (e['key']) {
-        subscription.keys[e['key']] = e;
-      }
-      if ('onMessage' in this.callbacks_) {
-        this.callbacks_['onMessage'](e);
-      }
+      this.onMessage_(e);
       break;
     default:
       // Client out of date? Force refresh?
