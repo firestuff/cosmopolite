@@ -65,7 +65,7 @@ module('All platforms');
 
 test('Construct/shutdown', function() {
   expect(2);
-  var cosmo = new Cosmopolite({});
+  var cosmo = new Cosmopolite({}, null, randstring());
   ok(true, 'new Cosmopolite() succeeds');
   cosmo.shutdown();
   ok(true, 'shutdown() succeeds');
@@ -82,7 +82,7 @@ asyncTest('onLogout fires', function() {
         start();
       }
     };
-    var cosmo = new Cosmopolite(callbacks);
+    var cosmo = new Cosmopolite(callbacks, null, randstring());
   });
 });
 
@@ -257,6 +257,23 @@ asyncTest('Message persistence', function() {
   // Should pick up the message from the persistent queue.
 });
 
+test('getMessages/subscribe', function() {
+  expect(2);
+
+  var subject = randstring();
+
+  var cosmo = new Cosmopolite({}, null, randstring());
+  throws(
+    cosmo.getMessages.bind(undefined, subject),
+    'getMessages before subscribe fails');
+  cosmo.subscribe(subject);
+  // Verify that we can call getMessages immediately after subscribe
+  cosmo.getMessages(subject);
+  ok(true, 'getMessages after subscribe succeeds');
+
+  cosmo.shutdown();
+});
+
 
 module('dev_appserver only');
 
@@ -281,7 +298,7 @@ asyncTest('Login', function() {
         start();
       },
     };
-    var cosmo = new Cosmopolite(callbacks);
+    var cosmo = new Cosmopolite(callbacks, null, randstring());
   });
 });
 
@@ -317,7 +334,7 @@ asyncTest('Profile merge', function() {
         cosmo.subscribe(subject, -1);
       },
     };
-    var cosmo = new Cosmopolite(callbacks);
+    var cosmo = new Cosmopolite(callbacks, null, randstring());
     cosmo.sendMessage(subject, message);
     cosmo.subscribe(subject, -1);
   });
