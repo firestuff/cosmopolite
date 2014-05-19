@@ -351,6 +351,29 @@ asyncTest('Message ordering', function() {
   sendNextMessage();
 });
 
+asyncTest('Reconnect channel', function() {
+  expect(2);
+
+  var subject = randstring();
+  var message = randstring();
+
+  var callbacks = {
+    'onMessage': function(msg) {
+      equal(msg['subject']['name'], subject, 'subject matches');
+      equal(msg['message'], message, 'message matches');
+      cosmo.shutdown();
+      start();
+    },
+  };
+
+  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.subscribe(subject, 0).then(function() {
+    // Reach inside to forcefully close the socket
+    cosmo.socket_.close();
+    cosmo.sendMessage(subject, message);
+  });
+});
+
 
 module('dev_appserver only');
 
