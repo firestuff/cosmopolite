@@ -380,35 +380,30 @@ asyncTest('subscribe ACL', function() {
   var subject = randstring();
 
   logout(function() {
-    var tempCallbacks = {
-      'onLogout': function() {
-        var tempProfile = tempCosmo.profile();
-        tempCosmo.shutdown();
+    var tempCosmo = new Cosmopolite({}, null, randstring());
+    tempCosmo.getProfile().then(function(tempProfile) {
+      tempCosmo.shutdown();
 
-        var callbacks = {
-          'onLogout': function() {
-            cosmo.subscribe({
-              'name':             subject,
-              'readable_only_by': cosmo.profile(),
-            }).then(function() {
-              ok(true, 'correct ACL succeeds');
+      var cosmo = new Cosmopolite({}, null, randstring());
+      cosmo.getProfile().then(function(profile) {
+        cosmo.subscribe({
+          'name':             subject,
+          'readable_only_by': profile,
+        }).then(function() {
+          ok(true, 'correct ACL succeeds');
 
-              cosmo.subscribe({
-                'name':             subject,
-                'readable_only_by': tempProfile,
-              }).then(null, function() {
-                ok(true, 'bad ACL fails');
-                cosmo.shutdown();
-                start();
-              });
+          cosmo.subscribe({
+            'name':             subject,
+            'readable_only_by': tempProfile,
+          }).then(null, function() {
+            ok(true, 'bad ACL fails');
+            cosmo.shutdown();
+            start();
+          });
 
-            });
-          },
-        };
-        var cosmo = new Cosmopolite(callbacks, null, randstring());
-      },
-    };
-    var tempCosmo = new Cosmopolite(tempCallbacks, null, randstring());
+        });
+      });
+    });
   });
 });
 
@@ -419,35 +414,30 @@ asyncTest('sendMessage ACL', function() {
   var message = randstring();
 
   logout(function() {
-    var tempCallbacks = {
-      'onLogout': function() {
-        var tempProfile = tempCosmo.profile();
-        tempCosmo.shutdown();
+    var tempCosmo = new Cosmopolite({}, null, randstring());
+    tempCosmo.getProfile().then(function(tempProfile) {
+      tempCosmo.shutdown();
 
-        var callbacks = {
-          'onLogout': function() {
-            cosmo.sendMessage({
-              'name':             subject,
-              'writable_only_by': cosmo.profile(),
-            }, message).then(function() {
-              ok(true, 'correct ACL succeeds');
+      var cosmo = new Cosmopolite({}, null, randstring());
+      cosmo.getProfile().then(function(profile) {
+        cosmo.sendMessage({
+          'name':             subject,
+          'writable_only_by': profile,
+        }, message).then(function() {
+          ok(true, 'correct ACL succeeds');
 
-              cosmo.sendMessage({
-                'name':             subject,
-                'writable_only_by': tempProfile,
-              }, message).then(null, function() {
-                ok(true, 'bad ACL fails');
-                cosmo.shutdown();
-                start();
-              });
+          cosmo.sendMessage({
+            'name':             subject,
+            'writable_only_by': tempProfile,
+          }, message).then(null, function() {
+            ok(true, 'bad ACL fails');
+            cosmo.shutdown();
+            start();
+          });
 
-            });
-          },
-        };
-        var cosmo = new Cosmopolite(callbacks, null, randstring());
-      },
-    };
-    var tempCosmo = new Cosmopolite(tempCallbacks, null, randstring());
+        });
+      });
+    });
   });
 });
 
@@ -463,13 +453,13 @@ asyncTest('Login', function() {
     var callbacks = {
       'onLogout': function(login_url) {
         ok(true, 'onLogout fired');
-        anonymousProfile = cosmo.profile();
+        anonymousProfile = cosmo.currentProfile();
         // Entirely magic URL that sets the login cookie and redirects.
         window.open('/_ah/login?email=test%40example.com&action=Login&continue=/cosmopolite/static/login_complete.html');
       },
       'onLogin': function(login_url) {
         ok(true, 'onLogin fired');
-        notEqual(anonymousProfile, cosmo.profile(), 'profile changed');
+        notEqual(anonymousProfile, cosmo.currentProfile(), 'profile changed');
         cosmo.shutdown();
         logout();
         start();
@@ -495,7 +485,7 @@ asyncTest('Profile merge', function() {
               'message #' + messages + ': subject matches');
         equal(msg['message'], message,
               'message #' + messages + ': message matches');
-        equal(msg['sender'], cosmo.profile(),
+        equal(msg['sender'], cosmo.currentProfile(),
               'message #' + messages + ': profile matches');
         if (messages == 1) {
           cosmo.unsubscribe(subject);

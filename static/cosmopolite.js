@@ -43,6 +43,7 @@ var Cosmopolite = function(callbacks, urlPrefix, namespace) {
 
   this.rpcQueue_ = [];
   this.subscriptions_ = {};
+  this.profilePromises_ = [];
 
   this.messageQueueKey_ = this.namespace_ + ':message_queue';
   if (this.messageQueueKey_ in localStorage) {
@@ -248,13 +249,26 @@ Cosmopolite.prototype.getKeyMessage = function(subject, key) {
 };
 
 /**
+ * Return a Promise for our profile ID.
+ */
+Cosmopolite.prototype.getProfile = function() {
+  return new Promise(function(resolve, reject) {
+    if (this.profile_) {
+      resolve(this.profile_);
+    } else {
+      this.profilePromises_.push(resolve);
+    }
+  }.bind(this));
+};
+
+ /**
  * Return our current profile ID, if known.
  *
  * @return {?string} Profile ID.
  * @const
  */
-Cosmopolite.prototype.profile = function() {
-  return this.profile_ || null;
+Cosmopolite.prototype.currentProfile = function() {
+  return this.profile_;
 };
 
 /**
@@ -756,6 +770,10 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
   }
   if (e['profile']) {
     this.profile_ = e['profile'];
+    this.profilePromises_.forEach(function(resolve) {
+      resolve(this.profile_);
+    }.bind(this));
+    this.profilePromises_ = [];
   }
   switch (e['event_type']) {
     case 'login':
