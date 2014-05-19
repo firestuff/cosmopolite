@@ -34,6 +34,10 @@ class DuplicateMessage(Exception):
   pass
 
 
+class AccessDenied(Exception):
+  pass
+
+
 class Profile(db.Model):
   google_user = db.UserProperty()
 
@@ -99,11 +103,29 @@ class Subject(db.Model):
   next_message_id = db.IntegerProperty(required=True, default=1)
 
   @classmethod
-  def FindOrCreate(cls, name):
-    subjects = cls.all().filter('name =', name).fetch(1)
+  def FindOrCreate(cls, subject):
+    if 'readable_only_by' in subject:
+      readable_only_by = Profile.get(subject['readable_only_by'])
+    else:
+      readable_only_by = None
+
+    if 'writable_only_by' in subject:
+      writable_only_by = Profile.get(subject['writable_only_by'])
+    else:
+      writable_only_by = None
+
+    subjects = (
+        cls.all()
+        .filter('name =', subject['name'])
+        .filter('readable_only_by =', readable_only_by)
+        .filter('writable_only_by =', writable_only_by)
+        .fetch(1))
     if subjects:
       return subjects[0]
-    subject = cls(name=name)
+    subject = cls(
+        name=subject['name'],
+        readable_only_by=readable_only_by,
+        writable_only_by=writable_only_by)
     subject.put()
     return subject
 
@@ -179,10 +201,26 @@ class Subject(db.Model):
          for subscription in Subscription.all().ancestor(subject)])
 
   def SendMessage(self, message, sender, sender_message_id, key=None):
+    writable_only_by = Subject.writable_only_by.get_value_for_datastore(self)
+    if (writable_only_by and
+        writable_only_by != sender):
+      raise AccessDenied
     obj, subscriptions = self.PutMessage(message, sender, sender_message_id, key)
     event = obj.ToEvent()
     for subscription in subscriptions:
       Client.SendByKey(subscription, event)
+
+  def ToDict(self):
+    ret = {
+      'name': self.name,
+    }
+    readable_only_by = Subject.readable_only_by.get_value_for_datastore(self)
+    if readable_only_by:
+      ret['readable_only_by'] = readable_only_by
+    writable_only_by = Subject.writable_only_by.get_value_for_datastore(self)
+    if writable_only_by:
+      ret['writable_only_by'] = writable_only_by
+    return ret
 
 
 class Subscription(db.Model):
@@ -193,6 +231,12 @@ class Subscription(db.Model):
   @classmethod
   @db.transactional()
   def FindOrCreate(cls, subject, client, messages=0, last_id=None):
+    readable_only_by = (
+        Subject.readable_only_by.get_value_for_datastore(subject))
+    if (readable_only_by and
+        readable_only_by != client.parent_key()):
+      raise AccessDenied
+
     subscriptions = (
         cls.all(keys_only=True)
         .ancestor(subject)
@@ -235,9 +279,7 @@ class Message(db.Model):
       'event_type':   'message',
       'id':           self.id_,
       'sender':       str(Message.sender.get_value_for_datastore(self)),
-      'subject':      {
-          'name':         self.parent().name,
-      },
+      'subject':      self.parent().ToDict(),
       'created':      self.created,
       'message':      self.message,
     }

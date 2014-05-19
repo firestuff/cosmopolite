@@ -374,6 +374,83 @@ asyncTest('Reconnect channel', function() {
   });
 });
 
+asyncTest('subscribe ACL', function() {
+  expect(2);
+
+  var subject = randstring();
+
+  logout(function() {
+    var tempCallbacks = {
+      'onLogout': function() {
+        var tempProfile = tempCosmo.profile();
+        tempCosmo.shutdown();
+
+        var callbacks = {
+          'onLogout': function() {
+            cosmo.subscribe({
+              'name':             subject,
+              'readable_only_by': cosmo.profile(),
+            }).then(function() {
+              ok(true, 'correct ACL succeeds');
+
+              cosmo.subscribe({
+                'name':             subject,
+                'readable_only_by': tempProfile,
+              }).then(null, function() {
+                ok(true, 'bad ACL fails');
+                cosmo.shutdown();
+                start();
+              });
+
+            });
+          },
+        };
+        var cosmo = new Cosmopolite(callbacks, null, randstring());
+      },
+    };
+    var tempCosmo = new Cosmopolite(tempCallbacks, null, randstring());
+  });
+});
+
+asyncTest('sendMessage ACL', function() {
+  expect(2);
+
+  var subject = randstring();
+  var message = randstring();
+
+  logout(function() {
+    var tempCallbacks = {
+      'onLogout': function() {
+        var tempProfile = tempCosmo.profile();
+        tempCosmo.shutdown();
+
+        var callbacks = {
+          'onLogout': function() {
+            cosmo.sendMessage({
+              'name':             subject,
+              'writable_only_by': cosmo.profile(),
+            }, message).then(function() {
+              ok(true, 'correct ACL succeeds');
+
+              cosmo.sendMessage({
+                'name':             subject,
+                'writable_only_by': tempProfile,
+              }, message).then(null, function() {
+                ok(true, 'bad ACL fails');
+                cosmo.shutdown();
+                start();
+              });
+
+            });
+          },
+        };
+        var cosmo = new Cosmopolite(callbacks, null, randstring());
+      },
+    };
+    var tempCosmo = new Cosmopolite(tempCallbacks, null, randstring());
+  });
+});
+
 
 module('dev_appserver only');
 

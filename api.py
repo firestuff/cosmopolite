@@ -61,11 +61,18 @@ def SendMessage(google_user, client, args):
         message, client.parent_key(), sender_message_id, key)
   except models.DuplicateMessage:
     logging.exception('Duplicate message: %s', sender_message_id)
-    # We still return success since we assume that the message was already
-    # delivered. If it's really a client ID generation bug, we just swallowed
-    # a message.
+    return {
+      'result': 'duplicate_message',
+    }
+  except models.AccessDenied:
+    logging.exception('SendMessage access denied')
+    return {
+      'result': 'access_denied',
+    }
 
-  return {}
+  return {
+    'result': 'ok',
+  }
 
 
 def Subscribe(google_user, client, args):
@@ -74,13 +81,22 @@ def Subscribe(google_user, client, args):
   last_id = args.get('last_id', None)
   keys = args.get('keys', [])
 
-  ret = {
-    'events': models.Subscription.FindOrCreate(subject, client, messages, last_id),
-  }
+  try:
+    ret = {
+      'result': 'ok',
+      'events': models.Subscription.FindOrCreate(subject, client, messages, last_id),
+    }
+  except models.AccessDenied:
+    logging.exception('Subscribe access denied')
+    return {
+      'result': 'access_denied',
+    }
+
   for key in keys:
     message = subject.GetKey(key)
     if message:
       ret['events'].append(message.ToEvent())
+
   return ret
 
 
