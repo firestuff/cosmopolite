@@ -247,7 +247,7 @@ class Subscription(db.Model):
     events = []
     if messages:
       events.extend(m.ToEvent() for m in subject.GetRecentMessages(messages))
-    if last_id:
+    if last_id is not None:
       events.extend(m.ToEvent() for m in subject.GetMessagesSince(last_id))
     return events
 
