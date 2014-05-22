@@ -49,7 +49,7 @@
 
 <ol>
   <li>Access your local cosmopolite debug page (replace port if necessary): <a href="http://localhost:8080/cosmopolite/static/debug.html" target="_blank">http://localhost:8080/cosmopolite/static/debug.html</a></li>
-  <li>Subscribe to a subject "testsubject"</li>
+  <li>Subscribe to a subject <i>testsubject</i></li>
   <li>Send a message to that subject; it should appear in the message list below</li>
 </ol>
 
@@ -75,7 +75,7 @@
   <li>Have it create a cosmopolite instance and send a message to it:
 <pre>var cosmo = new Cosmopolite();
 cosmo.sendMessage('testsubject', 'test message');</pre></li>
-  <li>Keep the debug page (from above) up and subscribed (to "testsubject") in one browser tab</li>
+  <li>Keep the debug page (from above) up and subscribed (to <i>testsubject</i>) in one browser tab</li>
   <li>Load <a href="http://localhost:8080/test.html" target="_blank">your test page</a> <b>in an incognito window</b> (right click/control-click, Open Link in Incognito Window)</li>
   <li>The debug page should show the message from the test page</li>
   <li>You've written code that uses cosmopolite!</li>
@@ -103,7 +103,7 @@ cosmo.sendMessage('testsubject', 'test message');</pre></li>
 var cosmo = new Cosmopolite(callbacks);
 cosmo.subscribe('testsubject');</pre></li>
   <li>Load (or re-load) the test page (still in an incognito window)</li>
-  <li>Use the debug interface to send a message to testsubject</li>
+  <li>Use the debug interface to send a message to <i>testsubject</i></li>
   <li>Your test page should generate an alert popup</li>
 </ol>
 
