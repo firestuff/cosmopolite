@@ -107,6 +107,20 @@ cosmo.subscribe('testsubject');</pre></li>
   <li>Your test page should generate an alert popup</li>
 </ol>
 
+<h3>Using keys</h3>
+
+<ol>
+  <li>Cosmopolite can be used as a key/value store, with historical data and update notification</li>
+  <li>Use the debug interface to send several messages to <i>testsubject</i>. Some of them should have the key <i>testkey</i>, while others should have different keys or no key.</li>
+  <li>Change your test script:
+<pre>var cosmo = new Cosmopolite();
+cosmo.subscribe('testsubject', 0, null, ['testkey']).then(function() {
+  var msg = cosmo.getKeyMessage('testsubject', 'testkey');
+  alert(msg['message']);
+});</pre></li>
+  <li>Your test page should generate an alert popup showing the last message sent with that key</li>
+</ol>
+
       </section>
     </div>
 <script>
