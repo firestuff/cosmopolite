@@ -48,11 +48,64 @@
 <h3>Test cosmopolite</h3>
 
 <ol>
-  <li>Access your local cosmopolite debug page (replace port if necessary): <a href="http://localhost:8080/cosmopolite/static/debug.html">http://localhost:8080/cosmopolite/static/debug.html</a></li>
+  <li>Access your local cosmopolite debug page (replace port if necessary): <a href="http://localhost:8080/cosmopolite/static/debug.html" target="_blank">http://localhost:8080/cosmopolite/static/debug.html</a></li>
   <li>Subscribe to a subject "testsubject"</li>
   <li>Send a message to that subject; it should appear in the message list below</li>
 </ol>
 
+<h3>Create a test page</h3>
+
+<ol>
+  <li>Create a test.html page at the top level of your application:
+<pre>&lt;html&gt;
+  &lt;head&gt;
+    &lt;script src="/cosmopolite/static/cosmopolite.js" charset="UTF-8"&gt;&lt;/script&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;script&gt;
+// Subsequent script examples go here
+    &lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</pre></li>
+  <li>Add a mapping to app.yaml:
+<pre>handlers:
+- url: /test.html
+  static_files: test.html
+  upload: test.html</pre></li>
+  <li>Have it create a cosmopolite instance and send a message to it:
+<pre>var cosmo = new Cosmopolite();
+cosmo.sendMessage('testsubject', 'test message');</pre></li>
+  <li>Keep the debug page (from above) up and subscribed (to "testsubject") in one browser tab</li>
+  <li>Load <a href="http://localhost:8080/test.html" target="_blank">your test page</a> <b>in an incognito window</b> (right click/control-click, Open Link in Incognito Window)</li>
+  <li>The debug page should show the message from the test page</li>
+  <li>You've written code that uses cosmopolite!</li>
+</ol>
+
+<h3>Time out for concepts</h3>
+
+<ol>
+  <li><b>Subject</b>: a topic that clients that publish and subscribe to, e.g. "books"</li>
+  <li><b>Message</b>: a single chunk of data transmitted to a single subject, e.g. "I love books!"</li>
+  <li><b>Key</b>: an optional string associated with a message, that can be used to look up the last message with a given key, e.g. "title" (key) = "A place to talk about books" (message)</li>
+  <li><b>Client</b>: an instance of Cosmopolite() in a browser</li>
+  <li><b>Profile</b>: a collection of clients that all speak as the same user (and so should appear the same to subscribers)</li>
+</ol>
+
+<h3>Subscribe to a subject</h3>
+
+<ol>
+  <li>Change your test script:
+<pre>var callbacks = {
+  onMessage: function(msg) {
+    alert(msg['message']);
+  },
+};
+var cosmo = new Cosmopolite(callbacks);
+cosmo.subscribe('testsubject');</pre></li>
+  <li>Load (or re-load) the test page (still in an incognito window)</li>
+  <li>Use the debug interface to send a message to testsubject</li>
+  <li>Your test page should generate an alert popup</li>
+</ol>
 
       </section>
     </div>
