@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Cosmopolite by flamingcowtv</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1 class="header">Cosmopolite</h1>
+        <p class="header">Client/server publish/subscribe and key/value storage for AppEngine</p>
+
+        <ul>
+          <li class="download"><a class="buttons" href="https://github.com/flamingcowtv/cosmopolite/zipball/master">Download ZIP</a></li>
+          <li class="download"><a class="buttons" href="https://github.com/flamingcowtv/cosmopolite/tarball/master">Download TAR</a></li>
+          <li><a class="buttons github" href="https://github.com/flamingcowtv/cosmopolite">View On GitHub</a></li>
+        </ul>
+
+      </header>
+      <section>
+        <h1>
+<a name="cosmopolite" class="anchor" href="#cosmopolite"><span class="octicon octicon-link"></span></a>Cosmopolite Tutorial</h1>
+
+<h3>AppEngine prerequisites</h3>
+
+<ol>
+  <li>Download and install the <a href="https://developers.google.com/appengine/downloads">Python AppEngine SDK</a></li>
+</ol>
+
+<h3>Server-side setup</h3>
+
+<ol>
+  <li>Create an application in your SDK client</li>
+  <li>Download cosmopolite via the links at left. Unpack it into a "cosmopolite" subdirectory of your local application</li>
+  <li>Create an <a href="https://developers.google.com/appengine/docs/python/config/appconfig">app.yaml</a> file for your application.</li>
+  <li>Add a cosmopolite include to your app.yaml file:
+<pre>includes:
+- cosmopolite</pre></li>
+  <li>Start the application in your SDK client</li>
+</ol>
+
+<h3>Test cosmopolite</h3>
+
+<ol>
+  <li>Access your local cosmopolite debug page (replace port if necessary): <a href="http://localhost:8080/cosmopolite/static/debug.html">http://localhost:8080/cosmopolite/static/debug.html</a></li>
+</ol>
+
+
+      </section>
+    </div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-37845853-2', 'flamingcowtv.github.io');
+  ga('send', 'pageview');
+
+</script>
+  </body>
+</html>
