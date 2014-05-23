@@ -27,10 +27,6 @@ from cosmopolite.lib import utils
 import config
 
 
-class InvalidInstanceID(Exception):
-  pass
-
-
 def CreateChannel(google_user, client, instance_id, args):
   models.Instance.FindOrCreate(instance_id)
 
@@ -84,7 +80,10 @@ def SendMessage(google_user, client, instance_id, args):
 def Subscribe(google_user, client, instance_id, args):
   instance = models.Instance.FromID(instance_id)
   if not instance or not instance.active:
-    raise InvalidInstanceID
+    # Probably a race with the channel opening
+    return {
+      'result': 'retry',
+    }
 
   subject = models.Subject.FindOrCreate(args['subject'])
   messages = args.get('messages', 0)

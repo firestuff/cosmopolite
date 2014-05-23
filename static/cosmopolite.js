@@ -469,7 +469,7 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
   var xhr = new XMLHttpRequest();
   xhr.responseType = 'json';
 
-  var retryAfterDelay = function() {
+  var retryAfterDelay = function(newCommands) {
     var intDelay =
       xhr.getResponseHeader('Retry-After') ||
       Math.min(32, Math.max(2, delay || 2));
@@ -477,14 +477,14 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
       this.loggingPrefix_(),
       'RPC failed; will retry in ' + intDelay + ' seconds');
     var retry = function() {
-      this.sendRPCs_(commands, Math.pow(intDelay, 2));
+      this.sendRPCs_(newCommands, Math.pow(intDelay, 2));
     }.bind(this);
     window.setTimeout(retry, intDelay * 1000);
   }.bind(this);
 
   xhr.addEventListener('load', function(e) {
     if (xhr.status != 200) {
-      retryAfterDelay();
+      retryAfterDelay(commands);
       return;
     }
     var data = xhr.response;
@@ -517,10 +517,21 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
     // data.
     data['events'].forEach(this.onServerEvent_, this);
 
+    var retryCommands = [];
+
     for (var i = 0; i < data['responses'].length; i++) {
+      var response = data['responses'][i];
+      if (response['result'] == 'retry') {
+        retryCommands.push(commands[i]);
+        continue;
+      }
       if (commands[i]['onSuccess']) {
         commands[i]['onSuccess'].bind(this)(data['responses'][i]);
       }
+    }
+
+    if (retryCommands.length) {
+      retryAfterDelay(retryCommands);
     }
   }.bind(this));
 
