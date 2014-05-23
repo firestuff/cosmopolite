@@ -76,7 +76,7 @@
 <pre>var cosmo = new Cosmopolite();
 cosmo.sendMessage('testsubject', 'test message');</pre></li>
   <li>Keep the debug page (from above) up and subscribed (to <i>testsubject</i>) in one browser tab</li>
-  <li>Load <a href="http://localhost:8080/test.html" target="_blank">your test page</a> <b>in an incognito window</b> (right click/control-click, Open Link in Incognito Window)</li>
+  <li>Load <a href="http://localhost:8080/test.html" target="_blank">your test page</a></li>
   <li>The debug page should show the message from the test page</li>
   <li>You've written code that uses cosmopolite!</li>
 </ol>
@@ -87,7 +87,8 @@ cosmo.sendMessage('testsubject', 'test message');</pre></li>
   <li><b>Subject</b>: a topic that clients that publish and subscribe to, e.g. "books"</li>
   <li><b>Message</b>: a single chunk of data transmitted to a single subject, e.g. "I love books!"</li>
   <li><b>Key</b>: an optional string associated with a message, that can be used to look up the last message with a given key, e.g. "title" (key) = "A place to talk about books" (message)</li>
-  <li><b>Client</b>: an instance of Cosmopolite() in a browser</li>
+  <li><b>Instance</b>: a single instantiation of Cosmopolite() in a browser (destroyed on page close)</li>
+  <li><b>Client</b>: a persistent identifier for a browser (consistent across browser restarts)</li>
   <li><b>Profile</b>: a collection of clients that all speak as the same user (and so should appear the same to subscribers)</li>
 </ol>
 
@@ -102,7 +103,7 @@ cosmo.sendMessage('testsubject', 'test message');</pre></li>
 };
 var cosmo = new Cosmopolite(callbacks);
 cosmo.subscribe('testsubject');</pre></li>
-  <li>Load (or re-load) the test page (still in an incognito window)</li>
+  <li>Load (or re-load) the test page</li>
   <li>Use the debug interface to send a message to <i>testsubject</i></li>
   <li>Your test page should generate an alert popup</li>
 </ol>
