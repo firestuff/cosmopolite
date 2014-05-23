@@ -28,8 +28,10 @@ import config
 
 
 def CreateChannel(google_user, client, instance_id, args):
+  instance = models.Instance.FindOrCreate(instance_id, client)
+
   token = channel.create_channel(
-      client_id=str(client.key()) + '/' + instance_id,
+      client_id=str(instance),
       duration_minutes=config.CHANNEL_DURATION_SECONDS / 60)
   events = []
   if google_user:

@@ -89,6 +89,7 @@ class Instance(db.Model):
   # parent=Client
 
   id_ = db.StringProperty(required=True)
+  active = db.BooleanProperty(required=True, default=False)
 
   @classmethod
   @db.transactional()
@@ -111,11 +112,6 @@ class Instance(db.Model):
       return instance
     else:
       return cls(parent=client, id_=instance_id).put()
-
-  def SendMessage(self, msg):
-    channel.send_message(
-        str(self.parent_key()) + '/' + self.id_,
-        json.dumps(msg, default=utils.EncodeJSON))
 
 
 class Subject(db.Model):
@@ -231,7 +227,7 @@ class Subject(db.Model):
     obj, subscriptions = self.PutMessage(message, sender, sender_message_id, key)
     event = obj.ToEvent()
     for subscription in subscriptions:
-      subscription.instance.SendMessage(event)
+      subscription.SendMessage(event)
 
   def ToDict(self):
     ret = {
@@ -283,6 +279,12 @@ class Subscription(db.Model):
         .filter('instance =', instance))
     for subscription in subscriptions:
       subscription.delete()
+
+  def SendMessage(self, msg):
+    instance_key = Subscription.instance.get_value_for_datastore(self)
+    channel.send_message(
+        str(instance_key),
+        json.dumps(msg, default=utils.EncodeJSON))
 
 
 class Message(db.Model):
