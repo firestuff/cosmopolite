@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import webapp2
 
 from google.appengine.ext import db
@@ -26,7 +27,7 @@ class OnChannelConnect(webapp2.RequestHandler):
   @db.transactional()
   def post(self):
     instance_id = self.request.get('from')
-    instance = models.Instance.get_by_id(instance_id)
+    instance = models.Instance.FromID(instance_id)
     instance.active = True
     instance.put()
 
@@ -35,7 +36,7 @@ class OnChannelDisconnect(webapp2.RequestHandler):
   @utils.local_namespace
   def post(self):
     instance_id = self.request.get('from')
-    instance = models.Instance.get_by_id(instance_id)
+    instance = models.Instance.FromID(instance_id)
 
     subscriptions = models.Subscription.all().filter('instance =', instance)
     for subscription in subscriptions:

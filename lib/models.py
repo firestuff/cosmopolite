@@ -24,7 +24,8 @@ import utils
 
 # Profile
 # ↳ Client
-#   ↳ Instance
+#
+# Instance (⤴︎ Client)
 #
 # Subject
 # ↳ Message
@@ -86,32 +87,24 @@ class Client(db.Model):
 
 
 class Instance(db.Model):
-  # parent=Client
-
-  id_ = db.StringProperty(required=True)
+  client = db.ReferenceProperty(required=True)
   active = db.BooleanProperty(required=True, default=False)
 
   @classmethod
   @db.transactional()
-  def FromID(cls, instance_id, client):
-    instances = (
-        cls.all(keys_only=True)
-        .filter('id_ =', instance_id)
-        .ancestor(client)
-        .fetch(1))
-    if instances:
-      return instances[0]
-    else:
-      return None
+  def FromID(cls, instance_id):
+    # TODO: assert client equality here if possible
+    return cls.get_by_key_name(instance_id)
 
   @classmethod
   @db.transactional()
   def FindOrCreate(cls, instance_id, client):
-    instance = cls.FromID(instance_id, client)
+    instance = cls.get_by_key_name(instance_id)
     if instance:
+      # TODO: assert client equality here
       return instance
     else:
-      return cls(parent=client, id_=instance_id).put()
+      return cls(key_name=instance_id, client=client).put()
 
 
 class Subject(db.Model):
@@ -252,8 +245,10 @@ class Subscription(db.Model):
   def FindOrCreate(cls, subject, instance, messages=0, last_id=None):
     readable_only_by = (
         Subject.readable_only_by.get_value_for_datastore(subject))
+    client_key = (
+        Instance.client.get_value_for_datastore(instance))
     if (readable_only_by and
-        readable_only_by != instance.parent().parent()):
+        readable_only_by != client_key.parent()):
       raise AccessDenied
 
     subscriptions = (
@@ -283,7 +278,7 @@ class Subscription(db.Model):
   def SendMessage(self, msg):
     instance_key = Subscription.instance.get_value_for_datastore(self)
     channel.send_message(
-        str(instance_key.id()),
+        str(instance_key.name()),
         json.dumps(msg, default=utils.EncodeJSON))
 
 

@@ -27,11 +27,15 @@ from cosmopolite.lib import utils
 import config
 
 
+class InvalidInstanceID(Exception):
+  pass
+
+
 def CreateChannel(google_user, client, instance_id, args):
-  instance = models.Instance.FindOrCreate(instance_id, client)
+  models.Instance.FindOrCreate(instance_id, client)
 
   token = channel.create_channel(
-      client_id=str(instance.id()),
+      client_id=instance_id,
       duration_minutes=config.CHANNEL_DURATION_SECONDS / 60)
   events = []
   if google_user:
@@ -78,7 +82,10 @@ def SendMessage(google_user, client, instance_id, args):
 
 
 def Subscribe(google_user, client, instance_id, args):
-  instance = models.Instance.FromID(instance_id, client)
+  instance = models.Instance.FromID(instance_id)
+  if not instance or not instance.active:
+    raise InvalidInstanceID
+
   subject = models.Subject.FindOrCreate(args['subject'])
   messages = args.get('messages', 0)
   last_id = args.get('last_id', None)
@@ -105,7 +112,7 @@ def Subscribe(google_user, client, instance_id, args):
 
 
 def Unsubscribe(google_user, client, instance_id, args):
-  instance = models.Instance.FromID(instance_id, client)
+  instance = models.Instance.FromID(instance_id)
   subject = models.Subject.FindOrCreate(args['subject'])
   models.Subscription.Remove(subject, instance)
 
