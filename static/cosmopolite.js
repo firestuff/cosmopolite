@@ -45,6 +45,8 @@ var Cosmopolite = function(callbacks, urlPrefix, namespace) {
   this.subscriptions_ = {};
   this.profilePromises_ = [];
 
+  this.instanceId_ = this.uuid_();
+
   this.messageQueueKey_ = this.namespace_ + ':message_queue';
   if (this.messageQueueKey_ in localStorage) {
     var messages = JSON.parse(localStorage[this.messageQueueKey_]);
@@ -447,6 +449,7 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
     return;
   }
   var request = {
+    'instance_id': this.instanceId_,
     'commands': [],
   };
   commands.forEach(function(command) {

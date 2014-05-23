@@ -441,6 +441,32 @@ asyncTest('sendMessage ACL', function() {
   });
 });
 
+asyncTest('Two channels, one client', function() {
+  expect(2);
+
+  var namespace = randstring();
+  var subject = randstring();
+  var message = randstring();
+
+  var callbacks = {
+    'onMessage': function(msg) {
+      console.log('onMessage');
+      equal(msg['subject']['name'], subject, 'subject matches');
+      equal(msg['message'], message, 'message matches');
+      cosmo1.shutdown();
+      start();
+    },
+  };
+
+  var cosmo1 = new Cosmopolite(callbacks, null, namespace);
+  cosmo1.subscribe(subject).then(function() {
+    var cosmo2 = new Cosmopolite({}, null, namespace);
+    cosmo2.sendMessage(subject, message).then(function() {
+      cosmo2.shutdown();
+    });
+  });
+});
+
 
 module('dev_appserver only');
 

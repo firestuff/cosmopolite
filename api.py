@@ -27,9 +27,9 @@ from cosmopolite.lib import utils
 import config
 
 
-def CreateChannel(google_user, client, args):
+def CreateChannel(google_user, client, instance_id, args):
   token = channel.create_channel(
-      client_id=str(client.key()),
+      client_id=str(client.key()) + '/' + instance_id,
       duration_minutes=config.CHANNEL_DURATION_SECONDS / 60)
   events = []
   if google_user:
@@ -50,7 +50,7 @@ def CreateChannel(google_user, client, args):
   }
 
 
-def SendMessage(google_user, client, args):
+def SendMessage(google_user, client, instance_id, args):
   subject = args['subject']
   message = args['message']
   sender_message_id = args['sender_message_id']
@@ -75,7 +75,8 @@ def SendMessage(google_user, client, args):
   }
 
 
-def Subscribe(google_user, client, args):
+def Subscribe(google_user, client, instance_id, args):
+  instance = models.Instance.FromID(instance_id, client)
   subject = models.Subject.FindOrCreate(args['subject'])
   messages = args.get('messages', 0)
   last_id = args.get('last_id', None)
@@ -84,7 +85,8 @@ def Subscribe(google_user, client, args):
   try:
     ret = {
       'result': 'ok',
-      'events': models.Subscription.FindOrCreate(subject, client, messages, last_id),
+      'events': models.Subscription.FindOrCreate(
+          subject, instance, messages, last_id),
     }
   except models.AccessDenied:
     logging.exception('Subscribe access denied')
@@ -100,9 +102,10 @@ def Subscribe(google_user, client, args):
   return ret
 
 
-def Unsubscribe(google_user, client, args):
+def Unsubscribe(google_user, client, instance_id, args):
+  instance = models.Instance.FromID(instance_id, client)
   subject = models.Subject.FindOrCreate(args['subject'])
-  models.Subscription.Remove(subject, client)
+  models.Subscription.Remove(subject, instance)
 
   return {}
 
@@ -134,6 +137,7 @@ class APIWrapper(webapp2.RequestHandler):
       result = callback(
           self.verified_google_user,
           self.client,
+          self.request_json['instance_id'],
           command.get('arguments', {}))
       # Magic: if result contains "events", haul them up a level so the
       # client can see them as a single stream.

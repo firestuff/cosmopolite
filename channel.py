@@ -25,21 +25,23 @@ class OnChannelConnect(webapp2.RequestHandler):
   @utils.local_namespace
   @db.transactional()
   def post(self):
-    client = models.Client.get(self.request.get('from'))
-    client.channel_active = True
-    client.put()
+    client_key, instance_id = self.request.get('from').split('/', 1)
+    client = models.Client.get(client_key)
+    instance = models.Instance.FindOrCreate(instance_id, client)
 
 
 class OnChannelDisconnect(webapp2.RequestHandler):
   @utils.local_namespace
   def post(self):
-    client = models.Client.get(self.request.get('from'))
-    client.channel_active = False
-    client.put()
+    client_key, instance_id = self.request.get('from').split('/', 1)
+    client = models.Client.get(client_key)
+    instance = models.Instance.FindOrCreate(instance_id, client)
 
-    subscriptions = models.Subscription.all().filter('client =', client)
+    subscriptions = models.Subscription.all().filter('instance =', instance)
     for subscription in subscriptions:
       subscription.delete()
+
+    models.Instance.get(instance).delete()
 
 
 app = webapp2.WSGIApplication([

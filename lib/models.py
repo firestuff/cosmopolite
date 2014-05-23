@@ -24,10 +24,11 @@ import utils
 
 # Profile
 # ↳ Client
+#   ↳ Instance
 #
 # Subject
 # ↳ Message
-# ↳ Subscription (⤴︎ Client)
+# ↳ Subscription (⤴︎ Instance)
 
 
 class DuplicateMessage(Exception):
@@ -71,7 +72,6 @@ class Client(db.Model):
   # parent=Profile
 
   first_seen = db.DateTimeProperty(required=True, auto_now_add=True)
-  channel_active = db.BooleanProperty(required=True, default=False)
 
   @classmethod
   def FromProfile(cls, profile):
@@ -84,12 +84,38 @@ class Client(db.Model):
     profile = Profile.FromGoogleUser(google_user)
     return cls.FromProfile(profile)
 
-  def SendMessage(self, msg):
-    self.SendByKey(self.key(), msg)
 
-  @staticmethod
-  def SendByKey(key, msg):
-    channel.send_message(str(key), json.dumps(msg, default=utils.EncodeJSON))
+class Instance(db.Model):
+  # parent=Client
+
+  id_ = db.StringProperty(required=True)
+
+  @classmethod
+  @db.transactional()
+  def FromID(cls, instance_id, client):
+    instances = (
+        cls.all(keys_only=True)
+        .filter('id_ =', instance_id)
+        .ancestor(client)
+        .fetch(1))
+    if instances:
+      return instances[0]
+    else:
+      return None
+
+  @classmethod
+  @db.transactional()
+  def FindOrCreate(cls, instance_id, client):
+    instance = cls.FromID(instance_id, client)
+    if instance:
+      return instance
+    else:
+      return cls(parent=client, id_=instance_id).put()
+
+  def SendMessage(self, msg):
+    channel.send_message(
+        str(self.parent_key()) + '/' + self.id_,
+        json.dumps(msg, default=utils.EncodeJSON))
 
 
 class Subject(db.Model):
@@ -195,10 +221,7 @@ class Subject(db.Model):
         key_=key)
     obj.put()
 
-    return (
-        obj,
-        [Subscription.client.get_value_for_datastore(subscription)
-         for subscription in Subscription.all().ancestor(subject)])
+    return (obj, list(Subscription.all().ancestor(subject)))
 
   def SendMessage(self, message, sender, sender_message_id, key=None):
     writable_only_by = Subject.writable_only_by.get_value_for_datastore(self)
@@ -208,7 +231,7 @@ class Subject(db.Model):
     obj, subscriptions = self.PutMessage(message, sender, sender_message_id, key)
     event = obj.ToEvent()
     for subscription in subscriptions:
-      Client.SendByKey(subscription, event)
+      subscription.instance.SendMessage(event)
 
   def ToDict(self):
     ret = {
@@ -226,24 +249,24 @@ class Subject(db.Model):
 class Subscription(db.Model):
   # parent=Subject
 
-  client = db.ReferenceProperty(reference_class=Client)
+  instance = db.ReferenceProperty(reference_class=Instance, required=True)
 
   @classmethod
   @db.transactional()
-  def FindOrCreate(cls, subject, client, messages=0, last_id=None):
+  def FindOrCreate(cls, subject, instance, messages=0, last_id=None):
     readable_only_by = (
         Subject.readable_only_by.get_value_for_datastore(subject))
     if (readable_only_by and
-        readable_only_by != client.parent_key()):
+        readable_only_by != instance.parent().parent()):
       raise AccessDenied
 
     subscriptions = (
         cls.all(keys_only=True)
         .ancestor(subject)
-        .filter('client =', client)
+        .filter('instance =', instance)
         .fetch(1))
     if not subscriptions:
-      cls(parent=subject, client=client).put()
+      cls(parent=subject, instance=instance).put()
     events = []
     if messages:
       events.extend(m.ToEvent() for m in subject.GetRecentMessages(messages))
@@ -253,11 +276,11 @@ class Subscription(db.Model):
 
   @classmethod
   @db.transactional()
-  def Remove(cls, subject, client):
+  def Remove(cls, subject, instance):
     subscriptions = (
         cls.all()
         .ancestor(subject)
-        .filter('client =', client))
+        .filter('instance =', instance))
     for subscription in subscriptions:
       subscription.delete()
 
