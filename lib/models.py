@@ -25,7 +25,7 @@ import utils
 # Profile
 # ↳ Client
 #
-# Instance (⤴︎ Client)
+# Instance
 #
 # Subject
 # ↳ Message
@@ -97,7 +97,7 @@ class Instance(db.Model):
   @classmethod
   @db.transactional()
   def FindOrCreate(cls, instance_id):
-    instance = cls.get_by_key_name(instance_id)
+    instance = cls.FromID(instance_id)
     if instance:
       return instance
     else:
