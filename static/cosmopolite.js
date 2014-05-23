@@ -45,8 +45,6 @@ var Cosmopolite = function(callbacks, urlPrefix, namespace) {
   this.subscriptions_ = {};
   this.profilePromises_ = [];
 
-  this.instanceId_ = this.uuid_();
-
   this.messageQueueKey_ = this.namespace_ + ':message_queue';
   if (this.messageQueueKey_ in localStorage) {
     var messages = JSON.parse(localStorage[this.messageQueueKey_]);
@@ -595,6 +593,8 @@ Cosmopolite.prototype.createChannel_ = function() {
   } else {
     return;
   }
+
+  this.instanceId_ = this.uuid_();
 
   var rpcs = [
     {
