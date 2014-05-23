@@ -25,8 +25,8 @@ class OnChannelConnect(webapp2.RequestHandler):
   @utils.local_namespace
   @db.transactional()
   def post(self):
-    instance_key = self.request.get('from')
-    instance = models.Instance.get(instance_key)
+    instance_id = self.request.get('from')
+    instance = models.Instance.get_by_id(instance_id)
     instance.active = True
     instance.put()
 
@@ -34,8 +34,8 @@ class OnChannelConnect(webapp2.RequestHandler):
 class OnChannelDisconnect(webapp2.RequestHandler):
   @utils.local_namespace
   def post(self):
-    instance_key = self.request.get('from')
-    instance = models.Instance.get(instance_key)
+    instance_id = self.request.get('from')
+    instance = models.Instance.get_by_id(instance_id)
 
     subscriptions = models.Subscription.all().filter('instance =', instance)
     for subscription in subscriptions:

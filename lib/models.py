@@ -283,7 +283,7 @@ class Subscription(db.Model):
   def SendMessage(self, msg):
     instance_key = Subscription.instance.get_value_for_datastore(self)
     channel.send_message(
-        str(instance_key),
+        str(instance_key.id()),
         json.dumps(msg, default=utils.EncodeJSON))
 
 
