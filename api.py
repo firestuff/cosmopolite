@@ -32,7 +32,7 @@ class InvalidInstanceID(Exception):
 
 
 def CreateChannel(google_user, client, instance_id, args):
-  models.Instance.FindOrCreate(instance_id, client)
+  models.Instance.FindOrCreate(instance_id)
 
   token = channel.create_channel(
       client_id=instance_id,
@@ -95,7 +95,7 @@ def Subscribe(google_user, client, instance_id, args):
     ret = {
       'result': 'ok',
       'events': models.Subscription.FindOrCreate(
-          subject, instance, messages, last_id),
+          subject, client, instance, messages, last_id),
     }
   except models.AccessDenied:
     logging.exception('Subscribe access denied')

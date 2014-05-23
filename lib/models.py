@@ -87,24 +87,21 @@ class Client(db.Model):
 
 
 class Instance(db.Model):
-  client = db.ReferenceProperty(required=True)
   active = db.BooleanProperty(required=True, default=False)
 
   @classmethod
   @db.transactional()
   def FromID(cls, instance_id):
-    # TODO: assert client equality here if possible
     return cls.get_by_key_name(instance_id)
 
   @classmethod
   @db.transactional()
-  def FindOrCreate(cls, instance_id, client):
+  def FindOrCreate(cls, instance_id):
     instance = cls.get_by_key_name(instance_id)
     if instance:
-      # TODO: assert client equality here
       return instance
     else:
-      return cls(key_name=instance_id, client=client).put()
+      return cls(key_name=instance_id).put()
 
 
 class Subject(db.Model):
@@ -242,13 +239,11 @@ class Subscription(db.Model):
 
   @classmethod
   @db.transactional()
-  def FindOrCreate(cls, subject, instance, messages=0, last_id=None):
+  def FindOrCreate(cls, subject, client, instance, messages=0, last_id=None):
     readable_only_by = (
         Subject.readable_only_by.get_value_for_datastore(subject))
-    client_key = (
-        Instance.client.get_value_for_datastore(instance))
     if (readable_only_by and
-        readable_only_by != client_key.parent()):
+        readable_only_by != client.parent_key()):
       raise AccessDenied
 
     subscriptions = (
