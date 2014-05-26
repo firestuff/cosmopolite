@@ -33,22 +33,20 @@ class OnChannelConnect(webapp2.RequestHandler):
 
 
 class OnChannelDisconnect(webapp2.RequestHandler):
-  @staticmethod
-  @db.transactional()
-  def DeleteInstance(instance_id):
-    instance = models.Instance.FromID(instance_id)
-    ret = instance.key()
-    instance.delete()
-    return ret
-
   @utils.local_namespace
   def post(self):
     instance_id = self.request.get('from')
-    instance_key = self.DeleteInstance(instance_id)
+    instance = models.Instance.FromID(instance_id)
 
-    subscriptions = models.Subscription.all().filter('instance =', instance_key)
+    subscriptions = models.Subscription.all().filter('instance =', instance)
     for subscription in subscriptions:
       subscription.delete()
+
+    pins = models.Pin.all().filter('instance =', instance)
+    for pin in pins:
+      pin.Delete()
+
+    instance.delete()
 
 
 app = webapp2.WSGIApplication([

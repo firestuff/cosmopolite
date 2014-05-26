@@ -43,6 +43,7 @@ var Cosmopolite = function(callbacks, urlPrefix, namespace) {
 
   this.rpcQueue_ = [];
   this.subscriptions_ = {};
+  this.pins_ = {};
   this.profilePromises_ = [];
 
   this.messageQueueKey_ = this.namespace_ + ':message_queue';
@@ -140,6 +141,7 @@ Cosmopolite.prototype.subscribe = function(subject, messages, last_id, keys) {
     if (!(subjectString in this.subscriptions_)) {
       this.subscriptions_[subjectString] = {
         'messages': [],
+        'pins':     [],
         'keys':     {},
         'state':    this.SubscriptionState.PENDING,
       };
@@ -236,6 +238,18 @@ Cosmopolite.prototype.getMessages = function(subject) {
 };
 
 /**
+ * Fetch all current pins for a subject
+ *
+ * @param {!string} subject Subject name
+ * @const
+ */
+Cosmopolite.prototype.getPins = function(subject) {
+  var canonicalSubject = this.canonicalSubject_(subject);
+  var subjectString = JSON.stringify(canonicalSubject);
+  return this.subscriptions_[subjectString].pins;
+};
+
+/**
  * Fetch the most recent message that defined a key
  *
  * @param {!string} subject Subject name
@@ -272,6 +286,50 @@ Cosmopolite.prototype.currentProfile = function() {
 };
 
 /**
+ * Pin a message to the given subject, storing it and notifying all listeners.
+ *
+ * The message is deleted on unpin() or when we disconnect.
+ *
+ * The resulting Promise resolve callback is passed an ID that can later be
+ * passed to unpin().
+ *
+ * @param {!*} subject Subject name or object
+ * @param {!*} message Message string or object
+ */
+Cosmopolite.prototype.pin = function(subject, message) {
+  return new Promise(function(resolve, reject) {
+    var id = this.uuid_();
+    var args = {
+      'subject':           this.canonicalSubject_(subject),
+      'message':           JSON.stringify(message),
+      'sender_message_id': id,
+    };
+
+    this.pins_[id] = args;
+
+    this.sendRPC_('pin', args, resolve.bind(null, id));
+  }.bind(this));
+};
+
+/**
+ * Unpin a message from the given subject, storing it and notifying all listeners.
+ *
+ * @param {!string} id ID returned by pin()'s resolve callback
+ */
+Cosmopolite.prototype.unpin = function(id) {
+  return new Promise(function(resolve, reject) {
+    var args = {
+      'subject':           this.pins_[id]['subject'],
+      'sender_message_id': id,
+    };
+
+    delete this.pins_[id];
+
+    this.sendRPC_('unpin', args, resolve);
+  }.bind(this));
+};
+
+/**
  * Generate a string identifying us to be included in log messages.
  *
  * @return {string} Log line prefix.
@@ -301,7 +359,7 @@ Cosmopolite.prototype.uuid_ = function() {
 /**
  * Canonicalize a subject name or object
  *
- * @param {!*} subject A simple or complex representation of a subject
+ * @param {!Object|string|number} subject A simple or complex representation of a subject
  * @return {Object} A canonicalized object for RPCs
  */
 Cosmopolite.prototype.canonicalSubject_ = function(subject) {
@@ -543,7 +601,7 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
 /**
  * Are we currently clear to put RPCs on the wire?
  *
- * @return {Boolean} Yes or no?
+ * @return {boolean} Yes or no?
  */
 Cosmopolite.prototype.maySendRPC_ = function() {
   if (!(this.namespace_ + ':client_id' in localStorage)) {
@@ -591,6 +649,12 @@ Cosmopolite.prototype.resubscribe_ = function() {
         'last_id':  last_id,
       }
     });
+    subscription.pins.forEach(function(pin) {
+      rpcs.push({
+        'command': 'pin',
+        'arguments': pin,
+      });
+    }, this);
   }
   this.sendRPCs_(rpcs);
 };
@@ -679,6 +743,12 @@ Cosmopolite.prototype.onSocketClose_ = function() {
     this.channelState_ = this.ChannelState.CLOSED;
   } else {
     return;
+  }
+
+  // We treat a disconnection as if all pins disappeared
+  for (var subject in this.subscriptions_) {
+    var subscription = this.subscriptions_[subject];
+    subscription.pins.forEach(this.onUnpin_, this);
   }
 
   this.createChannel_();
@@ -774,6 +844,68 @@ Cosmopolite.prototype.onMessage_ = function(e) {
 };
 
 /**
+ * Callback on receiving a 'pin' event from the server
+ *
+ * @param {!Object} e Event object
+ */
+Cosmopolite.prototype.onPin_ = function(e) {
+  var subjectString = JSON.stringify(e['subject']);
+  var subscription = this.subscriptions_[subjectString];
+  if (!subscription) {
+    console.log(
+      this.loggingPrefix_(),
+      'message from unrecognized subject:', e);
+    return;
+  }
+  var duplicate = subscription.pins.some(function(pin) {
+    return pin['id'] == e.id;
+  });
+  if (duplicate) {
+    console.log(this.loggingPrefix_(), 'duplicate pin:', e);
+    return;
+  }
+  e['message'] = JSON.parse(e['message']);
+
+  subscription.pins.push(e);
+  if ('onPin' in this.callbacks_) {
+    this.callbacks_['onPin'](e);
+  }
+};
+
+/**
+ * Callback on receiving an 'unpin' event from the server
+ *
+ * @param {!Object} e Event object
+ */
+Cosmopolite.prototype.onUnpin_ = function(e) {
+  var subjectString = JSON.stringify(e['subject']);
+  var subscription = this.subscriptions_[subjectString];
+  if (!subscription) {
+    console.log(
+      this.loggingPrefix_(),
+      'message from unrecognized subject:', e);
+    return;
+  }
+  var index;
+  for (index = 0; index < subscription.pins.length; index++) {
+    var pin = subscription.pins[index];
+    if (pin['id'] == e['id']) {
+      break;
+    }
+  };
+  if (index == subscription.pins.length) {
+    console.log(this.loggingPrefix_(), 'unknown pin:', e);
+    return;
+  }
+  e['message'] = JSON.parse(e['message']);
+
+  subscription.pins.splice(index, 1)[0];
+  if ('onUnpin' in this.callbacks_) {
+    this.callbacks_['onUnpin'](e);
+  }
+};
+
+/**
  * Callback for Cosmopolite event (received via channel or pseudo-channel)
  *
  * @param {!Object} e Deserialized event object
@@ -798,6 +930,12 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
       break;
     case 'message':
       this.onMessage_(e);
+      break;
+    case 'pin':
+      this.onPin_(e);
+      break;
+    case 'unpin':
+      this.onUnpin_(e);
       break;
     default:
       // Client out of date? Force refresh?

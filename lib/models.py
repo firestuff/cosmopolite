@@ -29,6 +29,7 @@ import utils
 #
 # Subject
 # ↳ Message
+# ↳ Pin (⤴︎ Instance)
 # ↳ Subscription (⤴︎ Instance)
 
 
@@ -173,6 +174,13 @@ class Subject(db.Model):
     return None
 
   @db.transactional()
+  def GetPins(self):
+    query = (
+        Pin.all()
+        .ancestor(self))
+    return list(query)
+
+  @db.transactional()
   def PutMessage(self, message, sender, sender_message_id, key=None):
     """Internal helper for SendMessage().
 
@@ -209,15 +217,80 @@ class Subject(db.Model):
 
     return (obj, list(Subscription.all().ancestor(subject)))
 
-  def SendMessage(self, message, sender, sender_message_id, key=None):
+  def VerifyWritable(self, sender):
     writable_only_by = Subject.writable_only_by.get_value_for_datastore(self)
     if (writable_only_by and
         writable_only_by != sender):
       raise AccessDenied
+
+  def SendMessage(self, message, sender, sender_message_id, key=None):
+    self.VerifyWritable(sender)
     obj, subscriptions = self.PutMessage(message, sender, sender_message_id, key)
     event = obj.ToEvent()
     for subscription in subscriptions:
       subscription.SendMessage(event)
+
+  @db.transactional(xg=True)
+  def PutPin(self, message, sender, sender_message_id, instance):
+    """Internal helper for Pin()."""
+    # Reload the subject and instance to establish a barrier
+    subject = Subject.get(self.key())
+    instance = Instance.get(instance.key())
+
+    # sender_message_id should be universal across all subjects, but we check
+    # it within just this subject to allow in-transaction verification.
+    pins = (
+        Pin.all()
+        .ancestor(subject)
+        .filter('sender_message_id =', sender_message_id)
+        .fetch(1))
+    if pins:
+      raise DuplicateMessage(sender_message_id)
+
+    obj = Pin(
+        parent=subject,
+        message=message,
+        sender=sender,
+        sender_message_id=sender_message_id,
+        instance=instance)
+    obj.put()
+
+    return (obj, list(Subscription.all().ancestor(subject)))
+
+  def Pin(self, message, sender, sender_message_id, instance):
+    self.VerifyWritable(sender)
+    obj, subscriptions = self.PutPin(
+        message, sender, sender_message_id, instance)
+    event = obj.ToEvent()
+    for subscription in subscriptions:
+      subscription.SendMessage(event)
+
+  @db.transactional(xg=True)
+  def RemovePin(self, sender, sender_message_id, instance):
+    # Reload the subject and instance to establish a barrier
+    subject = Subject.get(self.key())
+    instance = Instance.get(instance.key())
+
+    pins = (
+        Pin.all()
+        .ancestor(subject)
+        .filter('sender =', sender)
+        .filter('sender_message_id =', sender_message_id)
+        .filter('instance =', instance))
+
+    events = []
+    for pin in pins:
+      events.append(pin.ToEvent(event_type='unpin'))
+      pin.delete()
+
+    return (events, list(Subscription.all().ancestor(subject)))
+
+  def Unpin(self, sender, sender_message_id, instance):
+    self.VerifyWritable(sender)
+    events, subscriptions = self.RemovePin(sender, sender_message_id, instance)
+    for event in events:
+      for subscription in subscriptions:
+        subscription.SendMessage(event)
 
   def ToDict(self):
     ret = {
@@ -253,7 +326,7 @@ class Subscription(db.Model):
         .fetch(1))
     if not subscriptions:
       cls(parent=subject, instance=instance).put()
-    events = []
+    events = [m.ToEvent() for m in subject.GetPins()]
     if messages:
       events.extend(m.ToEvent() for m in subject.GetRecentMessages(messages))
     if last_id is not None:
@@ -301,3 +374,26 @@ class Message(db.Model):
     if self.key_:
       ret['key'] = self.key_
     return ret
+
+
+class Pin(db.Model):
+  # parent=Subject
+
+  created = db.DateTimeProperty(required=True, auto_now_add=True)
+  instance = db.ReferenceProperty(required=True, reference_class=Instance)
+  sender = db.ReferenceProperty(required=True, reference_class=Profile)
+  message = db.TextProperty(required=True)
+  sender_message_id = db.StringProperty(required=True)
+
+  def ToEvent(self, event_type='pin'):
+    return {
+      'event_type':  event_type,
+      'id':          str(self.key()),
+      'sender':      str(Pin.sender.get_value_for_datastore(self)),
+      'subject':     self.parent().ToDict(),
+      'created':     self.created,
+      'message':     self.message,
+    }
+
+  def Delete(self):
+    self.parent().Unpin(self.sender, self.sender_message_id, self.instance)

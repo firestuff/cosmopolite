@@ -52,6 +52,32 @@ def CreateChannel(google_user, client, instance_id, args):
   }
 
 
+def Pin(google_user, client, instance_id, args):
+  instance = models.Instance.FromID(instance_id)
+
+  subject = args['subject']
+  message = args['message']
+  sender_message_id = args['sender_message_id']
+
+  try:
+    models.Subject.FindOrCreate(subject).Pin(
+        message, client.parent_key(), sender_message_id, instance)
+  except models.DuplicateMessage:
+    logging.exception('Duplicate message: %s', sender_message_id)
+    return {
+      'result': 'duplicate_message',
+    }
+  except models.AccessDenied:
+    logging.exception('Pin access denied')
+    return {
+      'result': 'access_denied',
+    }
+
+  return {
+    'result': 'ok',
+  }
+
+
 def SendMessage(google_user, client, instance_id, args):
   subject = args['subject']
   message = args['message']
@@ -110,6 +136,25 @@ def Subscribe(google_user, client, instance_id, args):
   return ret
 
 
+def Unpin(google_user, client, instance_id, args):
+  instance = models.Instance.FromID(instance_id)
+  subject = args['subject']
+  sender_message_id = args['sender_message_id']
+
+  try:
+    models.Subject.FindOrCreate(subject).Unpin(
+        client.parent_key(), sender_message_id, instance)
+  except models.AccessDenied:
+    logging.exception('Pin access denied')
+    return {
+      'result': 'access_denied',
+    }
+
+  return {
+    'result': 'ok',
+  }
+
+
 def Unsubscribe(google_user, client, instance_id, args):
   instance = models.Instance.FromID(instance_id)
   subject = models.Subject.FindOrCreate(args['subject'])
@@ -122,8 +167,10 @@ class APIWrapper(webapp2.RequestHandler):
 
   _COMMANDS = {
       'createChannel': CreateChannel,
+      'pin': Pin,
       'sendMessage': SendMessage,
       'subscribe': Subscribe,
+      'unpin': Unpin,
       'unsubscribe': Unsubscribe,
   }
 

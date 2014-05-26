@@ -29,11 +29,16 @@ a {
     </div>
     <div>
       <input type="button" id="send" value="Send">
+      <input type="button" id="pin" value="Pin">
     </div>
 
     <hr>
 
     <div id="keys"></div>
+
+    <hr>
+
+    <div id="pins"></div>
 
     <hr>
 
@@ -48,6 +53,8 @@ var key = document.getElementById('key');
 
 var keys = document.getElementById('keys');
 
+var pins = document.getElementById('pins');
+
 var messages = document.getElementById('messages');
 
 var addMessage = function(message) {
@@ -58,6 +65,17 @@ var addMessage = function(message) {
     message['message']
   ));
   messages.appendChild(messageDiv);
+};
+
+var addPin = function(pin) {
+  var pinDiv = document.createElement('div');
+  pinDiv.appendChild(document.createTextNode(
+    (new Date(pin['created'] * 1000)).toString() +
+    ' <????-' + (Math.abs(pin['sender'].hashCode()) % 10000) + '> ' +
+    pin['message']
+  ));
+  pinDiv.pinId = pin['id'];
+  pins.appendChild(pinDiv);
 };
 
 window.addEventListener('load', function() {
@@ -99,6 +117,24 @@ window.addEventListener('load', function() {
         }
       }
     },
+    onPin: function(pin) {
+      if (subscriptions.value != pin['subject']['name']) {
+        return;
+      }
+      addPin(pin);
+    },
+    onUnpin: function(pin) {
+      if (subscriptions.value != pin['subject']['name']) {
+        return;
+      }
+      for (var i = 0; i < pins.childNodes.length; i++) {
+        var pinDiv = pins.childNodes[i];
+        if (pinDiv.pinId == pin['id']) {
+          pins.removeChild(pinDiv);
+          break;
+        }
+      }
+    },
   };
 
   var debug = new Cosmopolite(callbacks);
@@ -121,12 +157,18 @@ window.addEventListener('load', function() {
     debug.sendMessage(subscriptions.value, message.value, key.value);
   });
 
+  document.getElementById('pin').addEventListener('click', function() {
+    debug.pin(subscriptions.value, message.value);
+  });
+
   document.getElementById('subscriptions').addEventListener('change', function() {
     messages.innerHTML = '';
+    pins.innerHTML = '';
     if (!subscriptions.value) {
       return;
     }
     debug.getMessages(subscriptions.value).forEach(addMessage);
+    debug.getPins(subscriptions.value).forEach(addPin);
   });
 
 });

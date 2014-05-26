@@ -441,6 +441,34 @@ asyncTest('sendMessage ACL', function() {
   });
 });
 
+asyncTest('pin/unpin', function() {
+  expect(5);
+
+  var subject = randstring();
+  var message = randstring();
+
+  var callbacks = {
+    'onPin': function(e) {
+      equal(subject, e['subject']['name'], 'onPin: subject matches');
+      equal(message, e['message'], 'onPin: message matches');
+      equal(cosmo.getPins(subject).length, 1);
+      pin.then(function(id) {
+        cosmo.unpin(id);
+      });
+    },
+    'onUnpin': function(e) {
+      equal(subject, e['subject']['name'], 'onUnpin: subject matches');
+      equal(message, e['message'], 'onUnpin: message matches');
+      cosmo.shutdown();
+      start();
+    },
+  }
+
+  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.subscribe(subject);
+  var pin = cosmo.pin(subject, message);
+});
+
 
 module('dev_appserver only');
 
