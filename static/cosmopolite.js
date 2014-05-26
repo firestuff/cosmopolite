@@ -229,6 +229,21 @@ Cosmopolite.prototype.getMessages = function(subject) {
 };
 
 /**
+ * Fetch the most recent message for a subject
+ *
+ * @param {!string} subject Subject name
+ * @const
+ */
+Cosmopolite.prototype.getLastMessage = function(subject) {
+  var messages = this.getMessages(subject);
+  if (messages.length) {
+    return messages[messages.length - 1];
+  } else {
+    return null;
+  }
+};
+
+/**
  * Fetch all current pins for a subject
  *
  * @param {!string} subject Subject name

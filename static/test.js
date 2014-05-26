@@ -240,7 +240,7 @@ test('getMessages/subscribe', function() {
 });
 
 asyncTest('subscribe barrier', function() {
-  expect(3);
+  expect(4);
 
   var subject = randstring();
   var message = randstring();
@@ -254,6 +254,7 @@ asyncTest('subscribe barrier', function() {
       equal(cosmo.getMessages(subject).length, 1, 'one message');
       equal(cosmo.getMessages(subject)[0]['subject']['name'], subject, 'subject matches');
       equal(cosmo.getMessages(subject)[0]['message'], message, 'message matches');
+      deepEqual(cosmo.getMessages(subject)[0], cosmo.getLastMessage(subject), 'getLastMessage works');
       cosmo.shutdown();
       start();
     });
