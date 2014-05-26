@@ -25,16 +25,9 @@ a {
       Message: <input type="text" id="message">
     </div>
     <div>
-      Key: <input type="text" id="key">
-    </div>
-    <div>
       <input type="button" id="send" value="Send">
       <input type="button" id="pin" value="Pin">
     </div>
-
-    <hr>
-
-    <div id="keys"></div>
 
     <hr>
 
@@ -49,9 +42,6 @@ var subject = document.getElementById('subject');
 var subscriptions = document.getElementById('subscriptions');
 
 var message = document.getElementById('message');
-var key = document.getElementById('key');
-
-var keys = document.getElementById('keys');
 
 var pins = document.getElementById('pins');
 
@@ -96,26 +86,6 @@ window.addEventListener('load', function() {
         return;
       }
       addMessage(message);
-      if (message['key']) {
-        var i;
-        for (i = 0; i < keys.childNodes.length; i++) {
-          var key = keys.childNodes[i];
-          if (key.message['key'] == message['key']) {
-            // Overwrite
-            key.replaceChild(
-              document.createTextNode(message['message']),
-              key.childNodes[1]);
-            break;
-          }
-        }
-        if (i == keys.childNodes.length) {
-          var keyDiv = document.createElement('div');
-          keyDiv.appendChild(document.createTextNode(message['key'] + ' = '));
-          keyDiv.appendChild(document.createTextNode(message['message']));
-          keyDiv.message = message;
-          keys.appendChild(keyDiv);
-        }
-      }
     },
     onPin: function(pin) {
       if (subscriptions.value != pin['subject']['name']) {
@@ -154,7 +124,7 @@ window.addEventListener('load', function() {
   });
 
   document.getElementById('send').addEventListener('click', function() {
-    debug.sendMessage(subscriptions.value, message.value, key.value);
+    debug.sendMessage(subscriptions.value, message.value);
   });
 
   document.getElementById('pin').addEventListener('click', function() {

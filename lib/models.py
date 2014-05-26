@@ -162,18 +162,6 @@ class Subject(db.Model):
     return list(query)
 
   @db.transactional()
-  def GetKey(self, key):
-    messages = (
-        Message.all()
-        .ancestor(self)
-        .filter('key_ =', key)
-        .order('-id_')
-        .fetch(1))
-    if messages:
-      return messages[0]
-    return None
-
-  @db.transactional()
   def GetPins(self):
     query = (
         Pin.all()
@@ -181,7 +169,7 @@ class Subject(db.Model):
     return list(query)
 
   @db.transactional()
-  def PutMessage(self, message, sender, sender_message_id, key=None):
+  def PutMessage(self, message, sender, sender_message_id):
     """Internal helper for SendMessage().
 
     Unless/until channel.send_message becomes transactional, we have to finish
@@ -211,8 +199,7 @@ class Subject(db.Model):
         message=message,
         sender=sender,
         sender_message_id=sender_message_id,
-        id_=message_id,
-        key_=key)
+        id_=message_id)
     obj.put()
 
     return (obj, list(Subscription.all().ancestor(subject)))
@@ -223,9 +210,9 @@ class Subject(db.Model):
         writable_only_by != sender):
       raise AccessDenied
 
-  def SendMessage(self, message, sender, sender_message_id, key=None):
+  def SendMessage(self, message, sender, sender_message_id):
     self.VerifyWritable(sender)
-    obj, subscriptions = self.PutMessage(message, sender, sender_message_id, key)
+    obj, subscriptions = self.PutMessage(message, sender, sender_message_id)
     event = obj.ToEvent()
     for subscription in subscriptions:
       subscription.SendMessage(event)
@@ -359,11 +346,9 @@ class Message(db.Model):
   sender_message_id = db.StringProperty(required=True)
   # id is reserved
   id_ = db.IntegerProperty(required=True)
-  # key and key_name are reserved
-  key_ = db.StringProperty()
 
   def ToEvent(self):
-    ret = {
+    return {
       'event_type':   'message',
       'id':           self.id_,
       'sender':       str(Message.sender.get_value_for_datastore(self)),
@@ -371,9 +356,6 @@ class Message(db.Model):
       'created':      self.created,
       'message':      self.message,
     }
-    if self.key_:
-      ret['key'] = self.key_
-    return ret
 
 
 class Pin(db.Model):

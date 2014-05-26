@@ -106,39 +106,6 @@ asyncTest('Message round trip', function() {
   cosmo.subscribe(subject, -1);
 });
 
-asyncTest('Overwrite key', function() {
-  expect(8);
-
-  var subject = randstring();
-  var message1 = randstring();
-  var message2 = randstring();
-  var key = randstring();
-
-  var messages = 0;
-
-  var callbacks = {
-    'onMessage': function(e) {
-      messages++;
-      equal(e['subject']['name'], subject, 'subject matches');
-      equal(e['key'], key, 'key matches');
-      if (messages == 1) {
-        equal(e['message'], message1, 'message #1 matches');
-        equal(cosmo.getKeyMessage(subject, key)['message'], message1, 'message #1 matches by key')
-        cosmo.sendMessage(subject, message2, key);
-        return;
-      }
-      equal(e['message'], message2, 'message #2 matches');
-      equal(cosmo.getKeyMessage(subject, key)['message'], message2, 'message #2 matches by key')
-      cosmo.shutdown();
-      start();
-    },
-  };
-
-  var cosmo = new Cosmopolite(callbacks, null, randstring());
-  cosmo.subscribe(subject, -1);
-  cosmo.sendMessage(subject, message1, key);
-});
-
 asyncTest('Complex object', function() {
   expect(2);
 
@@ -200,17 +167,15 @@ asyncTest('subscribe/unsubscribe Promise', function() {
 });
 
 asyncTest('Duplicate message suppression', function() {
-  expect(3);
+  expect(2);
 
   var subject = randstring();
-  var key = randstring();
   var message1 = randstring();
   var message2 = randstring();
 
   var callbacks = {
     'onMessage': function (msg) {
       equal(msg['subject']['name'], subject, 'subject matches');
-      equal(msg['key'], key, 'key matches');
       equal(msg['message'], message1, 'message matches');
       cosmo.shutdown();
       start();
@@ -224,9 +189,9 @@ asyncTest('Duplicate message suppression', function() {
     // chosen by fair dice roll.
     // guaranteed to be random.
   };
-  cosmo.sendMessage(subject, message1, key).then(function() {
-    cosmo.sendMessage(subject, message2, key).then(function() {
-      cosmo.subscribe(subject, 0, null, [key]);
+  cosmo.sendMessage(subject, message1).then(function() {
+    cosmo.sendMessage(subject, message2).then(function() {
+      cosmo.subscribe(subject, -1);
     });
   });
 });
@@ -319,30 +284,25 @@ asyncTest('resubscribe', function() {
 });
 
 asyncTest('Message ordering', function() {
-  expect(5);
+  expect(3);
 
   var subject = randstring();
-  var messages = [ 'A', 'B', 'C', 'D', 'E', 'F' ];
-  var keys = [ null, 'X', 'X', null, null, null ];
+  var messages = [ 'A', 'B', 'C', 'D' ];
 
   var cosmo = new Cosmopolite({}, null, randstring());
 
   var sendNextMessage = function() {
     if (messages.length) {
-      cosmo.sendMessage(subject, messages.shift(), keys.shift()).then(sendNextMessage);
+      cosmo.sendMessage(subject, messages.shift()).then(sendNextMessage);
     } else {
       cosmo.subscribe(subject, 1).then(function() {
-        cosmo.subscribe(subject, 0, null, ['X']).then(function() {
-          cosmo.subscribe(subject, 2).then(function() {
-            var fetched = cosmo.getMessages(subject);
-            equal(fetched.length, 3, 'three messages');
-            equal(fetched[0]['message'], 'C', 'message 0: C matches');
-            equal(fetched[1]['message'], 'E', 'message 1: E matches');
-            equal(fetched[2]['message'], 'F', 'message 2: F matches');
-            equal(cosmo.getKeyMessage(subject, 'X')['message'], 'C', 'key X matches');
-            cosmo.shutdown();
-            start();
-          });
+        cosmo.subscribe(subject, 2).then(function() {
+          var fetched = cosmo.getMessages(subject);
+          equal(fetched.length, 2, 'two messages');
+          equal(fetched[0]['message'], 'C', 'message 0: C matches');
+          equal(fetched[1]['message'], 'D', 'message 1: D matches');
+          cosmo.shutdown();
+          start();
         });
       });
     }

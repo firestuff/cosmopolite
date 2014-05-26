@@ -132,9 +132,8 @@ Cosmopolite.prototype.shutdown = function() {
  * @param {!*} subject Subject name or object
  * @param {number=} messages Number of recent messages to request; 0 for none, -1 for all
  * @param {number=} last_id ID of last message received; fetch all messages since
- * @param {Array.<string>=} keys Key names to ensure we receive at least 1 message defining
  */
-Cosmopolite.prototype.subscribe = function(subject, messages, last_id, keys) {
+Cosmopolite.prototype.subscribe = function(subject, messages, last_id) {
   return new Promise(function(resolve, reject) {
     var canonicalSubject = this.canonicalSubject_(subject);
     var subjectString = JSON.stringify(canonicalSubject);
@@ -142,7 +141,6 @@ Cosmopolite.prototype.subscribe = function(subject, messages, last_id, keys) {
       this.subscriptions_[subjectString] = {
         'messages': [],
         'pins':     [],
-        'keys':     {},
         'state':    this.SubscriptionState.PENDING,
       };
     }
@@ -155,9 +153,6 @@ Cosmopolite.prototype.subscribe = function(subject, messages, last_id, keys) {
     }
     if (last_id != null) {
       args['last_id'] = last_id;
-    }
-    if (keys != null) {
-      args['keys'] = keys;
     }
 
     this.sendRPC_('subscribe', args, function(response) {
@@ -201,18 +196,14 @@ Cosmopolite.prototype.unsubscribe = function(subject) {
  *
  * @param {!string} subject Subject name
  * @param {!*} message Message string or object
- * @param {string=} key Key name to associate this message with
  */
-Cosmopolite.prototype.sendMessage = function(subject, message, key) {
+Cosmopolite.prototype.sendMessage = function(subject, message) {
   return new Promise(function(resolve, reject) {
     var args = {
       'subject':           this.canonicalSubject_(subject),
       'message':           JSON.stringify(message),
       'sender_message_id': this.uuid_(),
     };
-    if (key) {
-      args['key'] = key;
-    }
 
     // No message left behind.
     var messageQueue = JSON.parse(localStorage[this.messageQueueKey_]);
@@ -247,19 +238,6 @@ Cosmopolite.prototype.getPins = function(subject) {
   var canonicalSubject = this.canonicalSubject_(subject);
   var subjectString = JSON.stringify(canonicalSubject);
   return this.subscriptions_[subjectString].pins;
-};
-
-/**
- * Fetch the most recent message that defined a key
- *
- * @param {!string} subject Subject name
- * @param {!string} key Key name
- * @const
- */
-Cosmopolite.prototype.getKeyMessage = function(subject, key) {
-  var canonicalSubject = this.canonicalSubject_(subject);
-  var subjectString = JSON.stringify(canonicalSubject);
-  return this.subscriptions_[subjectString].keys[key];
 };
 
 /**
@@ -835,9 +813,6 @@ Cosmopolite.prototype.onMessage_ = function(e) {
   }
   subscription.messages.splice(insertAfter + 1, 0, e);
 
-  if (e['key']) {
-    subscription.keys[e['key']] = e;
-  }
   if ('onMessage' in this.callbacks_) {
     this.callbacks_['onMessage'](e);
   }

@@ -82,11 +82,10 @@ def SendMessage(google_user, client, instance_id, args):
   subject = args['subject']
   message = args['message']
   sender_message_id = args['sender_message_id']
-  key = args.get('key', None)
 
   try:
     models.Subject.FindOrCreate(subject).SendMessage(
-        message, client.parent_key(), sender_message_id, key)
+        message, client.parent_key(), sender_message_id)
   except models.DuplicateMessage:
     logging.exception('Duplicate message: %s', sender_message_id)
     return {
@@ -114,10 +113,9 @@ def Subscribe(google_user, client, instance_id, args):
   subject = models.Subject.FindOrCreate(args['subject'])
   messages = args.get('messages', 0)
   last_id = args.get('last_id', None)
-  keys = args.get('keys', [])
 
   try:
-    ret = {
+    return {
       'result': 'ok',
       'events': models.Subscription.FindOrCreate(
           subject, client, instance, messages, last_id),
@@ -127,13 +125,6 @@ def Subscribe(google_user, client, instance_id, args):
     return {
       'result': 'access_denied',
     }
-
-  for key in keys:
-    message = subject.GetKey(key)
-    if message:
-      ret['events'].append(message.ToEvent())
-
-  return ret
 
 
 def Unpin(google_user, client, instance_id, args):
