@@ -122,6 +122,18 @@ cosmo.subscribe('testsubject', 1).then(function() {
   <li>Your test page should generate an alert popup showing the last message sent</li>
 </ol>
 
+<h3>Pin a value</h3>
+
+<ol>
+  <li>Pins publish a message temporarily, until the source conncetion disconnects. This can be used for presence information</li>
+  <li>Open the debug interface and subscribe to <i>testsubject</i></li>
+  <li>Change your test script:
+<pre>var cosmo = new Cosmopolite();
+cosmo.pin('testsubject', 'browser is alive!');</pre></li>
+  <li>Load the test page and watch the debug page; you should see the pin.</li>
+  <li>Close the test page, and the pin disappears.</li>
+</ol>
+
       </section>
     </div>
 <script>
