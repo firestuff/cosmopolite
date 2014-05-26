@@ -116,8 +116,8 @@ cosmo.subscribe('testsubject');</pre></li>
   <li>Change your test script:
 <pre>var cosmo = new Cosmopolite();
 cosmo.subscribe('testsubject', 1).then(function() {
-  var msgs = cosmo.getMessages('testsubject');
-  alert(msgs[msgs.length - 1]['message']);
+  var msg = cosmo.getLastMessage('testsubject');
+  alert(msg['message']);
 });</pre></li>
   <li>Your test page should generate an alert popup showing the last message sent</li>
 </ol>
