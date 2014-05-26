@@ -14,7 +14,7 @@
     <div class="wrapper">
       <header>
         <h1 class="header">Cosmopolite</h1>
-        <p class="header">Client/server publish/subscribe and key/value storage for AppEngine</p>
+        <p class="header">Client/server publish/subscribe, presence and key/value storage for AppEngine</p>
 
         <ul>
           <li class="download"><a class="buttons" href="https://github.com/flamingcowtv/cosmopolite/zipball/master">Download ZIP</a></li>
@@ -27,7 +27,7 @@
         <h1>
 <a name="cosmopolite" class="anchor" href="#cosmopolite"><span class="octicon octicon-link"></span></a>Cosmopolite</h1>
 
-<p>Client/server publish/subscribe and key/value storage for <a href="https://developers.google.com/appengine/">AppEngine</a>.</p>
+<p>Client/server publish/subscribe, presence and key/value storage for <a href="https://developers.google.com/appengine/">AppEngine</a>.</p>
 
 <h3>Dig in</h3>
 
@@ -48,7 +48,7 @@
 <ul>
   <li>Near-realtime notification to subscribers of messages published to a "subject"</li>
   <li>Server-side storage of past messages for replay later to clients</li>
-  <li>Support for associating a key with a message and for lookup of the most recent message for a given key</li>
+  <li>Ephemeral messages tied to client connection that can be used for presence information</li>
   <li>Client identification persistence via <a href="http://www.w3schools.com/html/html5_webstorage.asp">localStorage</a> tokens or in combination with <a href="https://developers.google.com/appengine/docs/python/users/">Google account signin</a></li>
   <li>Complex messages supported via transparent <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON">JSON</a> serialization</li>
   <li>Server-side strict ordering of messages</li>

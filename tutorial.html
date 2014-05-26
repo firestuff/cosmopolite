@@ -14,7 +14,7 @@
     <div class="wrapper">
       <header>
         <h1 class="header">Cosmopolite</h1>
-        <p class="header">Client/server publish/subscribe and key/value storage for AppEngine</p>
+        <p class="header">Client/server publish/subscribe, presence and key/value storage for AppEngine</p>
 
         <ul>
           <li class="download"><a class="buttons" href="https://github.com/flamingcowtv/cosmopolite/zipball/master">Download ZIP</a></li>
@@ -86,7 +86,7 @@ cosmo.sendMessage('testsubject', 'test message');</pre></li>
 <ol>
   <li><b>Subject</b>: a topic that clients that publish and subscribe to, e.g. "books"</li>
   <li><b>Message</b>: a single chunk of data transmitted to a single subject, e.g. "I love books!"</li>
-  <li><b>Key</b>: an optional string associated with a message, that can be used to look up the last message with a given key, e.g. "title" (key) = "A place to talk about books" (message)</li>
+  <li><b>Pin</b>: an ephemeral message that is deleted when the client that pinned it disconnects</li>
   <li><b>Instance</b>: a single instantiation of Cosmopolite() in a browser (destroyed on page close)</li>
   <li><b>Client</b>: a persistent identifier for a browser (consistent across browser restarts)</li>
   <li><b>Profile</b>: a collection of clients that all speak as the same user (and so should appear the same to subscribers)</li>
@@ -108,18 +108,18 @@ cosmo.subscribe('testsubject');</pre></li>
   <li>Your test page should generate an alert popup</li>
 </ol>
 
-<h3>Using keys</h3>
+<h3>Key/value store</h3>
 
 <ol>
   <li>Cosmopolite can be used as a key/value store, with historical data and update notification</li>
-  <li>Use the debug interface to send several messages to <i>testsubject</i>. Some of them should have the key <i>testkey</i>, while others should have different keys or no key.</li>
+  <li>When subscribing to a subject, you can request the most recent message for that subject</li>
   <li>Change your test script:
 <pre>var cosmo = new Cosmopolite();
-cosmo.subscribe('testsubject', 0, null, ['testkey']).then(function() {
-  var msg = cosmo.getKeyMessage('testsubject', 'testkey');
-  alert(msg['message']);
+cosmo.subscribe('testsubject', 1).then(function() {
+  var msgs = cosmo.getMessages('testsubject');
+  alert(msgs[msgs.length - 1]['message']);
 });</pre></li>
-  <li>Your test page should generate an alert popup showing the last message sent with that key</li>
+  <li>Your test page should generate an alert popup showing the last message sent</li>
 </ol>
 
       </section>
