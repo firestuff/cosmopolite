@@ -676,8 +676,6 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
       return;
     }
 
-    this.flushRPCQueue_();
-
     // Handle events that were immediately available as if they came over the
     // channel. Fire them before the message callbacks, so clients can use
     // events like the subscribe promise fulfillment as a barrier for initial
@@ -728,27 +726,18 @@ Cosmopolite.prototype.maySendRPC_ = function() {
 }
 
 /**
- * Send queued RPCs
- *
- * @private
- */
-Cosmopolite.prototype.flushRPCQueue_ = function() {
-  if (!this.maySendRPC_() || !this.rpcQueue_.length) {
-    return;
-  }
-
-  this.sendRPCs_(this.rpcQueue_);
-  this.rpcQueue_ = [];
-};
-
-/**
  * Handle tasks needed after reconnecting the channel
  *
  * @private
  */
 Cosmopolite.prototype.onReconnect_ = function() {
+  if (!this.maySendRPC_()) {
+    return;
+  }
+
   /** @type {Array.<typeRPC>} */
-  var rpcs = [];
+  var rpcs = this.rpcQueue_;
+  this.rpcQueue_ = [];
   for (var subject in this.subscriptions_) {
     /** @type {typeSubscription} */
     var subscription = this.subscriptions_[subject];
@@ -856,7 +845,6 @@ Cosmopolite.prototype.onSocketOpen_ = function() {
     return;
   }
 
-  this.flushRPCQueue_();
   this.onReconnect_();
 };
 
