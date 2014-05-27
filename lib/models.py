@@ -253,17 +253,17 @@ class Subject(db.Model):
       subscription.SendMessage(event)
 
   @db.transactional(xg=True)
-  def RemovePin(self, sender, sender_message_id, instance):
+  def RemovePin(self, sender, sender_message_id, instance_key):
     # Reload the subject and instance to establish a barrier
     subject = Subject.get(self.key())
-    instance = Instance.get(instance.key())
+    Instance.get(instance_key)
 
     pins = (
         Pin.all()
         .ancestor(subject)
         .filter('sender =', sender)
         .filter('sender_message_id =', sender_message_id)
-        .filter('instance =', instance))
+        .filter('instance =', instance_key))
 
     events = []
     for pin in pins:
@@ -272,9 +272,9 @@ class Subject(db.Model):
 
     return (events, list(Subscription.all().ancestor(subject)))
 
-  def Unpin(self, sender, sender_message_id, instance):
+  def Unpin(self, sender, sender_message_id, instance_key):
     self.VerifyWritable(sender)
-    events, subscriptions = self.RemovePin(sender, sender_message_id, instance)
+    events, subscriptions = self.RemovePin(sender, sender_message_id, instance_key)
     for event in events:
       for subscription in subscriptions:
         subscription.SendMessage(event)
@@ -378,4 +378,6 @@ class Pin(db.Model):
     }
 
   def Delete(self):
-    self.parent().Unpin(self.sender, self.sender_message_id, self.instance)
+    self.parent().Unpin(
+        self.sender, self.sender_message_id,
+        Pin.instance.get_value_for_datastore(self))

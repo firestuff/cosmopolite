@@ -134,7 +134,7 @@ def Unpin(google_user, client, instance_id, args):
 
   try:
     models.Subject.FindOrCreate(subject).Unpin(
-        client.parent_key(), sender_message_id, instance)
+        client.parent_key(), sender_message_id, instance.key())
   except models.AccessDenied:
     logging.exception('Pin access denied')
     return {
