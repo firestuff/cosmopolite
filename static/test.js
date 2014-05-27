@@ -71,15 +71,26 @@ test('Construct/shutdown', function() {
   ok(true, 'shutdown() succeeds');
 });
 
-asyncTest('onLogout fires', function() {
-  expect(1);
+asyncTest('onConnect/onLogout fires', function() {
+  expect(2);
+
+  var numCallbacks = 0;
 
   logout(function() {
     var callbacks = {
+      'onConnect': function() {
+        ok(true, 'onConnect fired');
+        if (++numCallbacks == 2) {
+          cosmo.shutdown();
+          start();
+        }
+      },
       'onLogout': function(login_url) {
         ok(true, 'onLogout fired');
-        cosmo.shutdown();
-        start();
+        if (++numCallbacks == 2) {
+          cosmo.shutdown();
+          start();
+        }
       }
     };
     var cosmo = new Cosmopolite(callbacks, null, randstring());
@@ -313,12 +324,18 @@ asyncTest('Message ordering', function() {
 });
 
 asyncTest('Reconnect channel', function() {
-  expect(2);
+  expect(5);
 
   var subject = randstring();
   var message = randstring();
 
   var callbacks = {
+    'onConnect': function() {
+      ok(true, 'onConnect fired');
+    },
+    'onDisconnect': function() {
+      ok(true, 'onDisconnect fired');
+    },
     'onMessage': function(msg) {
       equal(msg['subject']['name'], subject, 'subject matches');
       equal(msg['message'], message, 'message matches');

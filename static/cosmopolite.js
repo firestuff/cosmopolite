@@ -62,7 +62,9 @@ var typeLogin;
                profile: string}} */
 var typeLogout;
 
-/** @typedef {{onLogin: (function(string, string)|undefined),
+/** @typedef {{onConnect: (function()|undefined),
+               onDisconnect: (function()|undefined),
+               onLogin: (function(string, string)|undefined),
                onLogout: (function(string)|undefined),
                onMessage: (function(typeMessage)|undefined),
                onPin: (function(typeMessage)|undefined),
@@ -847,6 +849,9 @@ Cosmopolite.prototype.onSocketOpen_ = function() {
 
   if (this.channelState_ == this.ChannelState.OPENING) {
     this.channelState_ = this.ChannelState.OPEN;
+    if (this.callbacks_.onConnect) {
+      this.callbacks_.onConnect();
+    }
   } else {
     return;
   }
@@ -869,6 +874,9 @@ Cosmopolite.prototype.onSocketClose_ = function() {
 
   if (this.channelState_ == this.ChannelState.OPEN) {
     this.channelState_ = this.ChannelState.CLOSED;
+    if (this.callbacks_.onDisconnect) {
+      this.callbacks_.onDisconnect();
+    }
   } else {
     return;
   }
