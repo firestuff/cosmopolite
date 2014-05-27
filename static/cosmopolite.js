@@ -403,9 +403,10 @@ Cosmopolite.prototype.pin = function(subject, message) {
  */
 Cosmopolite.prototype.unpin = function(id) {
   return new Promise(function(resolve, reject) {
+    var pin = this.pins_[id];
     var args = {
-      'subject':           this.pins_[id]['subject'],
-      'sender_message_id': id,
+      'subject':           pin['subject'],
+      'sender_message_id': pin['sender_message_id'],
     };
 
     delete this.pins_[id];
@@ -768,7 +769,6 @@ Cosmopolite.prototype.onReconnect_ = function() {
   for (var id in this.pins_) {
     /** @type {typeMessage} */
     var pin = this.pins_[id];
-    pin['sender_message_id'] = this.uuid_();
     rpcs.push({
       'command': 'pin',
       'arguments': pin,

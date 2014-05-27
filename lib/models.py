@@ -230,6 +230,7 @@ class Subject(db.Model):
         Pin.all()
         .ancestor(subject)
         .filter('sender_message_id =', sender_message_id)
+        .filter('instance =', instance)
         .fetch(1))
     if pins:
       raise DuplicateMessage(sender_message_id)
