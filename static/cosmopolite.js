@@ -422,7 +422,11 @@ Cosmopolite.prototype.unpin = function(id) {
  * @private
  */
 Cosmopolite.prototype.loggingPrefix_ = function() {
-  return 'cosmopolite (' + this.namespace_ + '):';
+  if (this.instanceID_) {
+    return 'cosmopolite (' + this.namespace_ + ' / ' + this.instanceID_ + '):';
+  } else {
+    return 'cosmopolite (' + this.namespace_ + '):';
+  }
 };
 
 /**
@@ -605,7 +609,7 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
     return;
   }
   var request = {
-    'instance_id': this.instanceId_,
+    'instance_id': this.instanceID_,
     'commands': [],
   };
   commands.forEach(function(command) {
@@ -786,7 +790,7 @@ Cosmopolite.prototype.createChannel_ = function() {
   }
 
   /** @type {string} */
-  this.instanceId_ = this.uuid_();
+  this.instanceID_ = this.uuid_();
 
   var rpcs = [
     {
@@ -894,6 +898,18 @@ Cosmopolite.prototype.onSocketMessage_ = function(msg) {
  */
 Cosmopolite.prototype.onSocketError_ = function(msg) {
   console.log(this.loggingPrefix_(), 'socket error:', msg);
+  if (this.socket_) {
+    this.socket_.close();
+  }
+};
+
+/**
+ * Callback on receiving a 'close' event from the server
+ *
+ * @private
+ */
+Cosmopolite.prototype.onClose_ = function() {
+  console.log(this.loggingPrefix_(), 'server asked us to close our socket');
   if (this.socket_) {
     this.socket_.close();
   }
@@ -1060,6 +1076,9 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
     this.profilePromises_ = [];
   }
   switch (e['event_type']) {
+    case 'close':
+      this.onClose_();
+      break;
     case 'login':
       this.onLogin_(/** @type {typeLogin} */ (e));
       break;

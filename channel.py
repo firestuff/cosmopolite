@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import webapp2
 
@@ -29,7 +30,11 @@ class OnChannelConnect(webapp2.RequestHandler):
     instance_id = self.request.get('from')
     instance = models.Instance.FromID(instance_id)
     if not instance:
-      logging.error('Channel opened with invalid instance_id: %s', instance_id)
+      logging.warning('Channel opened with invalid instance_id: %s', instance_id)
+      message = {
+        'event_type': 'close',
+      }
+      channel.send_message(instance_id, json.dumps(msg, default=utils.EncodeJSON))
       return
     instance.active = True
     instance.put()
