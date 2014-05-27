@@ -621,9 +621,9 @@ Cosmopolite.prototype.flushRPCQueue_ = function() {
 };
 
 /**
- * Resubscribe to subjects (i.e. after reconnection)
+ * Handle tasks needed after reconnecting the channel
  */
-Cosmopolite.prototype.resubscribe_ = function() {
+Cosmopolite.prototype.onReconnect_ = function() {
   var rpcs = [];
   for (var subject in this.subscriptions_) {
     var subscription = this.subscriptions_[subject];
@@ -642,12 +642,13 @@ Cosmopolite.prototype.resubscribe_ = function() {
         'last_id':  last_id,
       }
     });
-    subscription.pins.forEach(function(pin) {
-      rpcs.push({
-        'command': 'pin',
-        'arguments': pin,
-      });
-    }, this);
+  }
+  for (var id in this.pins_) {
+    var pin = this.pins_[id];
+    rpcs.push({
+      'command': 'pin',
+      'arguments': pin,
+    });
   }
   this.sendRPCs_(rpcs);
 };
@@ -719,7 +720,7 @@ Cosmopolite.prototype.onSocketOpen_ = function() {
   }
 
   this.flushRPCQueue_();
-  this.resubscribe_();
+  this.onReconnect_();
 };
 
 /**
