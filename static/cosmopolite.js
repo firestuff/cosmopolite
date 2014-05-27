@@ -15,9 +15,17 @@
  * limitations under the License.
  */
 
-// We use long keys in many places. Provide a method to trim those down for
-// human readability.
+/**
+ * Java-compatible hash calculation
+ *
+ * We use long keys in many places. Provide a method to trim those down for
+ * human readability.
+ *
+ * @return {number}
+ * @const
+ */
 String.prototype.hashCode = function() {
+  /** @type {number} */
   var hash = 0;
   for (i = 0; i < this.length; i++) {
     var char = this.charCodeAt(i);
@@ -27,28 +35,90 @@ String.prototype.hashCode = function() {
   return hash;
 };
 
+/* Exposed types */
+
+/** @typedef {{name: string,
+               readable_only_by: (string|undefined),
+               writable_only_by: (string|undefined)}} */
+var typeSubject;
+
+/** @typedef {(typeSubject|string|number)} */
+var typeSubjectLoose;
+
+/** @typedef {{event_type: string,
+               id: number,
+               created: number,
+               sender: string,
+               subject: typeSubject,
+               message: *}} */
+var typeMessage;
+
+/** @typedef {{event_type: string,
+               profile: string,
+               google_user: string}} */
+var typeLogin;
+
+/** @typedef {{event_type: string,
+               profile: string}} */
+var typeLogout;
+
+/** @typedef {{onLogin: (function(string, string)|undefined),
+               onLogout: (function(string)|undefined),
+               onMessage: (function(typeMessage)|undefined),
+               onPin: (function(typeMessage)|undefined),
+               onUnpin: (function(typeMessage)|undefined)}} */
+var typeCallbacks;
+
+/* Internal-only types */
+
+/** @typedef {{event_type: string}} */
+var typeEvent;
+
+/** @typedef {{messages: Array.<typeMessage>,
+               pins: Array.<typeMessage>,
+               state: Cosmopolite.prototype.SubscriptionState}} */
+var typeSubscription;
+
+/** @typedef {{command: string,
+               arguments: Object,
+               onSuccess: (function(Object)|null|undefined)}} */
+var typeRPC;
+
+
 /**
  * @constructor
- * @param {Object=} callbacks Callback dictionary
- * @param {string=} urlPrefix Absolute URL prefix for generating API URL
- * @param {string=} namespace Prefix for localStorage entries.
+ * @param {?typeCallbacks=} callbacks
+ * @param {?string=} urlPrefix
+ * @param {?string=} namespace
  */
 var Cosmopolite = function(callbacks, urlPrefix, namespace) {
-  this.callbacks_ = callbacks || {};
+  /** * @type {typeCallbacks} */
+  this.callbacks_ = callbacks || /** @type {typeCallbacks} */ ({});
+  /** @type {string} */
   this.urlPrefix_ = urlPrefix || '/cosmopolite';
+  /** @type {string} */
   this.namespace_ = namespace || 'cosmopolite';
 
+  /** @type {Cosmopolite.prototype.ChannelState} */
   this.channelState_ = this.ChannelState.CLOSED;
+  /** @type {boolean} */
   this.shutdown_ = false;
 
+  /** @type {Array.<Object>} */
   this.rpcQueue_ = [];
+  /** @type {Object.<string, typeSubscription>} */
   this.subscriptions_ = {};
+  /** @type {Object.<string, typeMessage>} */
   this.pins_ = {};
+  /** @type {Array.<function(string)>} */
   this.profilePromises_ = [];
 
+  /** @type {string} */
   this.messageQueueKey_ = this.namespace_ + ':message_queue';
   if (this.messageQueueKey_ in localStorage) {
-    var messages = JSON.parse(localStorage[this.messageQueueKey_]);
+    /** @type {Array.<typeMessage>} */
+    var messages = /** @type {Array.<typeMessage>} */
+      (JSON.parse(localStorage[this.messageQueueKey_]));
     if (messages.length) {
       console.log(
           this.loggingPrefix_(), '(re-)sending queued messages:', messages);
@@ -60,16 +130,19 @@ var Cosmopolite = function(callbacks, urlPrefix, namespace) {
       this.sendRPC_(
         'sendMessage', message,
         this.onMessageSent_.bind(this, message, null, null));
-    }.bind(this));
+    }, this);
   } else {
     localStorage[this.messageQueueKey_] = JSON.stringify([]);
   }
 
+  /** @type {Array.<string>} */
   var scriptUrls = [
     '/_ah/channel/jsapi',
   ];
+  /** @type {number} */
   this.numScriptsToLoad_ = scriptUrls.length;
   scriptUrls.forEach(function(scriptUrl) {
+    /** @type {Node} */
     var script = document.createElement('script');
     script.src = scriptUrl;
     script.onload = this.onLoad_.bind(this);
@@ -81,7 +154,6 @@ var Cosmopolite = function(callbacks, urlPrefix, namespace) {
 /**
  * Channel states
  * @enum {number}
- * @const
  * @private
  */
 Cosmopolite.prototype.ChannelState = {
@@ -99,7 +171,6 @@ Cosmopolite.prototype.ChannelState = {
 /**
  * Subscription states
  * @enum {number}
- * @const
  * @private
  */
 Cosmopolite.prototype.SubscriptionState = {
@@ -129,13 +200,16 @@ Cosmopolite.prototype.shutdown = function() {
  *
  * Start receiving messages sent to this subject via the onMessage callback.
  *
- * @param {!*} subject Subject name or object
- * @param {number=} messages Number of recent messages to request; 0 for none, -1 for all
- * @param {number=} last_id ID of last message received; fetch all messages since
+ * @param {typeSubjectLoose} subject
+ * @param {?number=} messages Number of recent messages to request; 0 for none, -1 for all
+ * @param {?number=} last_id ID of last message received; fetch all messages since
+ * @return {Promise}
  */
 Cosmopolite.prototype.subscribe = function(subject, messages, last_id) {
   return new Promise(function(resolve, reject) {
+    /** @type {typeSubject} */
     var canonicalSubject = this.canonicalSubject_(subject);
+    /** @type {string} */
     var subjectString = JSON.stringify(canonicalSubject);
     if (!(subjectString in this.subscriptions_)) {
       this.subscriptions_[subjectString] = {
@@ -161,13 +235,14 @@ Cosmopolite.prototype.subscribe = function(subject, messages, last_id) {
       if (subjectString in this.subscriptions_) {
         this.subscriptions_[subjectString].state = this.SubscriptionState.ACTIVE;
       }
+      /** @type {string} */
       var result = response['result'];
       if (result == 'ok') {
         resolve();
       } else {
         reject();
       }
-    }.bind(this));
+    });
   }.bind(this));
 };
 
@@ -177,11 +252,14 @@ Cosmopolite.prototype.subscribe = function(subject, messages, last_id) {
  * Note that no reference counting is done, so a single call to unsubscribe()
  * undoes multiple calls to subscribe().
  *
- * @param {!string} subject Subject name, as passed to subscribe()
+ * @param {typeSubjectLoose} subject
+ * @return {Promise}
  */
 Cosmopolite.prototype.unsubscribe = function(subject) {
   return new Promise(function(resolve, reject) {
+    /** @type {typeSubject} */
     var canonicalSubject = this.canonicalSubject_(subject);
+    /** @type {string} */
     var subjectString = JSON.stringify(canonicalSubject);
     delete this.subscriptions_[subjectString];
     var args = {
@@ -194,8 +272,9 @@ Cosmopolite.prototype.unsubscribe = function(subject) {
 /**
  * Post a message to the given subject, storing it and notifying all listeners.
  *
- * @param {!string} subject Subject name
- * @param {!*} message Message string or object
+ * @param {typeSubjectLoose} subject
+ * @param {!*} message
+ * @return {Promise}
  */
 Cosmopolite.prototype.sendMessage = function(subject, message) {
   return new Promise(function(resolve, reject) {
@@ -219,11 +298,14 @@ Cosmopolite.prototype.sendMessage = function(subject, message) {
 /**
  * Fetch all received messages for a subject
  *
- * @param {!string} subject Subject name
+ * @param {typeSubjectLoose} subject
+ * @return {Array.<typeMessage>}
  * @const
  */
 Cosmopolite.prototype.getMessages = function(subject) {
+  /** @type {typeSubject} */
   var canonicalSubject = this.canonicalSubject_(subject);
+  /** @type {string} */
   var subjectString = JSON.stringify(canonicalSubject);
   return this.subscriptions_[subjectString].messages;
 };
@@ -231,10 +313,12 @@ Cosmopolite.prototype.getMessages = function(subject) {
 /**
  * Fetch the most recent message for a subject
  *
- * @param {!string} subject Subject name
+ * @param {typeSubjectLoose} subject
+ * @return {?typeMessage}
  * @const
  */
 Cosmopolite.prototype.getLastMessage = function(subject) {
+  /** @type {Array.<typeMessage>} */
   var messages = this.getMessages(subject);
   if (messages.length) {
     return messages[messages.length - 1];
@@ -246,17 +330,22 @@ Cosmopolite.prototype.getLastMessage = function(subject) {
 /**
  * Fetch all current pins for a subject
  *
- * @param {!string} subject Subject name
+ * @param {typeSubjectLoose} subject
+ * @return {Array.<typeMessage>}
  * @const
  */
 Cosmopolite.prototype.getPins = function(subject) {
+  /** @type {typeSubject} */
   var canonicalSubject = this.canonicalSubject_(subject);
+  /** @type {string} */
   var subjectString = JSON.stringify(canonicalSubject);
   return this.subscriptions_[subjectString].pins;
 };
 
 /**
- * Return a Promise for our profile ID.
+ * Fetch our profile ID.
+ *
+ * @return {Promise}
  */
 Cosmopolite.prototype.getProfile = function() {
   return new Promise(function(resolve, reject) {
@@ -286,11 +375,13 @@ Cosmopolite.prototype.currentProfile = function() {
  * The resulting Promise resolve callback is passed an ID that can later be
  * passed to unpin().
  *
- * @param {!*} subject Subject name or object
- * @param {!*} message Message string or object
+ * @param {typeSubjectLoose} subject Subject name or object
+ * @param {!*} message
+ * @return {Promise}
  */
 Cosmopolite.prototype.pin = function(subject, message) {
   return new Promise(function(resolve, reject) {
+    /** @type {string} */
     var id = this.uuid_();
     var args = {
       'subject':           this.canonicalSubject_(subject),
@@ -307,7 +398,8 @@ Cosmopolite.prototype.pin = function(subject, message) {
 /**
  * Unpin a message from the given subject, storing it and notifying all listeners.
  *
- * @param {!string} id ID returned by pin()'s resolve callback
+ * @param {string} id ID returned by pin()'s resolve callback
+ * @return {Promise}
  */
 Cosmopolite.prototype.unpin = function(id) {
   return new Promise(function(resolve, reject) {
@@ -327,6 +419,7 @@ Cosmopolite.prototype.unpin = function(id) {
  *
  * @return {string} Log line prefix.
  * @const
+ * @private
  */
 Cosmopolite.prototype.loggingPrefix_ = function() {
   return 'cosmopolite (' + this.namespace_ + '):';
@@ -337,9 +430,11 @@ Cosmopolite.prototype.loggingPrefix_ = function() {
  *
  * @return {string} A universally-unique random value.
  * @const
+ * @private
  */
 Cosmopolite.prototype.uuid_ = function() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    /** @type {number} */
     var r = (Math.random() * 16) | 0;
     if (c == 'x') {
       return r.toString(16);
@@ -352,8 +447,10 @@ Cosmopolite.prototype.uuid_ = function() {
 /**
  * Canonicalize a subject name or object
  *
- * @param {!Object|string|number} subject A simple or complex representation of a subject
- * @return {Object} A canonicalized object for RPCs
+ * @param {typeSubjectLoose} subject A simple or complex representation of a subject
+ * @return {typeSubject} A canonicalized object for RPCs
+ * @const
+ * @private
  */
 Cosmopolite.prototype.canonicalSubject_ = function(subject) {
   if (typeof(subject) == 'number') {
@@ -376,6 +473,8 @@ Cosmopolite.prototype.canonicalSubject_ = function(subject) {
 
 /**
  * Callback when a script loads.
+ *
+ * @private
  */
 Cosmopolite.prototype.onLoad_ = function() {
   if (--this.numScriptsToLoad_ > 0) {
@@ -392,7 +491,8 @@ Cosmopolite.prototype.onLoad_ = function() {
 /**
  * Callback for a message from another browser window
  *
- * @param {!string} data Message contents
+ * @param {string} data
+ * @private
  */
 Cosmopolite.prototype.onReceiveMessage_ = function(data) {
   switch (data) {
@@ -419,8 +519,11 @@ Cosmopolite.prototype.onReceiveMessage_ = function(data) {
  *
  * Note that we share this bus with at least the channel code, so spurious
  * messages are normal.
+ *
+ * @private
  */
 Cosmopolite.prototype.registerMessageHandlers_ = function() {
+  /** @type {function(Event)} */
   this.messageHandler_ = function(e) {
     if (e.origin != window.location.origin) {
       // Probably talkgadget
@@ -435,10 +538,11 @@ Cosmopolite.prototype.registerMessageHandlers_ = function() {
 /**
  * Callback for a sendMessage RPC ack by the server.
  *
- * @param {Object} message Message details.
- * @param {function()=} resolve Promise resolution callback.
- * @param {function()=} reject Promise rejection callback.
- * @param {Object=} response Server RPC response.
+ * @param {typeMessage} message Message details.
+ * @param {?function()} resolve Promise resolution callback.
+ * @param {?function()} reject Promise rejection callback.
+ * @param {Object} response Server RPC response.
+ * @private
  */
 Cosmopolite.prototype.onMessageSent_ = function(
     message, resolve, reject, response) {
@@ -465,11 +569,13 @@ Cosmopolite.prototype.onMessageSent_ = function(
  *
  * See sendRPCs_()
  *
- * @param {!string} command Command name to call
- * @param {!Object} args Arguments to pass to server
- * @param {function(Object)=} onSuccess Success callback function
+ * @param {string} command Command name to call
+ * @param {Object} args Arguments to pass to server
+ * @param {?function(Object)=} onSuccess Success callback function
+ * @private
  */
 Cosmopolite.prototype.sendRPC_ = function(command, args, onSuccess) {
+  /** @type {typeRPC} */
   var rpc = {
     'command': command,
     'arguments': args,
@@ -490,8 +596,9 @@ Cosmopolite.prototype.sendRPC_ = function(command, args, onSuccess) {
  * to retry with more data. Also retries in cases of failure with exponential
  * backoff.
  *
- * @param {!Array.<{command:string, arguments:Object, onSuccess:function(Object)}>} commands List of commands to execute
+ * @param {Array.<typeRPC>} commands List of commands to execute
  * @param {number=} delay Seconds waited before executing this call (for backoff)
+ * @private
  */
 Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
   if (this.shutdown_ || !commands.length) {
@@ -568,6 +675,7 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
     // data.
     data['events'].forEach(this.onServerEvent_, this);
 
+    /** @type {Array.<typeRPC>} */
     var retryCommands = [];
 
     for (var i = 0; i < data['responses'].length; i++) {
@@ -594,7 +702,9 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
 /**
  * Are we currently clear to put RPCs on the wire?
  *
- * @return {boolean} Yes or no?
+ * @return {boolean}
+ * @const
+ * @private
  */
 Cosmopolite.prototype.maySendRPC_ = function() {
   if (!(this.namespace_ + ':client_id' in localStorage)) {
@@ -610,6 +720,8 @@ Cosmopolite.prototype.maySendRPC_ = function() {
 
 /**
  * Send queued RPCs
+ *
+ * @private
  */
 Cosmopolite.prototype.flushRPCQueue_ = function() {
   if (!this.maySendRPC_() || !this.rpcQueue_.length) {
@@ -622,15 +734,21 @@ Cosmopolite.prototype.flushRPCQueue_ = function() {
 
 /**
  * Handle tasks needed after reconnecting the channel
+ *
+ * @private
  */
 Cosmopolite.prototype.onReconnect_ = function() {
+  /** @type {Array.<typeRPC>} */
   var rpcs = [];
   for (var subject in this.subscriptions_) {
+    /** @type {typeSubscription} */
     var subscription = this.subscriptions_[subject];
-    var canonicalSubject = JSON.parse(subject);
+    /** @type {typeSubject} */
+    var canonicalSubject = /** @type {typeSubject} */ (JSON.parse(subject));
     if (subscription.state != this.SubscriptionState.ACTIVE) {
       continue;
     }
+    /** @type {number} */
     var last_id = 0;
     if (subscription.messages.length > 0) {
       last_id = subscription.messages[subscription.messages.length - 1]['id'];
@@ -644,6 +762,7 @@ Cosmopolite.prototype.onReconnect_ = function() {
     });
   }
   for (var id in this.pins_) {
+    /** @type {typeMessage} */
     var pin = this.pins_[id];
     rpcs.push({
       'command': 'pin',
@@ -655,6 +774,8 @@ Cosmopolite.prototype.onReconnect_ = function() {
 
 /**
  * Send RPC to create a server -> client channel
+ *
+ * @private
  */
 Cosmopolite.prototype.createChannel_ = function() {
   if (this.channelState_ == this.ChannelState.CLOSED) {
@@ -663,6 +784,7 @@ Cosmopolite.prototype.createChannel_ = function() {
     return;
   }
 
+  /** @type {string} */
   this.instanceId_ = this.uuid_();
 
   var rpcs = [
@@ -680,7 +802,8 @@ Cosmopolite.prototype.createChannel_ = function() {
  *
  * @suppress {missingProperties}
  *
- * @param {!Object} data Server response including channel token
+ * @param {Object} data
+ * @private
  */
 Cosmopolite.prototype.onCreateChannel_ = function(data) {
   if (this.shutdown_) {
@@ -705,6 +828,8 @@ Cosmopolite.prototype.onCreateChannel_ = function(data) {
 
 /**
  * Callback from channel library for successful open
+ *
+ * @private
  */
 Cosmopolite.prototype.onSocketOpen_ = function() {
   console.log(this.loggingPrefix_(), 'channel opened');
@@ -725,6 +850,8 @@ Cosmopolite.prototype.onSocketOpen_ = function() {
 
 /**
  * Callback from channel library for closure; reopen.
+ *
+ * @private
  */
 Cosmopolite.prototype.onSocketClose_ = function() {
   console.log(this.loggingPrefix_(), 'channel closed');
@@ -751,16 +878,18 @@ Cosmopolite.prototype.onSocketClose_ = function() {
 /**
  * Callback from channel library for message reception over channel
  *
- * @param {!Object} msg Message contents
+ * @param {{data: string}} msg
+ * @private
  */
 Cosmopolite.prototype.onSocketMessage_ = function(msg) {
-  this.onServerEvent_(JSON.parse(msg.data));
+  this.onServerEvent_(/** @type {typeEvent} */ (JSON.parse(msg.data)));
 };
 
 /**
  * Callback from channel library for error on channel
  *
- * @param {!string} msg Descriptive text
+ * @param {{description: string, code: number}} msg
+ * @private
  */
 Cosmopolite.prototype.onSocketError_ = function(msg) {
   console.log(this.loggingPrefix_(), 'socket error:', msg);
@@ -772,11 +901,12 @@ Cosmopolite.prototype.onSocketError_ = function(msg) {
 /**
  * Callback on receiving a 'login' event from the server
  *
- * @param {!Object} e Event object
+ * @param {typeLogin} e
+ * @private
  */
 Cosmopolite.prototype.onLogin_ = function(e) {
-  if ('onLogin' in this.callbacks_) {
-    this.callbacks_['onLogin'](
+  if (this.callbacks_.onLogin) {
+    this.callbacks_.onLogin(
         e['google_user'],
         this.urlPrefix_ + '/auth/logout');
   }
@@ -785,11 +915,12 @@ Cosmopolite.prototype.onLogin_ = function(e) {
 /**
  * Callback on receiving a 'logout' event from the server
  *
- * @param {!Object} e Event object
+ * @param {typeLogout} e
+ * @private
  */
 Cosmopolite.prototype.onLogout_ = function(e) {
-  if ('onLogout' in this.callbacks_) {
-    this.callbacks_['onLogout'](
+  if (this.callbacks_.onLogout) {
+    this.callbacks_.onLogout(
       this.urlPrefix_ + '/auth/login');
   }
 };
@@ -797,10 +928,13 @@ Cosmopolite.prototype.onLogout_ = function(e) {
 /**
  * Callback on receiving a 'message' event from the server
  *
- * @param {!Object} e Event object
+ * @param {typeMessage} e
+ * @private
  */
 Cosmopolite.prototype.onMessage_ = function(e) {
+  /** @type {string} */
   var subjectString = JSON.stringify(e['subject']);
+  /** @type {typeSubscription} */
   var subscription = this.subscriptions_[subjectString];
   if (!subscription) {
     console.log(
@@ -808,6 +942,7 @@ Cosmopolite.prototype.onMessage_ = function(e) {
       'message from unrecognized subject:', e);
     return;
   }
+  /** @type {boolean} */
   var duplicate = subscription.messages.some(function(message) {
     return message['id'] == e.id;
   });
@@ -819,6 +954,7 @@ Cosmopolite.prototype.onMessage_ = function(e) {
 
   // Reverse search for the position to insert this message, as iit will most
   // likely be at the end.
+  /** @type {?number} */
   var insertAfter;
   for (var insertAfter = subscription.messages.length - 1;
        insertAfter >= 0; insertAfter--) {
@@ -829,18 +965,21 @@ Cosmopolite.prototype.onMessage_ = function(e) {
   }
   subscription.messages.splice(insertAfter + 1, 0, e);
 
-  if ('onMessage' in this.callbacks_) {
-    this.callbacks_['onMessage'](e);
+  if (this.callbacks_.onMessage) {
+    this.callbacks_.onMessage(e);
   }
 };
 
 /**
  * Callback on receiving a 'pin' event from the server
  *
- * @param {!Object} e Event object
+ * @param {typeMessage} e
+ * @private
  */
 Cosmopolite.prototype.onPin_ = function(e) {
+  /** @type {string} */
   var subjectString = JSON.stringify(e['subject']);
+  /** @type {typeSubscription} */
   var subscription = this.subscriptions_[subjectString];
   if (!subscription) {
     console.log(
@@ -848,6 +987,7 @@ Cosmopolite.prototype.onPin_ = function(e) {
       'message from unrecognized subject:', e);
     return;
   }
+  /** @type {boolean} */
   var duplicate = subscription.pins.some(function(pin) {
     return pin['id'] == e.id;
   });
@@ -858,18 +998,21 @@ Cosmopolite.prototype.onPin_ = function(e) {
   e['message'] = JSON.parse(e['message']);
 
   subscription.pins.push(e);
-  if ('onPin' in this.callbacks_) {
-    this.callbacks_['onPin'](e);
+  if (this.callbacks_.onPin) {
+    this.callbacks_.onPin(e);
   }
 };
 
 /**
  * Callback on receiving an 'unpin' event from the server
  *
- * @param {!Object} e Event object
+ * @param {typeMessage} e
+ * @private
  */
 Cosmopolite.prototype.onUnpin_ = function(e) {
+  /** @type {string} */
   var subjectString = JSON.stringify(e['subject']);
+  /** @type {typeSubscription} */
   var subscription = this.subscriptions_[subjectString];
   if (!subscription) {
     console.log(
@@ -877,6 +1020,7 @@ Cosmopolite.prototype.onUnpin_ = function(e) {
       'message from unrecognized subject:', e);
     return;
   }
+  /** @type {?number} */
   var index;
   for (index = 0; index < subscription.pins.length; index++) {
     var pin = subscription.pins[index];
@@ -890,43 +1034,45 @@ Cosmopolite.prototype.onUnpin_ = function(e) {
   }
   e['message'] = JSON.parse(e['message']);
 
-  subscription.pins.splice(index, 1)[0];
-  if ('onUnpin' in this.callbacks_) {
-    this.callbacks_['onUnpin'](e);
+  subscription.pins.splice(index, 1);
+  if (this.callbacks_.onUnpin) {
+    this.callbacks_.onUnpin(e);
   }
 };
 
 /**
  * Callback for Cosmopolite event (received via channel or pseudo-channel)
  *
- * @param {!Object} e Deserialized event object
+ * @param {typeEvent} e
+ * @private
  */
 Cosmopolite.prototype.onServerEvent_ = function(e) {
   if (this.shutdown_) {
     return;
   }
   if (e['profile']) {
+    /** @type {string} */
     this.profile_ = e['profile'];
     this.profilePromises_.forEach(function(resolve) {
       resolve(this.profile_);
-    }.bind(this));
+    }, this);
     this.profilePromises_ = [];
   }
   switch (e['event_type']) {
     case 'login':
-      this.onLogin_(e);
+      this.onLogin_(/** @type {typeLogin} */ (e));
       break;
     case 'logout':
-      this.onLogout_(e);
+      this.onLogout_(/** @type {typeLogout} */ (e));
       break;
     case 'message':
-      this.onMessage_(e);
+      this.onMessage_(/** @type {typeMessage} */ (e));
       break;
     case 'pin':
-      this.onPin_(e);
+      this.onPin_(/** @type {typeMessage} */ (e));
       break;
     case 'unpin':
-      this.onUnpin_(e);
+      this.onUnpin_(/** @type {typeMessage } */ (e));
       break;
     default:
       // Client out of date? Force refresh?

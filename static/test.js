@@ -505,7 +505,6 @@ asyncTest('Two channels, one client', function() {
 
   var callbacks = {
     'onMessage': function(msg) {
-      console.log('onMessage');
       equal(msg['subject']['name'], subject, 'subject matches');
       equal(msg['message'], message, 'message matches');
       cosmo1.shutdown();
