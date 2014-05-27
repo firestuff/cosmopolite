@@ -389,9 +389,11 @@ Cosmopolite.prototype.pin = function(subject, message) {
       'sender_message_id': id,
     };
 
-    this.pins_[id] = args;
 
-    this.sendRPC_('pin', args, resolve.bind(null, id));
+    this.sendRPC_('pin', args, function() {
+      this.pins_[id] = args;
+      resolve(id);
+    });
   }.bind(this));
 };
 
@@ -874,7 +876,11 @@ Cosmopolite.prototype.onSocketClose_ = function() {
   // We treat a disconnection as if all pins disappeared
   for (var subject in this.subscriptions_) {
     var subscription = this.subscriptions_[subject];
-    subscription.pins.forEach(this.onUnpin_, this);
+    subscription.pins.forEach(function(pin) {
+      // Stupid hack that saves complexity elsewhere
+      pin['message'] = JSON.stringify(pin['message']);
+      this.onUnpin_(pin);
+    }, this);
   }
 
   this.createChannel_();

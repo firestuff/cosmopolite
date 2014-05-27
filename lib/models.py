@@ -217,18 +217,14 @@ class Subject(db.Model):
     for subscription in subscriptions:
       subscription.SendMessage(event)
 
-  @db.transactional(xg=True)
+  @db.transactional()
   def PutPin(self, message, sender, sender_message_id, instance):
     """Internal helper for Pin()."""
-    # Reload the subject and instance to establish a barrier
-    subject = Subject.get(self.key())
-    instance = Instance.get(instance.key())
-
     # sender_message_id should be universal across all subjects, but we check
     # it within just this subject to allow in-transaction verification.
     pins = (
         Pin.all()
-        .ancestor(subject)
+        .ancestor(self)
         .filter('sender_message_id =', sender_message_id)
         .filter('instance =', instance)
         .fetch(1))
@@ -236,14 +232,14 @@ class Subject(db.Model):
       raise DuplicateMessage(sender_message_id)
 
     obj = Pin(
-        parent=subject,
+        parent=self,
         message=message,
         sender=sender,
         sender_message_id=sender_message_id,
         instance=instance)
     obj.put()
 
-    return (obj, list(Subscription.all().ancestor(subject)))
+    return (obj, list(Subscription.all().ancestor(self)))
 
   def Pin(self, message, sender, sender_message_id, instance):
     self.VerifyWritable(sender)
@@ -253,15 +249,11 @@ class Subject(db.Model):
     for subscription in subscriptions:
       subscription.SendMessage(event)
 
-  @db.transactional(xg=True)
+  @db.transactional()
   def RemovePin(self, sender, sender_message_id, instance_key):
-    # Reload the subject and instance to establish a barrier
-    subject = Subject.get(self.key())
-    Instance.get(instance_key)
-
     pins = (
         Pin.all()
-        .ancestor(subject)
+        .ancestor(self)
         .filter('sender =', sender)
         .filter('sender_message_id =', sender_message_id)
         .filter('instance =', instance_key))
@@ -271,7 +263,7 @@ class Subject(db.Model):
       events.append(pin.ToEvent(event_type='unpin'))
       pin.delete()
 
-    return (events, list(Subscription.all().ancestor(subject)))
+    return (events, list(Subscription.all().ancestor(self)))
 
   def Unpin(self, sender, sender_message_id, instance_key):
     self.VerifyWritable(sender)

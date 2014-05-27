@@ -430,6 +430,37 @@ asyncTest('pin/unpin', function() {
   var pin = cosmo.pin(subject, message);
 });
 
+asyncTest('Repin', function() {
+  expect(8);
+
+  var subject = randstring();
+  var message = randstring();
+
+  var pins = 0;
+
+  var callbacks = {
+    'onPin': function(e) {
+      equal(subject, e['subject']['name'], 'onPin: subject matches');
+      equal(message, e['message'], 'onPin: message matches');
+      equal(cosmo.getPins(subject).length, 1);
+      if (++pins == 1) {
+        cosmo.socket_.close();
+      } else {
+        cosmo.shutdown();
+        start();
+      }
+    },
+    'onUnpin': function(e) {
+      equal(subject, e['subject']['name'], 'onUnpin: subject matches');
+      equal(message, e['message'], 'onUnpin: message matches');
+    },
+  }
+
+  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.subscribe(subject);
+  var pin = cosmo.pin(subject, message);
+});
+
 
 module('dev_appserver only');
 
