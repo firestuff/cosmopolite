@@ -764,6 +764,7 @@ Cosmopolite.prototype.onReconnect_ = function() {
   for (var id in this.pins_) {
     /** @type {typeMessage} */
     var pin = this.pins_[id];
+    pin['sender_message_id'] = this.uuid_();
     rpcs.push({
       'command': 'pin',
       'arguments': pin,
