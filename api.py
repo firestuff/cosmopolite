@@ -63,12 +63,12 @@ def Pin(google_user, client, instance_id, args):
     models.Subject.FindOrCreate(subject).Pin(
         message, client.parent_key(), sender_message_id, instance)
   except models.DuplicateMessage:
-    logging.exception('Duplicate message: %s', sender_message_id)
+    logging.warning('Duplicate pin: %s', sender_message_id)
     return {
       'result': 'duplicate_message',
     }
   except models.AccessDenied:
-    logging.exception('Pin access denied')
+    logging.warning('Pin access denied')
     return {
       'result': 'access_denied',
     }
@@ -87,12 +87,12 @@ def SendMessage(google_user, client, instance_id, args):
     models.Subject.FindOrCreate(subject).SendMessage(
         message, client.parent_key(), sender_message_id)
   except models.DuplicateMessage:
-    logging.exception('Duplicate message: %s', sender_message_id)
+    logging.warning('Duplicate message: %s', sender_message_id)
     return {
       'result': 'duplicate_message',
     }
   except models.AccessDenied:
-    logging.exception('SendMessage access denied')
+    logging.warning('SendMessage access denied')
     return {
       'result': 'access_denied',
     }
@@ -121,7 +121,7 @@ def Subscribe(google_user, client, instance_id, args):
           subject, client, instance, messages, last_id),
     }
   except models.AccessDenied:
-    logging.exception('Subscribe access denied')
+    logging.warning('Subscribe access denied')
     return {
       'result': 'access_denied',
     }
@@ -136,7 +136,7 @@ def Unpin(google_user, client, instance_id, args):
     models.Subject.FindOrCreate(subject).Unpin(
         client.parent_key(), sender_message_id, instance.key())
   except models.AccessDenied:
-    logging.exception('Pin access denied')
+    logging.warning('Pin access denied')
     return {
       'result': 'access_denied',
     }
