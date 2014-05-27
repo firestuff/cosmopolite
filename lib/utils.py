@@ -52,7 +52,15 @@ def chaos_monkey(handler):
       self.response.headers['Retry-After'] = '0'
       self.error(503)
       return
-    return handler(self)
+
+    ret = handler(self)
+
+    if random.random() < config.CHAOS_PROBABILITY:
+      self.response.headers['Retry-After'] = '0'
+      self.error(503)
+      return
+
+    return ret
 
   return IntroduceFailures
 
