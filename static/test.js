@@ -478,6 +478,38 @@ asyncTest('Repin', function() {
   var pin = cosmo.pin(subject, message);
 });
 
+asyncTest('Duplicate subject', function() {
+  expect(8);
+
+  var subject = randstring();
+  var message1 = randstring();
+  var message2 = randstring();
+
+  var messages = 0;
+
+  var callbacks = {
+    'onConnect': function() {
+      cosmo.sendMessage(subject, message1);
+      cosmo.sendMessage(subject, message2);
+      cosmo.subscribe(subject, -1);
+    },
+    'onMessage': function(e) {
+      equal(subject, e['subject']['name'], 'subject matches');
+      if (e['message'] == message1) {
+        equal(message1, e['message'], 'message1 matches');
+      } else {
+        equal(message2, e['message'], 'message1 matches');
+      }
+      if (++messages == 2) {
+        cosmo.shutdown();
+        start();
+      }
+    },
+  }
+
+  var cosmo = new Cosmopolite(callbacks, null, randstring());
+});
+
 
 module('dev_appserver only');
 
