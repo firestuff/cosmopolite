@@ -17,7 +17,6 @@ import hmac
 import random
 import string
 
-from google.appengine.api import memcache
 from google.appengine.ext import db
 
 
@@ -32,11 +31,11 @@ class AuthKey(db.Model):
 
 _KEY_CHARS = string.ascii_letters + string.digits
 _KEY_LENGTH = 64
+_AUTH_KEY = []
 
 def GetAuthKey():
-  auth_key = memcache.get('auth_key')
-  if auth_key:
-    return auth_key
+  if _AUTH_KEY:
+    return _AUTH_KEY[0]
 
   for key in AuthKey.all().filter('live =', True):
     auth_key = key.auth_key
@@ -45,7 +44,7 @@ def GetAuthKey():
     auth_key = ''.join(random.choice(_KEY_CHARS) for _ in xrange(_KEY_LENGTH))
     AuthKey(auth_key=auth_key).put()
 
-  memcache.set('auth_key', auth_key)
+  _AUTH_KEY.append(auth_key)
   return auth_key
 
 

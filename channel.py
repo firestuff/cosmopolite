@@ -46,17 +46,15 @@ class OnChannelDisconnect(webapp2.RequestHandler):
     instance_id = self.request.get('from')
     instance_key = db.Key.from_path('Instance', instance_id)
 
-    subscriptions = models.Subscription.all().filter('instance =', instance_key)
-    for subscription in subscriptions:
-      subscription.delete()
+    subscriptions = list(models.Subscription.all().filter('instance =', instance_key))
+    if subscriptions:
+      db.delete(subscriptions)
 
     pins = models.Pin.all().filter('instance =', instance_key)
     for pin in pins:
       pin.Delete()
 
-    instance = models.Instance.FromID(instance_id)
-    if instance:
-      instance.delete()
+    db.delete(instance_key)
 
 
 app = webapp2.WSGIApplication([

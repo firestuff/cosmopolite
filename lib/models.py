@@ -112,6 +112,8 @@ class Subject(db.Model):
 
   next_message_id = db.IntegerProperty(required=True, default=1)
 
+  _cache = {}
+
   @classmethod
   def _UpdateHashWithString(cls, hashobj, string):
     string = string.encode('utf8')
@@ -138,11 +140,19 @@ class Subject(db.Model):
     else:
       writable_only_by = None
 
-    return cls.get_or_insert(
-        cls._KeyName(subject),
+    key_name = cls._KeyName(subject)
+    obj = cls._cache.get(key_name)
+    if obj:
+      return obj
+
+    obj = cls.get_or_insert(
+        key_name,
         name=subject['name'],
         readable_only_by=readable_only_by,
         writable_only_by=writable_only_by)
+
+    cls._cache[key_name] = obj
+    return obj
 
   @db.transactional()
   def GetRecentMessages(self, num_messages):

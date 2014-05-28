@@ -54,6 +54,11 @@ def CreateChannel(google_user, client, instance_id, args):
 
 def Pin(google_user, client, instance_id, args):
   instance = models.Instance.FromID(instance_id)
+  if not instance or not instance.active:
+    # Probably a race with the channel opening
+    return {
+      'result': 'retry',
+    }
 
   subject = args['subject']
   message = args['message']
