@@ -88,21 +88,16 @@ class Client(db.Model):
 
 
 class Instance(db.Model):
+  # key_name=instance_id
   active = db.BooleanProperty(required=True, default=False)
 
   @classmethod
-  @db.transactional()
   def FromID(cls, instance_id):
     return cls.get_by_key_name(instance_id)
 
   @classmethod
-  @db.transactional()
   def FindOrCreate(cls, instance_id):
-    instance = cls.FromID(instance_id)
-    if instance:
-      return instance
-    else:
-      return cls(key_name=instance_id).put()
+    return cls.get_or_insert(instance_id)
 
 
 class Subject(db.Model):
