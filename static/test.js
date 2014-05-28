@@ -479,7 +479,7 @@ asyncTest('Repin', function() {
 });
 
 asyncTest('Duplicate subject', function() {
-  expect(8);
+  expect(4);
 
   var subject = randstring();
   var message1 = randstring();
@@ -498,7 +498,7 @@ asyncTest('Duplicate subject', function() {
       if (e['message'] == message1) {
         equal(message1, e['message'], 'message1 matches');
       } else {
-        equal(message2, e['message'], 'message1 matches');
+        equal(message2, e['message'], 'message2 matches');
       }
       if (++messages == 2) {
         cosmo.shutdown();

@@ -14,7 +14,9 @@
 # limitations under the License.
 
 import json
+import hashlib
 import logging
+import struct
 
 from google.appengine.api import channel
 from google.appengine.ext import db
@@ -111,31 +113,36 @@ class Subject(db.Model):
   next_message_id = db.IntegerProperty(required=True, default=1)
 
   @classmethod
+  def _UpdateHashWithString(cls, hashobj, string):
+    string = string.encode('utf8')
+    hashobj.update(struct.pack('!i', len(string)))
+    hashobj.update(string)
+
+  @classmethod
+  def _KeyName(cls, subject):
+    hashobj = hashlib.sha256()
+    cls._UpdateHashWithString(hashobj, subject['name'])
+    cls._UpdateHashWithString(hashobj, subject.get('readable_only_by', ''))
+    cls._UpdateHashWithString(hashobj, subject.get('writable_only_by', ''))
+    return hashobj.hexdigest()
+
+  @classmethod
   def FindOrCreate(cls, subject):
     if 'readable_only_by' in subject:
-      readable_only_by = Profile.get(subject['readable_only_by'])
+      readable_only_by = db.Key(subject['readable_only_by'])
     else:
       readable_only_by = None
 
     if 'writable_only_by' in subject:
-      writable_only_by = Profile.get(subject['writable_only_by'])
+      writable_only_by = db.Key(subject['writable_only_by'])
     else:
       writable_only_by = None
 
-    subjects = (
-        cls.all()
-        .filter('name =', subject['name'])
-        .filter('readable_only_by =', readable_only_by)
-        .filter('writable_only_by =', writable_only_by)
-        .fetch(1))
-    if subjects:
-      return subjects[0]
-    subject = cls(
+    return cls.get_or_insert(
+        cls._KeyName(subject),
         name=subject['name'],
         readable_only_by=readable_only_by,
         writable_only_by=writable_only_by)
-    subject.put()
-    return subject
 
   @db.transactional()
   def GetRecentMessages(self, num_messages):
