@@ -37,10 +37,10 @@ def GetAuthKey():
   if _AUTH_KEY:
     return _AUTH_KEY[0]
 
-  for key in AuthKey.all().filter('live =', True):
-    auth_key = key.auth_key
-
-  if not auth_key:
+  auth_keys = AuthKey.all().filter('live =', True).fetch(1)
+  if auth_keys:
+    auth_key = auth_keys[0].auth_key
+  else:
     auth_key = ''.join(random.choice(_KEY_CHARS) for _ in xrange(_KEY_LENGTH))
     AuthKey(auth_key=auth_key).put()
 
