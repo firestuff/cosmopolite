@@ -13,5 +13,5 @@ curl \
   http://closure-compiler.appspot.com/compile
 echo
 
-gjslint --strict --disable=0121,0233 cosmopolite.js
-gjslint --strict --disable=0121,0233 --nojsdoc test.js
+gjslint --strict cosmopolite.js
+gjslint --strict --nojsdoc test.js

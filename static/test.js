@@ -109,7 +109,7 @@ asyncTest('Message round trip', function() {
       equal(e['message'], message, 'message matches');
       cosmo.shutdown();
       start();
-    },
+    }
   };
 
   var cosmo = new Cosmopolite(callbacks, null, randstring());
@@ -127,9 +127,9 @@ asyncTest('Complex object', function() {
     'zag': [16, 22, 59, 76],
     'boo': {
       'nested': 'object',
-      10: 100,
+      10: 100
     },
-    'unicode': '☠☣☃𠜎',
+    'unicode': '☠☣☃𠜎'
   };
 
   var callbacks = {
@@ -138,7 +138,7 @@ asyncTest('Complex object', function() {
       deepEqual(e['message'], message, 'message matches');
       cosmo.shutdown();
       start();
-    },
+    }
   };
 
   var cosmo = new Cosmopolite(callbacks, null, randstring());
@@ -190,7 +190,7 @@ asyncTest('Duplicate message suppression', function() {
       equal(msg['message'], message1, 'message matches');
       cosmo.shutdown();
       start();
-    },
+    }
   };
 
   var cosmo = new Cosmopolite(callbacks, null, randstring());
@@ -225,7 +225,7 @@ asyncTest('Message persistence', function() {
       equal(msg['message'], message, 'message matches');
       cosmo2.shutdown();
       start();
-    },
+    }
   };
 
   var cosmo2 = new Cosmopolite(callbacks, null, namespace);
@@ -344,7 +344,7 @@ asyncTest('Reconnect channel', function() {
       equal(msg['message'], message, 'message matches');
       cosmo.shutdown();
       start();
-    },
+    }
   };
 
   var cosmo = new Cosmopolite(callbacks, null, randstring());
@@ -369,13 +369,13 @@ asyncTest('subscribe ACL', function() {
       cosmo.getProfile().then(function(profile) {
         cosmo.subscribe({
           'name': subject,
-          'readable_only_by': profile,
+          'readable_only_by': profile
         }).then(function() {
           ok(true, 'correct ACL succeeds');
 
           cosmo.subscribe({
             'name': subject,
-            'readable_only_by': tempProfile,
+            'readable_only_by': tempProfile
           }).then(null, function() {
             ok(true, 'bad ACL fails');
             cosmo.shutdown();
@@ -403,13 +403,13 @@ asyncTest('sendMessage ACL', function() {
       cosmo.getProfile().then(function(profile) {
         cosmo.sendMessage({
           'name': subject,
-          'writable_only_by': profile,
+          'writable_only_by': profile
         }, message).then(function() {
           ok(true, 'correct ACL succeeds');
 
           cosmo.sendMessage({
             'name': subject,
-            'writable_only_by': tempProfile,
+            'writable_only_by': tempProfile
           }, message).then(null, function() {
             ok(true, 'bad ACL fails');
             cosmo.shutdown();
@@ -442,7 +442,7 @@ asyncTest('pin/unpin', function() {
       equal(message, e['message'], 'onUnpin: message matches');
       cosmo.shutdown();
       start();
-    },
+    }
   };
 
   var cosmo = new Cosmopolite(callbacks, null, randstring());
@@ -473,7 +473,7 @@ asyncTest('Repin', function() {
     'onUnpin': function(e) {
       equal(subject, e['subject']['name'], 'onUnpin: subject matches');
       equal(message, e['message'], 'onUnpin: message matches');
-    },
+    }
   };
 
   var cosmo = new Cosmopolite(callbacks, null, randstring());
@@ -507,7 +507,7 @@ asyncTest('Duplicate subject', function() {
         cosmo.shutdown();
         start();
       }
-    },
+    }
   };
 
   var cosmo = new Cosmopolite(callbacks, null, randstring());
@@ -537,7 +537,7 @@ asyncTest('Login', function() {
         cosmo.shutdown();
         logout();
         start();
-      },
+      }
     };
     var cosmo = new Cosmopolite(callbacks, null, randstring());
   });
@@ -575,7 +575,7 @@ asyncTest('Profile merge', function() {
       },
       'onLogin': function(logout_url) {
         cosmo.subscribe(subject, -1);
-      },
+      }
     };
     var cosmo = new Cosmopolite(callbacks, null, randstring());
     cosmo.sendMessage(subject, message);
@@ -596,7 +596,7 @@ asyncTest('Two channels, one client', function() {
       equal(msg['message'], message, 'message matches');
       cosmo1.shutdown();
       start();
-    },
+    }
   };
 
   var cosmo1 = new Cosmopolite(callbacks, null, namespace);

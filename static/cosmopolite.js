@@ -40,25 +40,26 @@ String.prototype.hashCode = function() {
 
 /**
  * @constructor
- * @param {?Cosmopolite.typeCallbacks=} callbacks
- * @param {?string=} urlPrefix
- * @param {?string=} namespace
+ * @param {?Cosmopolite.typeCallbacks=} opt_callbacks
+ * @param {?string=} opt_urlPrefix
+ * @param {?string=} opt_namespace
  */
-var Cosmopolite = function(callbacks, urlPrefix, namespace) {
+var Cosmopolite = function(opt_callbacks, opt_urlPrefix, opt_namespace) {
   /**
    * @type {Cosmopolite.typeCallbacks}
    * @private
    */
-  this.callbacks_ = callbacks || /** @type {Cosmopolite.typeCallbacks} */ ({});
+  this.callbacks_ =
+      opt_callbacks || /** @type {Cosmopolite.typeCallbacks} */ ({});
   /**
    * @type {string}
    * @private
    */
-  this.urlPrefix_ = urlPrefix || '/cosmopolite';
+  this.urlPrefix_ = opt_urlPrefix || '/cosmopolite';
   /**
    * @type {string}
    * @private */
-  this.namespace_ = namespace || 'cosmopolite';
+  this.namespace_ = opt_namespace || 'cosmopolite';
 
   /**
    * @type {Cosmopolite.ChannelState_}
@@ -119,7 +120,7 @@ var Cosmopolite = function(callbacks, urlPrefix, namespace) {
 
   /** @type {Array.<string>} */
   var scriptUrls = [
-    '/_ah/channel/jsapi',
+    '/_ah/channel/jsapi'
   ];
   /**
    * @type {number}
@@ -176,7 +177,7 @@ Cosmopolite.typeMessage;
 /**
  * @typedef {{command: string,
               arguments: Object,
-              onSuccess: (function(Object)|null|undefined)}}
+              onSuccess: (function(Object)|null)}}
  * @private
  */
 Cosmopolite.typeRPC_;
@@ -214,7 +215,7 @@ Cosmopolite.ChannelState_ = {
   // RPC complete, channel opening
   OPENING: 3,
   // Channel opened
-  OPEN: 3,
+  OPEN: 3
 };
 
 
@@ -225,7 +226,7 @@ Cosmopolite.ChannelState_ = {
  */
 Cosmopolite.SubscriptionState_ = {
   PENDING: 1,
-  ACTIVE: 2,
+  ACTIVE: 2
 };
 
 
@@ -252,12 +253,13 @@ Cosmopolite.prototype.shutdown = function() {
  * Start receiving messages sent to this subject via the onMessage callback.
  *
  * @param {Cosmopolite.typeSubjectLoose} subject
- * @param {?number=} messages Number of recent messages to request;
+ * @param {?number=} opt_messages Number of recent messages to request;
  *     0 for none, -1 for all
- * @param {?number=} last_id ID of last message received; fetch messages since
+ * @param {?number=} opt_last_id ID of last message received; fetch messages
+ *     since
  * @return {Promise}
  */
-Cosmopolite.prototype.subscribe = function(subject, messages, last_id) {
+Cosmopolite.prototype.subscribe = function(subject, opt_messages, opt_last_id) {
   return new Promise(function(resolve, reject) {
     /** @type {Cosmopolite.typeSubject} */
     var canonicalSubject = this.canonicalSubject_(subject);
@@ -267,18 +269,18 @@ Cosmopolite.prototype.subscribe = function(subject, messages, last_id) {
       this.subscriptions_[subjectString] = {
         'messages': [],
         'pins': [],
-        'state': Cosmopolite.SubscriptionState_.PENDING,
+        'state': Cosmopolite.SubscriptionState_.PENDING
       };
     }
 
     var args = {
-      'subject': canonicalSubject,
+      'subject': canonicalSubject
     };
-    if (messages) {
-      args['messages'] = messages;
+    if (opt_messages) {
+      args['messages'] = opt_messages;
     }
-    if (last_id != null) {
-      args['last_id'] = last_id;
+    if (opt_last_id != null) {
+      args['last_id'] = opt_last_id;
     }
 
     this.sendRPC_('subscribe', args, function(response) {
@@ -317,7 +319,7 @@ Cosmopolite.prototype.unsubscribe = function(subject) {
     var subjectString = JSON.stringify(canonicalSubject);
     delete this.subscriptions_[subjectString];
     var args = {
-      'subject': canonicalSubject,
+      'subject': canonicalSubject
     };
     this.sendRPC_('unsubscribe', args, resolve);
   }.bind(this));
@@ -336,7 +338,7 @@ Cosmopolite.prototype.sendMessage = function(subject, message) {
     var args = {
       'subject': this.canonicalSubject_(subject),
       'message': JSON.stringify(message),
-      'sender_message_id': this.uuid_(),
+      'sender_message_id': this.uuid_()
     };
 
     // No message left behind.
@@ -447,7 +449,7 @@ Cosmopolite.prototype.pin = function(subject, message) {
     var args = {
       'subject': this.canonicalSubject_(subject),
       'message': JSON.stringify(message),
-      'sender_message_id': id,
+      'sender_message_id': id
     };
 
 
@@ -470,7 +472,7 @@ Cosmopolite.prototype.unpin = function(id) {
     var pin = this.pins_[id];
     var args = {
       'subject': pin['subject'],
-      'sender_message_id': pin['sender_message_id'],
+      'sender_message_id': pin['sender_message_id']
     };
 
     delete this.pins_[id];
@@ -531,7 +533,7 @@ Cosmopolite.prototype.canonicalSubject_ = function(subject) {
   }
   if (typeof(subject) == 'string') {
     subject = {
-      'name': subject,
+      'name': subject
     };
   }
   if (subject['readable_only_by'] === null) {
@@ -651,15 +653,15 @@ Cosmopolite.prototype.onMessageSent_ = function(
  *
  * @param {string} command Command name to call
  * @param {Object} args Arguments to pass to server
- * @param {?function(Object)=} onSuccess Success callback function
+ * @param {?function(Object)=} opt_onSuccess Success callback function
  * @private
  */
-Cosmopolite.prototype.sendRPC_ = function(command, args, onSuccess) {
+Cosmopolite.prototype.sendRPC_ = function(command, args, opt_onSuccess) {
   /** @type {Cosmopolite.typeRPC_} */
   var rpc = {
     'command': command,
     'arguments': args,
-    'onSuccess': onSuccess,
+    'onSuccess': opt_onSuccess || null
   };
   if (this.maySendRPC_()) {
     this.sendRPCs_([rpc]);
@@ -678,20 +680,21 @@ Cosmopolite.prototype.sendRPC_ = function(command, args, onSuccess) {
  * backoff.
  *
  * @param {Array.<Cosmopolite.typeRPC_>} commands List of commands to execute
- * @param {number=} delay Seconds waited before executing this call for backoff
+ * @param {number=} opt_delay Seconds waited before executing this call for
+ *     backoff
  * @private
  */
-Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
+Cosmopolite.prototype.sendRPCs_ = function(commands, opt_delay) {
   if (this.shutdown_ || !commands.length) {
     return;
   }
   var request = {
     'instance_id': this.instanceID_,
-    'commands': [],
+    'commands': []
   };
   commands.forEach(function(command) {
     var request_command = {
-      'command': command['command'],
+      'command': command['command']
     };
     if ('arguments' in command) {
       request_command['arguments'] = command['arguments'];
@@ -712,7 +715,7 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
   var retryAfterDelay = (function(newCommands) {
     var intDelay =
         xhr.getResponseHeader('Retry-After') ||
-        Math.min(32, Math.max(2, delay || 2));
+        Math.min(32, Math.max(2, opt_delay || 2));
     console.log(
         this.loggingPrefix_(),
         'RPC failed; will retry in ' + intDelay + ' seconds');
@@ -831,7 +834,7 @@ Cosmopolite.prototype.onReconnect_ = function() {
       'command': 'subscribe',
       'arguments': {
         'subject': canonicalSubject,
-        'last_id': last_id,
+        'last_id': last_id
       }
     });
   }
@@ -840,7 +843,7 @@ Cosmopolite.prototype.onReconnect_ = function() {
     var pin = this.pins_[id];
     rpcs.push({
       'command': 'pin',
-      'arguments': pin,
+      'arguments': pin
     });
   }
   this.sendRPCs_(rpcs);
@@ -865,8 +868,8 @@ Cosmopolite.prototype.createChannel_ = function() {
   var rpcs = [
     {
       'command': 'createChannel',
-      'onSuccess': this.onCreateChannel_,
-    },
+      'onSuccess': this.onCreateChannel_
+    }
   ];
   // sendRPCs instead of sendRPC so we don't queue.
   this.sendRPCs_(rpcs);
@@ -898,7 +901,7 @@ Cosmopolite.prototype.onCreateChannel_ = function(data) {
     onopen: this.onSocketOpen_.bind(this),
     onclose: this.onSocketClose_.bind(this),
     onmessage: this.onSocketMessage_.bind(this),
-    onerror: this.onSocketError_.bind(this),
+    onerror: this.onSocketError_.bind(this)
   });
 };
 
