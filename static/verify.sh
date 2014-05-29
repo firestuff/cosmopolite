@@ -11,5 +11,6 @@ curl \
   --data externs_url=https://closure-compiler.googlecode.com/git/contrib/externs/jquery-1.8.js \
   --data-urlencode "js_code@cosmopolite.js" \
   http://closure-compiler.appspot.com/compile
-
 echo
+
+gjslint --disable=0121 cosmopolite.js

@@ -78,7 +78,7 @@ var typeEvent;
 
 /** @typedef {{messages: Array.<typeMessage>,
                pins: Array.<typeMessage>,
-               state: Cosmopolite.prototype.SubscriptionState}} */
+               state: Cosmopolite.SubscriptionState_}} */
 var typeSubscription;
 
 /** @typedef {{command: string,
@@ -94,28 +94,57 @@ var typeRPC;
  * @param {?string=} namespace
  */
 var Cosmopolite = function(callbacks, urlPrefix, namespace) {
-  /** * @type {typeCallbacks} */
+  /**
+   * @type {typeCallbacks}
+   * @private
+   */
   this.callbacks_ = callbacks || /** @type {typeCallbacks} */ ({});
-  /** @type {string} */
+  /**
+   * @type {string}
+   * @private
+   */
   this.urlPrefix_ = urlPrefix || '/cosmopolite';
-  /** @type {string} */
+  /**
+   * @type {string}
+   * @private */
   this.namespace_ = namespace || 'cosmopolite';
 
-  /** @type {Cosmopolite.prototype.ChannelState} */
-  this.channelState_ = this.ChannelState.CLOSED;
-  /** @type {boolean} */
+  /**
+   * @type {Cosmopolite.ChannelState_}
+   * @private
+   */
+  this.channelState_ = Cosmopolite.ChannelState_.CLOSED;
+  /**
+   * @type {boolean}
+   * @private
+   */
   this.shutdown_ = false;
 
-  /** @type {Array.<Object>} */
+  /**
+   * @type {Array.<Object>}
+   * @private
+   */
   this.rpcQueue_ = [];
-  /** @type {Object.<string, typeSubscription>} */
+  /**
+   * @type {Object.<string, typeSubscription>}
+   * @private
+   */
   this.subscriptions_ = {};
-  /** @type {Object.<string, typeMessage>} */
+  /**
+   * @type {Object.<string, typeMessage>}
+   * @private
+   */
   this.pins_ = {};
-  /** @type {Array.<function(string)>} */
+  /**
+   * @type {Array.<function(string)>}
+   * @private
+   */
   this.profilePromises_ = [];
 
-  /** @type {string} */
+  /**
+   * @type {string}
+   * @private
+   */
   this.messageQueueKey_ = this.namespace_ + ':message_queue';
   if (this.messageQueueKey_ in localStorage) {
     /** @type {Array.<typeMessage>} */
@@ -141,7 +170,10 @@ var Cosmopolite = function(callbacks, urlPrefix, namespace) {
   var scriptUrls = [
     '/_ah/channel/jsapi',
   ];
-  /** @type {number} */
+  /**
+   * @type {number}
+   * @private
+   */
   this.numScriptsToLoad_ = scriptUrls.length;
   scriptUrls.forEach(function(scriptUrl) {
     /** @type {Node} */
@@ -158,7 +190,7 @@ var Cosmopolite = function(callbacks, urlPrefix, namespace) {
  * @enum {number}
  * @private
  */
-Cosmopolite.prototype.ChannelState = {
+Cosmopolite.ChannelState_ = {
   // No channel open, no RPC pending
   CLOSED: 1,
   // No channel open, RPC pending
@@ -175,7 +207,7 @@ Cosmopolite.prototype.ChannelState = {
  * @enum {number}
  * @private
  */
-Cosmopolite.prototype.SubscriptionState = {
+Cosmopolite.SubscriptionState_ = {
   PENDING: 1,
   ACTIVE: 2,
 };
@@ -203,8 +235,9 @@ Cosmopolite.prototype.shutdown = function() {
  * Start receiving messages sent to this subject via the onMessage callback.
  *
  * @param {typeSubjectLoose} subject
- * @param {?number=} messages Number of recent messages to request; 0 for none, -1 for all
- * @param {?number=} last_id ID of last message received; fetch all messages since
+ * @param {?number=} messages Number of recent messages to request;
+ *     0 for none, -1 for all
+ * @param {?number=} last_id ID of last message received; fetch messages since
  * @return {Promise}
  */
 Cosmopolite.prototype.subscribe = function(subject, messages, last_id) {
@@ -216,8 +249,8 @@ Cosmopolite.prototype.subscribe = function(subject, messages, last_id) {
     if (!(subjectString in this.subscriptions_)) {
       this.subscriptions_[subjectString] = {
         'messages': [],
-        'pins':     [],
-        'state':    this.SubscriptionState.PENDING,
+        'pins': [],
+        'state': Cosmopolite.SubscriptionState_.PENDING,
       };
     }
 
@@ -235,7 +268,8 @@ Cosmopolite.prototype.subscribe = function(subject, messages, last_id) {
       // unsubscribe may have been called since we sent the RPC. That's racy
       // without waiting for the promise, but do our best
       if (subjectString in this.subscriptions_) {
-        this.subscriptions_[subjectString].state = this.SubscriptionState.ACTIVE;
+        this.subscriptions_[subjectString].state =
+          Cosmopolite.SubscriptionState_.ACTIVE;
       }
       /** @type {string} */
       var result = response['result'];
@@ -266,7 +300,7 @@ Cosmopolite.prototype.unsubscribe = function(subject) {
     delete this.subscriptions_[subjectString];
     var args = {
       'subject': canonicalSubject,
-    }
+    };
     this.sendRPC_('unsubscribe', args, resolve);
   }.bind(this));
 };
@@ -281,8 +315,8 @@ Cosmopolite.prototype.unsubscribe = function(subject) {
 Cosmopolite.prototype.sendMessage = function(subject, message) {
   return new Promise(function(resolve, reject) {
     var args = {
-      'subject':           this.canonicalSubject_(subject),
-      'message':           JSON.stringify(message),
+      'subject': this.canonicalSubject_(subject),
+      'message': JSON.stringify(message),
       'sender_message_id': this.uuid_(),
     };
 
@@ -386,8 +420,8 @@ Cosmopolite.prototype.pin = function(subject, message) {
     /** @type {string} */
     var id = this.uuid_();
     var args = {
-      'subject':           this.canonicalSubject_(subject),
-      'message':           JSON.stringify(message),
+      'subject': this.canonicalSubject_(subject),
+      'message': JSON.stringify(message),
       'sender_message_id': id,
     };
 
@@ -400,7 +434,7 @@ Cosmopolite.prototype.pin = function(subject, message) {
 };
 
 /**
- * Unpin a message from the given subject, storing it and notifying all listeners.
+ * Unpin a message from the given subject, storing it and notifying listeners.
  *
  * @param {string} id ID returned by pin()'s resolve callback
  * @return {Promise}
@@ -409,7 +443,7 @@ Cosmopolite.prototype.unpin = function(id) {
   return new Promise(function(resolve, reject) {
     var pin = this.pins_[id];
     var args = {
-      'subject':           pin['subject'],
+      'subject': pin['subject'],
       'sender_message_id': pin['sender_message_id'],
     };
 
@@ -456,7 +490,8 @@ Cosmopolite.prototype.uuid_ = function() {
 /**
  * Canonicalize a subject name or object
  *
- * @param {typeSubjectLoose} subject A simple or complex representation of a subject
+ * @param {typeSubjectLoose} subject A simple or complex representation of a
+ *     subject
  * @return {typeSubject} A canonicalized object for RPCs
  * @const
  * @private
@@ -468,14 +503,14 @@ Cosmopolite.prototype.canonicalSubject_ = function(subject) {
   if (typeof(subject) == 'string') {
     subject = {
       'name': subject,
-    }
+    };
   }
   if (subject['readable_only_by'] === null) {
     delete subject['readable_only_by'];
-  };
+  }
   if (subject['writable_only_by'] === null) {
     delete subject['writable_only_by'];
-  };
+  }
   return subject;
 };
 
@@ -532,15 +567,18 @@ Cosmopolite.prototype.onReceiveMessage_ = function(data) {
  * @private
  */
 Cosmopolite.prototype.registerMessageHandlers_ = function() {
-  /** @type {function(Event)} */
-  this.messageHandler_ = function(e) {
+  /**
+   * @param {Event} e
+   * @this {Cosmopolite}
+   */
+  this.messageHandler_ = (function(e) {
     if (e.origin != window.location.origin) {
       // Probably talkgadget
       return;
     }
     console.log(this.loggingPrefix_(), 'received browser message:', e.data);
     this.onReceiveMessage_(e.data);
-  }.bind(this);
+  }).bind(this);
   window.addEventListener('message', this.messageHandler_);
 };
 
@@ -606,7 +644,7 @@ Cosmopolite.prototype.sendRPC_ = function(command, args, onSuccess) {
  * backoff.
  *
  * @param {Array.<typeRPC>} commands List of commands to execute
- * @param {number=} delay Seconds waited before executing this call (for backoff)
+ * @param {number=} delay Seconds waited before executing this call for backoff
  * @private
  */
 Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
@@ -630,24 +668,25 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, delay) {
     request['client_id'] = localStorage[this.namespace_ + ':client_id'];
   }
   if (this.namespace_ + ':google_user_id' in localStorage) {
-    request['google_user_id'] = localStorage[this.namespace_ + ':google_user_id'];
+    request['google_user_id'] =
+      localStorage[this.namespace_ + ':google_user_id'];
   }
 
   var xhr = new XMLHttpRequest();
   xhr.responseType = 'json';
 
-  var retryAfterDelay = function(newCommands) {
+  var retryAfterDelay = (function(newCommands) {
     var intDelay =
       xhr.getResponseHeader('Retry-After') ||
       Math.min(32, Math.max(2, delay || 2));
     console.log(
       this.loggingPrefix_(),
       'RPC failed; will retry in ' + intDelay + ' seconds');
-    var retry = function() {
+    var retry = (function() {
       this.sendRPCs_(newCommands, Math.pow(intDelay, 2));
-    }.bind(this);
+    }).bind(this);
     window.setTimeout(retry, intDelay * 1000);
-  }.bind(this);
+  }).bind(this);
 
   xhr.addEventListener('load', function(e) {
     if (xhr.status != 200) {
@@ -718,12 +757,12 @@ Cosmopolite.prototype.maySendRPC_ = function() {
     return false;
   }
 
-  if (this.channelState_ != this.ChannelState.OPEN) {
+  if (this.channelState_ != Cosmopolite.ChannelState_.OPEN) {
     return false;
   }
 
   return true;
-}
+};
 
 /**
  * Handle tasks needed after reconnecting the channel
@@ -743,7 +782,7 @@ Cosmopolite.prototype.onReconnect_ = function() {
     var subscription = this.subscriptions_[subject];
     /** @type {typeSubject} */
     var canonicalSubject = /** @type {typeSubject} */ (JSON.parse(subject));
-    if (subscription.state != this.SubscriptionState.ACTIVE) {
+    if (subscription.state != Cosmopolite.SubscriptionState_.ACTIVE) {
       continue;
     }
     /** @type {number} */
@@ -754,8 +793,8 @@ Cosmopolite.prototype.onReconnect_ = function() {
     rpcs.push({
       'command': 'subscribe',
       'arguments': {
-        'subject':  canonicalSubject,
-        'last_id':  last_id,
+        'subject': canonicalSubject,
+        'last_id': last_id,
       }
     });
   }
@@ -776,8 +815,8 @@ Cosmopolite.prototype.onReconnect_ = function() {
  * @private
  */
 Cosmopolite.prototype.createChannel_ = function() {
-  if (this.channelState_ == this.ChannelState.CLOSED) {
-    this.channelState_ = this.ChannelState.PENDING;
+  if (this.channelState_ == Cosmopolite.ChannelState_.CLOSED) {
+    this.channelState_ = Cosmopolite.ChannelState_.PENDING;
   } else {
     return;
   }
@@ -787,7 +826,7 @@ Cosmopolite.prototype.createChannel_ = function() {
 
   var rpcs = [
     {
-      'command':   'createChannel',
+      'command': 'createChannel',
       'onSuccess': this.onCreateChannel_,
     },
   ];
@@ -808,8 +847,8 @@ Cosmopolite.prototype.onCreateChannel_ = function(data) {
     return;
   }
 
-  if (this.channelState_ == this.ChannelState.PENDING) {
-    this.channelState_ = this.ChannelState.OPENING;
+  if (this.channelState_ == Cosmopolite.ChannelState_.PENDING) {
+    this.channelState_ = Cosmopolite.ChannelState_.OPENING;
   } else {
     return;
   }
@@ -834,10 +873,10 @@ Cosmopolite.prototype.onSocketOpen_ = function() {
 
   if (this.shutdown_ && this.socket_) {
     this.socket_.close();
-  };
+  }
 
-  if (this.channelState_ == this.ChannelState.OPENING) {
-    this.channelState_ = this.ChannelState.OPEN;
+  if (this.channelState_ == Cosmopolite.ChannelState_.OPENING) {
+    this.channelState_ = Cosmopolite.ChannelState_.OPEN;
     if (this.callbacks_.onConnect) {
       this.callbacks_.onConnect();
     }
@@ -860,8 +899,8 @@ Cosmopolite.prototype.onSocketClose_ = function() {
     return;
   }
 
-  if (this.channelState_ == this.ChannelState.OPEN) {
-    this.channelState_ = this.ChannelState.CLOSED;
+  if (this.channelState_ == Cosmopolite.ChannelState_.OPEN) {
+    this.channelState_ = Cosmopolite.ChannelState_.CLOSED;
     if (this.callbacks_.onDisconnect) {
       this.callbacks_.onDisconnect();
     }
@@ -1046,7 +1085,7 @@ Cosmopolite.prototype.onUnpin_ = function(e) {
     if (pin['id'] == e['id']) {
       break;
     }
-  };
+  }
   if (index == subscription.pins.length) {
     console.log(this.loggingPrefix_(), 'unknown pin:', e);
     return;
@@ -1103,5 +1142,5 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
   }
 };
 
-/* Exported values */
+/** @type {function(new:Cosmopolite, ?typeCallbacks=, ?string=, ?string=)} */
 window.Cosmopolite = Cosmopolite;
