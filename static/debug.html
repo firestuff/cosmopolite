@@ -1,147 +1,34 @@
 <html>
   <head>
     <script src="/cosmopolite/static/cosmopolite.js" charset="UTF-8"></script>
-    <style>
-a {
-  text-decoration: none;
-}
-    </style>
+    <link rel="stylesheet" type="text/css" href="debug.css">
   </head>
   <body>
-    <div>Google user: <span id="google_user"></span></div>
-
-    <div>
-      Subject: <input type="text" id="subject">
-      <input type="button" id="subscribe" value="Subscribe">
-    </div>
-    <div>
-      <select id="subscriptions"></select>
-      <input type="button" id="unsubscribe" value="Unsubscribe">
-    </div>
-
-    <hr>
-
-    <div>
-      Message: <input type="text" id="message">
-    </div>
-    <div>
-      <input type="button" id="send" value="Send">
-      <input type="button" id="pin" value="Pin">
-    </div>
-
-    <hr>
-
-    <div id="pins"></div>
-
-    <hr>
-
-    <div id="messages"></div>
-
-    <script>
-var subject = document.getElementById('subject');
-var subscriptions = document.getElementById('subscriptions');
-
-var message = document.getElementById('message');
-
-var pins = document.getElementById('pins');
-
-var messages = document.getElementById('messages');
-
-var addMessage = function(message) {
-  var messageDiv = document.createElement('div');
-  messageDiv.appendChild(document.createTextNode(
-    (new Date(message['created'] * 1000)).toString() +
-    ' <????-' + (Math.abs(message['sender'].hashCode()) % 10000) + '> ' +
-    message['message']
-  ));
-  messages.appendChild(messageDiv);
-};
-
-var addPin = function(pin) {
-  var pinDiv = document.createElement('div');
-  pinDiv.appendChild(document.createTextNode(
-    (new Date(pin['created'] * 1000)).toString() +
-    ' <????-' + (Math.abs(pin['sender'].hashCode()) % 10000) + '> ' +
-    pin['message']
-  ));
-  pinDiv.pinId = pin['id'];
-  pins.appendChild(pinDiv);
-};
-
-window.addEventListener('load', function() {
-  var googleUser = document.getElementById('google_user');
-
-  var callbacks = {
-    onLogin: function(username, logout_url) {
-      googleUser.innerHTML =
-        username +
-        ' <a href="' + logout_url + '" target="_blank">(log out)</a>';
-    },
-    onLogout: function(login_url) {
-      googleUser.innerHTML =
-        '<a href="' + login_url + '" target="_blank">(log in)</a>';
-    },
-    onMessage: function(message) {
-      if (subscriptions.value != message['subject']['name']) {
-        return;
-      }
-      addMessage(message);
-    },
-    onPin: function(pin) {
-      if (subscriptions.value != pin['subject']['name']) {
-        return;
-      }
-      addPin(pin);
-    },
-    onUnpin: function(pin) {
-      if (subscriptions.value != pin['subject']['name']) {
-        return;
-      }
-      for (var i = 0; i < pins.childNodes.length; i++) {
-        var pinDiv = pins.childNodes[i];
-        if (pinDiv.pinId == pin['id']) {
-          pins.removeChild(pinDiv);
-          break;
-        }
-      }
-    },
-  };
-
-  var debug = new Cosmopolite(callbacks);
-
-  document.getElementById('subscribe').addEventListener('click', function() {
-    debug.subscribe(subject.value, -1);
-    var option = document.createElement('option');
-    option.text = subject.value;
-    subscriptions.options.add(option);
-    subscriptions.dispatchEvent(new CustomEvent('change'));
-  });
-
-  document.getElementById('unsubscribe').addEventListener('click', function() {
-    debug.unsubscribe(subscriptions.value);
-    subscriptions.options.remove(subscriptions.options.selectedIndex);
-    subscriptions.dispatchEvent(new CustomEvent('change'));
-  });
-
-  document.getElementById('send').addEventListener('click', function() {
-    debug.sendMessage(subscriptions.value, message.value);
-  });
-
-  document.getElementById('pin').addEventListener('click', function() {
-    debug.pin(subscriptions.value, message.value);
-  });
-
-  document.getElementById('subscriptions').addEventListener('change', function() {
-    messages.innerHTML = '';
-    pins.innerHTML = '';
-    if (!subscriptions.value) {
-      return;
-    }
-    debug.getMessages(subscriptions.value).forEach(addMessage);
-    debug.getPins(subscriptions.value).forEach(addPin);
-  });
-
-});
-    </script>
+    <container>
+      <subjectcontainer class="verticalcontainer">
+        <subjectlist class="panel">
+          <panelheading>Subjects</panelheading>
+        </subjectlist>
+        <subscribe class="panel fixed">
+          <panelheading>Subscribe</panelheading>
+        </subscribe">
+      </subjectcontainer>
+      <messagecontainer class="verticalcontainer">
+        <messagelist class="panel">
+          <panelheading>Messages</panelheading>
+        </messagelist>
+        <sendmessage class="panel fixed">
+          <panelheading>Send Message</panelheading>
+        </sendmessage>
+      </messagecontainer>
+      <pincontainer class="verticalcontainer">
+        <pinlist class="panel">
+          <panelheading>Pins</panelheading>
+        </pinlist>
+        <pin class="panel fixed">
+          <panelheading>Pin</panelheading>
+        </pin>
+      </pincontainer>
+    </container>
   </body>
 </html>
