@@ -14,3 +14,4 @@ curl \
 echo
 
 gjslint --strict --disable=0121,0233 cosmopolite.js
+gjslint --strict --disable=0121,0233 --nojsdoc test.js
