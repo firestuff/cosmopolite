@@ -290,10 +290,10 @@ class Subject(db.Model):
     }
     readable_only_by = Subject.readable_only_by.get_value_for_datastore(self)
     if readable_only_by:
-      ret['readable_only_by'] = readable_only_by
+      ret['readable_only_by'] = str(readable_only_by)
     writable_only_by = Subject.writable_only_by.get_value_for_datastore(self)
     if writable_only_by:
-      ret['writable_only_by'] = writable_only_by
+      ret['writable_only_by'] = str(writable_only_by)
     return ret
 
 

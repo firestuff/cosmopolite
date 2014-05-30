@@ -264,7 +264,7 @@ Cosmopolite.prototype.subscribe = function(subject, opt_messages, opt_last_id) {
     /** @type {Cosmopolite.typeSubject} */
     var canonicalSubject = this.canonicalSubject_(subject);
     /** @type {string} */
-    var subjectString = JSON.stringify(canonicalSubject);
+    var subjectString = this.subjectString_(canonicalSubject);
     if (!(subjectString in this.subscriptions_)) {
       this.subscriptions_[subjectString] = {
         'messages': [],
@@ -316,7 +316,7 @@ Cosmopolite.prototype.unsubscribe = function(subject) {
     /** @type {Cosmopolite.typeSubject} */
     var canonicalSubject = this.canonicalSubject_(subject);
     /** @type {string} */
-    var subjectString = JSON.stringify(canonicalSubject);
+    var subjectString = this.subjectString_(canonicalSubject);
     delete this.subscriptions_[subjectString];
     var args = {
       'subject': canonicalSubject
@@ -364,7 +364,7 @@ Cosmopolite.prototype.getMessages = function(subject) {
   /** @type {Cosmopolite.typeSubject} */
   var canonicalSubject = this.canonicalSubject_(subject);
   /** @type {string} */
-  var subjectString = JSON.stringify(canonicalSubject);
+  var subjectString = this.subjectString_(canonicalSubject);
   return this.subscriptions_[subjectString].messages;
 };
 
@@ -398,7 +398,7 @@ Cosmopolite.prototype.getPins = function(subject) {
   /** @type {Cosmopolite.typeSubject} */
   var canonicalSubject = this.canonicalSubject_(subject);
   /** @type {string} */
-  var subjectString = JSON.stringify(canonicalSubject);
+  var subjectString = this.subjectString_(canonicalSubject);
   return this.subscriptions_[subjectString].pins;
 };
 
@@ -543,6 +543,23 @@ Cosmopolite.prototype.canonicalSubject_ = function(subject) {
     delete subject['writable_only_by'];
   }
   return subject;
+};
+
+
+/**
+ * Stringify a subject for use as an object key.
+ *
+ * @param {Cosmopolite.typeSubject} subject
+ * @return {string}
+ * @const
+ * @private
+ */
+Cosmopolite.prototype.subjectString_ = function(subject) {
+  return [
+    subject['name'],
+    subject['readable_only_by'],
+    subject['writable_only_by']
+  ].toString();
 };
 
 
@@ -1042,13 +1059,15 @@ Cosmopolite.prototype.onLogout_ = function(e) {
  */
 Cosmopolite.prototype.onMessage_ = function(e) {
   /** @type {string} */
-  var subjectString = JSON.stringify(e['subject']);
+  var subjectString = this.subjectString_(e['subject']);
   /** @type {Cosmopolite.typeSubscription_} */
   var subscription = this.subscriptions_[subjectString];
   if (!subscription) {
     console.log(
         this.loggingPrefix_(),
         'message from unrecognized subject:', e);
+    console.log(this.subscriptions_);
+    console.log(subjectString);
     return;
   }
   /** @type {boolean} */
@@ -1088,7 +1107,7 @@ Cosmopolite.prototype.onMessage_ = function(e) {
  */
 Cosmopolite.prototype.onPin_ = function(e) {
   /** @type {string} */
-  var subjectString = JSON.stringify(e['subject']);
+  var subjectString = this.subjectString_(e['subject']);
   /** @type {Cosmopolite.typeSubscription_} */
   var subscription = this.subscriptions_[subjectString];
   if (!subscription) {
@@ -1122,7 +1141,7 @@ Cosmopolite.prototype.onPin_ = function(e) {
  */
 Cosmopolite.prototype.onUnpin_ = function(e) {
   /** @type {string} */
-  var subjectString = JSON.stringify(e['subject']);
+  var subjectString = this.subjectString_(e['subject']);
   /** @type {Cosmopolite.typeSubscription_} */
   var subscription = this.subscriptions_[subjectString];
   if (!subscription) {
