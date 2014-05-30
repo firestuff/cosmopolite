@@ -777,7 +777,7 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, opt_delay) {
     }
   }.bind(this));
 
-  xhr.addEventListener('error', retryAfterDelay);
+  xhr.addEventListener('error', retryAfterDelay.bind(null, commands));
   xhr.open('POST', this.urlPrefix_ + '/api');
   xhr.send(JSON.stringify(request));
 };
