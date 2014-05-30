@@ -1,32 +1,88 @@
 <html>
   <head>
-    <script src="/cosmopolite/static/cosmopolite.js" charset="UTF-8"></script>
     <link rel="stylesheet" type="text/css" href="debug.css">
+    <script src="/cosmopolite/static/cosmopolite.js" charset="UTF-8"></script>
+    <script src="debug.js" charset="UTF-8"></script>
   </head>
   <body>
     <container>
       <subjectcontainer class="verticalcontainer">
+        <status class="panel fixed">
+          <panelheading>Status</panelheading>
+          <row>
+            <label>Connection status:</label>
+            <value id="connectionStatus"></value>
+          </row>
+          <row>
+            <label>Login status:</label>
+            <value id="loginStatus"></value>
+          </row>
+          <row>
+            <label>Username:</label>
+            <value id="username"></value>
+          </row>
+          <row>
+            <label>Login action:</label>
+            <value id="loginAction"></value>
+          </row>
+        </status>
         <subjectlist class="panel">
           <panelheading>Subjects</panelheading>
+	        <panelbody id="subjectList"></panelbody>
         </subjectlist>
         <subscribe class="panel fixed">
           <panelheading>Subscribe</panelheading>
+          <panelbody>
+            <row>
+              <label>Name:</label>
+              <input type="text" id="subjectName">
+            </row>
+            <row>
+              <label>Read:</label>
+              <select id="readID">
+                <option>(all)</option>
+                <option>me</option>
+              </select>
+              <label>Write:</label>
+              <select id="writeID">
+                <option>(all)</option>
+                <option>me</option>
+              </select>
+            </row>
+            <row>
+              <button id="subscribe">Subscribe</button>
+            </row>
+          </panelbody>
         </subscribe">
       </subjectcontainer>
       <messagecontainer class="verticalcontainer">
         <messagelist class="panel">
           <panelheading>Messages</panelheading>
+	        <panelbody id="messageList"></panelbody>
         </messagelist>
         <sendmessage class="panel fixed">
           <panelheading>Send Message</panelheading>
+	        <panelbody>
+            <row>
+              <input type="text" id="messageText">
+              <button id="sendMessage">Send</button>
+            </row>
+	        </panelbody>
         </sendmessage>
       </messagecontainer>
       <pincontainer class="verticalcontainer">
         <pinlist class="panel">
           <panelheading>Pins</panelheading>
+	        <panelbody id="pinList"></panelbody>
         </pinlist>
         <pin class="panel fixed">
           <panelheading>Pin</panelheading>
+          <panelbody>
+            <row>
+              <input type="text" id="pinText">
+              <button id="pin">Pin</button>
+            </row>
+          </panelbody>
         </pin>
       </pincontainer>
     </container>

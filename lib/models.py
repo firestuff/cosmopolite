@@ -354,12 +354,13 @@ class Message(db.Model):
 
   def ToEvent(self):
     return {
-      'event_type':   'message',
-      'id':           self.id_,
-      'sender':       str(Message.sender.get_value_for_datastore(self)),
-      'subject':      self.parent().ToDict(),
-      'created':      self.created,
-      'message':      self.message,
+      'event_type':        'message',
+      'id':                self.id_,
+      'sender':            str(Message.sender.get_value_for_datastore(self)),
+      'subject':           self.parent().ToDict(),
+      'created':           self.created,
+      'sender_message_id': self.sender_message_id,
+      'message':           self.message,
     }
 
 
@@ -374,12 +375,13 @@ class Pin(db.Model):
 
   def ToEvent(self, event_type='pin'):
     return {
-      'event_type':  event_type,
-      'id':          str(self.key()),
-      'sender':      str(Pin.sender.get_value_for_datastore(self)),
-      'subject':     self.parent().ToDict(),
-      'created':     self.created,
-      'message':     self.message,
+      'event_type':        event_type,
+      'id':                str(self.key()),
+      'sender':            str(Pin.sender.get_value_for_datastore(self)),
+      'subject':           self.parent().ToDict(),
+      'created':           self.created,
+      'sender_message_id': self.sender_message_id,
+      'message':           self.message,
     }
 
   def Delete(self):
