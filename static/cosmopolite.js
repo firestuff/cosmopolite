@@ -267,6 +267,7 @@ Cosmopolite.prototype.subscribe = function(subject, opt_messages, opt_last_id) {
     var subjectString = this.subjectString_(canonicalSubject);
     if (!(subjectString in this.subscriptions_)) {
       this.subscriptions_[subjectString] = {
+        'subject': canonicalSubject,
         'messages': [],
         'pins': [],
         'state': Cosmopolite.SubscriptionState_.PENDING
@@ -837,8 +838,6 @@ Cosmopolite.prototype.onReconnect_ = function() {
     /** @type {Cosmopolite.typeSubscription_} */
     var subscription = this.subscriptions_[subject];
     /** @type {Cosmopolite.typeSubject} */
-    var canonicalSubject =
-        /** @type {Cosmopolite.typeSubject} */ (JSON.parse(subject));
     if (subscription.state != Cosmopolite.SubscriptionState_.ACTIVE) {
       continue;
     }
@@ -850,7 +849,7 @@ Cosmopolite.prototype.onReconnect_ = function() {
     rpcs.push({
       'command': 'subscribe',
       'arguments': {
-        'subject': canonicalSubject,
+        'subject': subscription['subject'],
         'last_id': last_id
       }
     });
