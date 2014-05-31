@@ -34,6 +34,8 @@ var onReady = function() {
   }
   cosmo = new Cosmopolite(callbacks);
 
+  elements['messageText'].addEventListener('keypress', messageKeyPress);
+  elements['pinText'].addEventListener('keypress', pinKeyPress);
   document.getElementById('pin').addEventListener('click', pin);
   document.getElementById('sendMessage').addEventListener('click', sendMessage);
   document.getElementById('subscribe').addEventListener('click', subscribe);
@@ -240,6 +242,12 @@ var sendMessage = function() {
   elements['messageText'].value = '';
 };
 
+var messageKeyPress = function(e) {
+  if (e.keyCode == 13) {
+    sendMessage();
+  }
+};
+
 var pin = function() {
   if (!selectedSubject) {
     alert('Please select a subject.');
@@ -247,6 +255,12 @@ var pin = function() {
   }
   cosmo.pin(selectedSubject.subject, elements['pinText'].value);
   elements['pinText'].value = '';
+};
+
+var pinKeyPress = function(e) {
+  if (e.keyCode == 13) {
+    pin();
+  }
 };
 
 var senderID = function(msg) {
