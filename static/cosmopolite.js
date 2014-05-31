@@ -45,7 +45,8 @@ String.prototype.hashCode = function() {
  * @param {?string=} opt_namespace
  * @param {?string=} opt_trackingID
  */
-var Cosmopolite = function(opt_callbacks, opt_urlPrefix, opt_namespace, opt_trackingID) {
+var Cosmopolite = function(
+    opt_callbacks, opt_urlPrefix, opt_namespace, opt_trackingID) {
   /**
    * @type {Cosmopolite.typeCallbacks}
    * @private
@@ -136,10 +137,10 @@ var Cosmopolite = function(opt_callbacks, opt_urlPrefix, opt_namespace, opt_trac
       'storage': 'none',
       'clientId': localStorage[this.namespace_ + ':tracking_client_id']
     };
-    var saveCallback = function(analytics) {
+    var saveCallback = (function(analytics) {
       localStorage[this.namespace_ + ':tracking_client_id'] =
-        analytics.get('clientId');
-    }.bind(this);
+          analytics.get('clientId');
+    }).bind(this);
     window[this.analyticsObjName_] = {
       'l': 1 * new Date(),
       'q': [
@@ -326,7 +327,7 @@ Cosmopolite.prototype.subscribe = function(subject, opt_messages, opt_last_id) {
         resolve();
         if (this.analyticsObj_) {
           this.analyticsObj_(
-            'send', 'event', 'cosmopolite', 'subscribe', subjectString);
+              'send', 'event', 'cosmopolite', 'subscribe', subjectString);
         }
       } else {
         delete this.subscriptions_[subjectString];
@@ -613,7 +614,7 @@ Cosmopolite.prototype.onLoad_ = function() {
   }
   if (this.analyticsObjName_) {
     /**
-     * @type {Object}
+     * @type {function(...)}
      * @private
      */
     this.analyticsObj_ = window[this.analyticsObjName_];
@@ -879,7 +880,6 @@ Cosmopolite.prototype.onReconnect_ = function() {
   for (var subject in this.subscriptions_) {
     /** @type {Cosmopolite.typeSubscription_} */
     var subscription = this.subscriptions_[subject];
-    /** @type {Cosmopolite.typeSubject} */
     if (subscription.state != Cosmopolite.SubscriptionState_.ACTIVE) {
       continue;
     }
