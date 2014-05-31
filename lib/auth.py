@@ -26,7 +26,6 @@ class BadSignature(Exception):
 
 class AuthKey(db.Model):
   auth_key = db.ByteStringProperty(required=True)
-  live = db.BooleanProperty(required=True, default=True)
 
 
 _KEY_CHARS = string.ascii_letters + string.digits
@@ -37,7 +36,7 @@ def GetAuthKey():
   if _AUTH_KEY:
     return _AUTH_KEY[0]
 
-  auth_keys = AuthKey.all().filter('live =', True).fetch(1)
+  auth_keys = AuthKey.all().fetch(1)
   if auth_keys:
     auth_key = auth_keys[0].auth_key
   else:
