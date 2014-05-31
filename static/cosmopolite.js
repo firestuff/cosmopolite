@@ -43,8 +43,9 @@ String.prototype.hashCode = function() {
  * @param {?Cosmopolite.typeCallbacks=} opt_callbacks
  * @param {?string=} opt_urlPrefix
  * @param {?string=} opt_namespace
+ * @param {?string=} opt_trackingID
  */
-var Cosmopolite = function(opt_callbacks, opt_urlPrefix, opt_namespace) {
+var Cosmopolite = function(opt_callbacks, opt_urlPrefix, opt_namespace, opt_trackingID) {
   /**
    * @type {Cosmopolite.typeCallbacks}
    * @private
@@ -58,7 +59,8 @@ var Cosmopolite = function(opt_callbacks, opt_urlPrefix, opt_namespace) {
   this.urlPrefix_ = opt_urlPrefix || '/cosmopolite';
   /**
    * @type {string}
-   * @private */
+   * @private
+   */
   this.namespace_ = opt_namespace || 'cosmopolite';
 
   /**
@@ -119,18 +121,45 @@ var Cosmopolite = function(opt_callbacks, opt_urlPrefix, opt_namespace) {
   }
 
   /** @type {Array.<string>} */
-  var scriptUrls = [
+  var scriptURLs = [
     '/_ah/channel/jsapi'
   ];
+  if (opt_trackingID) {
+    scriptURLs.push('https://www.google-analytics.com/analytics.js');
+    /**
+     * @type {string}
+     * @private
+     */
+    this.analyticsObjName_ = this.uuid_();
+    window['GoogleAnalyticsObject'] = this.analyticsObjName_;
+    var settings = {
+      'storage': 'none',
+      'clientId': localStorage[this.namespace_ + ':tracking_client_id']
+    };
+    var saveCallback = function(analytics) {
+      localStorage[this.namespace_ + ':tracking_client_id'] =
+        analytics.get('clientId');
+    }.bind(this);
+    window[this.analyticsObjName_] = {
+      'l': 1 * new Date(),
+      'q': [
+        ['create', opt_trackingID, settings],
+        [saveCallback],
+        ['send', 'event', 'cosmopolite', 'load']
+      ]
+    };
+  }
+
   /**
    * @type {number}
    * @private
    */
-  this.numScriptsToLoad_ = scriptUrls.length;
-  scriptUrls.forEach(function(scriptUrl) {
+  this.numScriptsToLoad_ = scriptURLs.length;
+  scriptURLs.forEach(function(scriptURL) {
     /** @type {Node} */
     var script = document.createElement('script');
-    script.src = scriptUrl;
+    script.src = scriptURL;
+    script.async = true;
     script.onload = this.onLoad_.bind(this);
     document.body.appendChild(script);
   }, this);
@@ -285,17 +314,22 @@ Cosmopolite.prototype.subscribe = function(subject, opt_messages, opt_last_id) {
     }
 
     this.sendRPC_('subscribe', args, function(response) {
-      // unsubscribe may have been called since we sent the RPC. That's racy
-      // without waiting for the promise, but do our best
-      if (subjectString in this.subscriptions_) {
-        this.subscriptions_[subjectString].state =
-            Cosmopolite.SubscriptionState_.ACTIVE;
-      }
       /** @type {string} */
       var result = response['result'];
       if (result == 'ok') {
+        // unsubscribe may have been called since we sent the RPC. That's racy
+        // without waiting for the promise, but do our best
+        if (subjectString in this.subscriptions_) {
+          this.subscriptions_[subjectString].state =
+              Cosmopolite.SubscriptionState_.ACTIVE;
+        }
         resolve();
+        if (this.analyticsObj_) {
+          this.analyticsObj_(
+            'send', 'event', 'cosmopolite', 'subscribe', subjectString);
+        }
       } else {
+        delete this.subscriptions_[subjectString];
         reject();
       }
     });
@@ -576,6 +610,14 @@ Cosmopolite.prototype.onLoad_ = function() {
   if (this.shutdown_) {
     // Shutdown during startup
     return;
+  }
+  if (this.analyticsObjName_) {
+    /**
+     * @type {Object}
+     * @private
+     */
+    this.analyticsObj_ = window[this.analyticsObjName_];
+    delete window[this.analyticsObjName_];
   }
   this.registerMessageHandlers_();
   this.createChannel_();
@@ -1183,6 +1225,9 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
   if (e['profile']) {
     /** @type {string} */
     this.profile_ = e['profile'];
+    if (this.analyticsObj_) {
+      this.analyticsObj_('set', 'userId', this.profile_);
+    }
     this.profilePromises_.forEach(function(resolve) {
       resolve(this.profile_);
     }, this);

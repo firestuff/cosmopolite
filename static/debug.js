@@ -32,7 +32,7 @@ var onReady = function() {
     'onPin': onPin,
     'onUnpin': onUnpin,
   }
-  cosmo = new Cosmopolite(callbacks);
+  cosmo = new Cosmopolite(callbacks, null, null, 'UA-37845853-3');
 
   elements['messageText'].addEventListener('keypress', messageKeyPress);
   elements['pinText'].addEventListener('keypress', pinKeyPress);
