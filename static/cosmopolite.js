@@ -96,6 +96,10 @@ var Cosmopolite = function(
    */
   this.profilePromises_ = [];
 
+  if (!localStorage[this.namespace_ + ':client_id']) {
+    localStorage[this.namespace_ + ':client_id'] = this.uuid_();
+  }
+
   /**
    * @type {string}
    * @private
@@ -639,7 +643,7 @@ Cosmopolite.prototype.onReceiveMessage_ = function(data) {
       }
       break;
     case 'logout_complete':
-      localStorage.removeItem(this.namespace_ + ':client_id');
+      localStorage[this.namespace_ + ':client_id'] = this.uuid_();
       localStorage.removeItem(this.namespace_ + ':google_user_id');
       if (this.socket_) {
         this.socket_.close();
@@ -751,6 +755,7 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, opt_delay) {
   }
   var request = {
     'instance_id': this.instanceID_,
+    'client_id': localStorage[this.namespace_ + ':client_id'],
     'commands': []
   };
   commands.forEach(function(command) {
@@ -762,9 +767,6 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, opt_delay) {
     }
     request.commands.push(request_command);
   });
-  if (this.namespace_ + ':client_id' in localStorage) {
-    request['client_id'] = localStorage[this.namespace_ + ':client_id'];
-  }
   if (this.namespace_ + ':google_user_id' in localStorage) {
     request['google_user_id'] =
         localStorage[this.namespace_ + ':google_user_id'];
@@ -796,9 +798,6 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, opt_delay) {
     if ('google_user_id' in data) {
       localStorage[this.namespace_ + ':google_user_id'] =
           data['google_user_id'];
-    }
-    if ('client_id' in data) {
-      localStorage[this.namespace_ + ':client_id'] = data['client_id'];
     }
 
     if (data['status'] == 'retry') {
@@ -852,10 +851,6 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, opt_delay) {
  * @private
  */
 Cosmopolite.prototype.maySendRPC_ = function() {
-  if (!(this.namespace_ + ':client_id' in localStorage)) {
-    return false;
-  }
-
   if (this.channelState_ != Cosmopolite.ChannelState_.OPEN) {
     return false;
   }

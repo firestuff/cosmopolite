@@ -25,7 +25,8 @@ import utils
 
 
 # Profile
-# ↳ Client
+#
+# Client (⤴︎ Profile)
 #
 # Instance
 #
@@ -73,20 +74,20 @@ class Profile(db.Model):
 
 
 class Client(db.Model):
-  # parent=Profile
 
+  profile = db.ReferenceProperty(reference_class=Profile)
   first_seen = db.DateTimeProperty(required=True, auto_now_add=True)
 
   @classmethod
-  def FromProfile(cls, profile):
-    client = cls(parent=profile)
+  def FromProfile(cls, client_id, profile):
+    client = cls(key_name=client_id, profile=profile)
     client.put()
     return client
 
   @classmethod
-  def FromGoogleUser(cls, google_user):
+  def FromGoogleUser(cls, client_id, google_user):
     profile = Profile.FromGoogleUser(google_user)
-    return cls.FromProfile(profile)
+    return cls.FromProfile(client_id, profile)
 
 
 class Instance(db.Model):
@@ -308,7 +309,7 @@ class Subscription(db.Model):
     readable_only_by = (
         Subject.readable_only_by.get_value_for_datastore(subject))
     if (readable_only_by and
-        readable_only_by != client.parent_key()):
+        readable_only_by != Client.profile.get_value_for_datastore(client)):
       raise AccessDenied
 
     subscriptions = (

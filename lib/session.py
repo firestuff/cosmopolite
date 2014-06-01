@@ -23,15 +23,16 @@ from cosmopolite.lib import models
 def _CheckClientAndGoogleUser(client, google_user):
   if not google_user:
     # Nothing to check. If there's a user on the profile, it can stay there.
-    return client
+    return
 
-  client_profile_google_user = client.parent().google_user
+  client_profile_google_user = client.profile.google_user
   if client_profile_google_user:
     if client_profile_google_user == google_user:
-      return client
+      return
     else:
-      # Shared computer? Google account wins.
-      return models.Client.FromGoogleUser(google_user)
+      client.profile = models.Profile.FromGoogleUser(google_user)
+      client.put()
+      return
 
   # User just signed in. Their anonymous profile gets permanently
   # associated with this Google account.
@@ -44,14 +45,17 @@ def _CheckClientAndGoogleUser(client, google_user):
     # profile.
     # TODO(flamingcow): Fetch-then-store uniqueness is a race.
     google_profile = profiles[0]
-    google_profile.MergeFrom(client.parent_key())
-    return models.Client.FromProfile(google_profile)
+    google_profile.MergeFrom(
+        models.Client.profile.get_value_for_datastore(client))
+    client.profile = google_profile
+    client.put()
+    return
 
   # First time signin.
-  client_profile = client.parent()
+  client_profile = client.profile
   client_profile.google_user = google_user
   client_profile.put()
-  return client
+  return
 
 
 def session_required(handler):
@@ -65,21 +69,16 @@ def session_required(handler):
 
   @functools.wraps(handler)
   def FindOrCreateSession(self):
-    client_key = auth.ParseKey(self.request_json.get('client_id', None))
+    client_id = self.request_json['client_id']
 
-    # The hunt for a Profile begins.
-    if client_key:
-      self.client = _CheckClientAndGoogleUser(
-          models.Client.get(client_key),
-          self.verified_google_user)
+    self.client = models.Client.get_by_key_name(client_id)
+
+    if self.client:
+      _CheckClientAndGoogleUser(self.client, self.verified_google_user)
     else:
-      self.client = models.Client.FromGoogleUser(self.verified_google_user)
+      self.client = models.Client.FromGoogleUser(
+          client_id, self.verified_google_user)
 
-    ret = handler(self)
-    if client_key != self.client.key():
-      # Tell the client that this changed
-      ret['client_id'] = auth.Sign(self.client.key())
-
-    return ret
+    return handler(self)
 
   return FindOrCreateSession

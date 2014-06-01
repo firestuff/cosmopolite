@@ -36,14 +36,14 @@ def CreateChannel(google_user, client, instance_id, args):
   events = []
   if google_user:
     events.append({
-      'event_type':   'login',
-      'profile':      str(client.parent_key()),
-      'google_user':  google_user.email(),
+      'event_type':  'login',
+      'profile':     str(models.Client.profile.get_value_for_datastore(client)),
+      'google_user': google_user.email(),
     })
   else:
     events.append({
       'event_type': 'logout',
-      'profile':      str(client.parent_key()),
+      'profile':    str(models.Client.profile.get_value_for_datastore(client)),
     })
 
   return {
@@ -66,7 +66,10 @@ def Pin(google_user, client, instance_id, args):
 
   try:
     models.Subject.FindOrCreate(subject).Pin(
-        message, client.parent_key(), sender_message_id, instance)
+        message,
+        models.Client.profile.get_value_for_datastore(client),
+        sender_message_id,
+        instance)
   except models.DuplicateMessage:
     logging.warning('Duplicate pin: %s', sender_message_id)
     return {
@@ -90,7 +93,9 @@ def SendMessage(google_user, client, instance_id, args):
 
   try:
     models.Subject.FindOrCreate(subject).SendMessage(
-        message, client.parent_key(), sender_message_id)
+        message,
+        models.Client.profile.get_value_for_datastore(client),
+        sender_message_id)
   except models.DuplicateMessage:
     logging.warning('Duplicate message: %s', sender_message_id)
     return {
@@ -139,7 +144,9 @@ def Unpin(google_user, client, instance_id, args):
 
   try:
     models.Subject.FindOrCreate(subject).Unpin(
-        client.parent_key(), sender_message_id, instance.key())
+        models.Client.profile.get_value_for_datastore(client),
+        sender_message_id,
+        instance.key())
   except models.AccessDenied:
     logging.warning('Pin access denied')
     return {
