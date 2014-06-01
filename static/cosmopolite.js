@@ -76,11 +76,6 @@ var Cosmopolite = function(
   this.shutdown_ = false;
 
   /**
-   * @type {Array.<Object>}
-   * @private
-   */
-  this.rpcQueue_ = [];
-  /**
    * @type {Object.<string, Cosmopolite.typeSubscription_>}
    * @private
    */
@@ -99,6 +94,9 @@ var Cosmopolite = function(
   if (!localStorage[this.namespace_ + ':client_id']) {
     localStorage[this.namespace_ + ':client_id'] = this.uuid_();
   }
+
+  /** @type {string} */
+  this.instanceID_ = this.uuid_();
 
   /**
    * @type {string}
@@ -728,12 +726,7 @@ Cosmopolite.prototype.sendRPC_ = function(command, args, opt_onSuccess) {
     'arguments': args,
     'onSuccess': opt_onSuccess || null
   };
-  if (this.maySendRPC_()) {
-    this.sendRPCs_([rpc]);
-  } else {
-    // Queue instead of sending.
-    this.rpcQueue_.push(rpc);
-  }
+  this.sendRPCs_([rpc]);
 };
 
 
@@ -844,34 +837,13 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, opt_delay) {
 
 
 /**
- * Are we currently clear to put RPCs on the wire?
- *
- * @return {boolean}
- * @const
- * @private
- */
-Cosmopolite.prototype.maySendRPC_ = function() {
-  if (this.channelState_ != Cosmopolite.ChannelState_.OPEN) {
-    return false;
-  }
-
-  return true;
-};
-
-
-/**
  * Handle tasks needed after reconnecting the channel
  *
  * @private
  */
 Cosmopolite.prototype.onReconnect_ = function() {
-  if (!this.maySendRPC_()) {
-    return;
-  }
-
   /** @type {Array.<Cosmopolite.typeRPC_>} */
-  var rpcs = this.rpcQueue_;
-  this.rpcQueue_ = [];
+  var rpcs = [];
   for (var subject in this.subscriptions_) {
     /** @type {Cosmopolite.typeSubscription_} */
     var subscription = this.subscriptions_[subject];
@@ -914,9 +886,6 @@ Cosmopolite.prototype.createChannel_ = function() {
   } else {
     return;
   }
-
-  /** @type {string} */
-  this.instanceID_ = this.uuid_();
 
   var rpcs = [
     {
@@ -1014,6 +983,8 @@ Cosmopolite.prototype.onSocketClose_ = function() {
       this.onUnpin_(pin);
     }, this);
   }
+
+  this.instanceID_ = this.uuid_();
 
   this.createChannel_();
 };
