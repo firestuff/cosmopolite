@@ -117,6 +117,28 @@ asyncTest('Message round trip', function() {
   cosmo.subscribe(subject, -1);
 });
 
+asyncTest('Message round trip without channel', function() {
+  expect(2);
+
+  var subject = randstring();
+  var message = randstring();
+
+  var callbacks = {
+    'onMessage': function(e) {
+      equal(e['subject']['name'], subject, 'subject matches');
+      equal(e['message'], message, 'message matches');
+      cosmo.shutdown();
+      start();
+    }
+  };
+
+  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.channelState_ = Cosmopolite.ChannelState_.OPENING;
+  cosmo.sendMessage(subject, message);
+  cosmo.subscribe(subject, -1);
+});
+
+
 asyncTest('Complex object', function() {
   expect(2);
 

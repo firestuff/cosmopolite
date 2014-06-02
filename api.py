@@ -114,15 +114,16 @@ def SendMessage(google_user, client, instance_id, args):
 
 def Subscribe(google_user, client, instance_id, args):
   instance = models.Instance.FromID(instance_id)
+  subject = models.Subject.FindOrCreate(args['subject'])
+  messages = args.get('messages', 0)
+  last_id = args.get('last_id', None)
+
   if not instance or not instance.active:
     # Probably a race with the channel opening
     return {
       'result': 'retry',
+      'events': subject.GetEvents(messages, last_id),
     }
-
-  subject = models.Subject.FindOrCreate(args['subject'])
-  messages = args.get('messages', 0)
-  last_id = args.get('last_id', None)
 
   try:
     return {

@@ -297,6 +297,15 @@ class Subject(db.Model):
       ret['writable_only_by'] = str(writable_only_by)
     return ret
 
+  @db.transactional()
+  def GetEvents(self, messages, last_id):
+    events = [m.ToEvent() for m in self.GetPins()]
+    if messages:
+      events.extend(m.ToEvent() for m in self.GetRecentMessages(messages))
+    if last_id is not None:
+      events.extend(m.ToEvent() for m in self.GetMessagesSince(last_id))
+    return events
+
 
 class Subscription(db.Model):
   # parent=Subject
@@ -319,12 +328,7 @@ class Subscription(db.Model):
         .fetch(1))
     if not subscriptions:
       cls(parent=subject, instance=instance).put()
-    events = [m.ToEvent() for m in subject.GetPins()]
-    if messages:
-      events.extend(m.ToEvent() for m in subject.GetRecentMessages(messages))
-    if last_id is not None:
-      events.extend(m.ToEvent() for m in subject.GetMessagesSince(last_id))
-    return events
+    return subject.GetEvents(messages, last_id)
 
   @classmethod
   @db.transactional()
