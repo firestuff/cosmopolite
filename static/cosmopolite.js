@@ -95,7 +95,10 @@ var Cosmopolite = function(
     localStorage[this.namespace_ + ':client_id'] = this.uuid_();
   }
 
-  /** @type {string} */
+  /**
+   * @type {string}
+   * @private
+   */
   this.instanceID_ = this.uuid_();
 
   /**
@@ -154,7 +157,7 @@ var Cosmopolite = function(
 
     window[this.analyticsObjName_] = {
       'l': 1 * new Date(),
-      'q': [],
+      'q': []
     };
 
     var script = document.createElement('script');
@@ -171,7 +174,7 @@ var Cosmopolite = function(
       localStorage[this.namespace_ + ':tracking_client_id'] =
           analytics.get('clientId');
     }).bind(this));
-    this.trackeEvent('send', 'event', 'cosmopolite', 'load');
+    this.trackEvent('send', 'event', 'cosmopolite', 'load');
   }
 
   this.registerMessageHandlers_();
@@ -338,7 +341,7 @@ Cosmopolite.prototype.subscribe = function(subject, opt_messages, opt_last_id) {
         }
         resolve();
         this.trackEvent(
-          'send', 'event', 'cosmopolite', 'subscribe', subjectString);
+            'send', 'event', 'cosmopolite', 'subscribe', subjectString);
       } else {
         delete this.subscriptions_[subjectString];
         reject();
@@ -531,9 +534,9 @@ Cosmopolite.prototype.unpin = function(id) {
 /**
  * Log an event to analytics.
  *
- * @param {...[string]}
+ * @param {...*} var_args
  */
-Cosmopolite.prototype.trackEvent = function() {
+Cosmopolite.prototype.trackEvent = function(var_args) {
   if (this.analyticsObj_) {
     this.analyticsObj_.apply(this, arguments);
   } else if (this.analyticsObjName_) {
