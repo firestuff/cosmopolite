@@ -118,6 +118,15 @@ def Subscribe(google_user, client, instance_id, args):
   messages = args.get('messages', 0)
   last_id = args.get('last_id', None)
 
+  try:
+    subject.VerifyReadable(models.Client.profile.get_value_for_datastore(client))
+  except models.AccessDenied:
+    logging.warning('Subscribe access denied')
+    return {
+      'result': 'access_denied',
+    }
+
+
   if not instance or not instance.active:
     # Probably a race with the channel opening
     return {
@@ -125,17 +134,11 @@ def Subscribe(google_user, client, instance_id, args):
       'events': subject.GetEvents(messages, last_id),
     }
 
-  try:
-    return {
-      'result': 'ok',
-      'events': models.Subscription.FindOrCreate(
-          subject, client, instance, messages, last_id),
-    }
-  except models.AccessDenied:
-    logging.warning('Subscribe access denied')
-    return {
-      'result': 'access_denied',
-    }
+  return {
+    'result': 'ok',
+    'events': models.Subscription.FindOrCreate(
+        subject, client, instance, messages, last_id),
+  }
 
 
 def Unpin(google_user, client, instance_id, args):

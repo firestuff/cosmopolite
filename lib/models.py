@@ -223,6 +223,12 @@ class Subject(db.Model):
         writable_only_by != sender):
       raise AccessDenied
 
+  def VerifyReadable(self, reader):
+    readable_only_by = Subject.readable_only_by.get_value_for_datastore(self)
+    if (readable_only_by and
+        readable_only_by != reader):
+      raise AccessDenied
+
   def SendMessage(self, message, sender, sender_message_id):
     self.VerifyWritable(sender)
     obj, subscriptions = self.PutMessage(message, sender, sender_message_id)
@@ -315,12 +321,6 @@ class Subscription(db.Model):
   @classmethod
   @db.transactional()
   def FindOrCreate(cls, subject, client, instance, messages=0, last_id=None):
-    readable_only_by = (
-        Subject.readable_only_by.get_value_for_datastore(subject))
-    if (readable_only_by and
-        readable_only_by != Client.profile.get_value_for_datastore(client)):
-      raise AccessDenied
-
     subscriptions = (
         cls.all(keys_only=True)
         .ancestor(subject)
