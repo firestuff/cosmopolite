@@ -47,27 +47,10 @@ class AccessDenied(Exception):
 class Profile(db.Model):
   google_user = db.UserProperty()
 
-  @classmethod
-  def FromGoogleUser(cls, google_user):
-    if not google_user:
-      profile = Profile()
-      profile.put()
-      return profile
-
-    profiles = Profile.all().filter('google_user =', google_user).fetch(1)
-    if profiles:
-      return profiles[0]
-    else:
-      # TODO(flamingcow): Fetch-then-store uniqueness is a race.
-      profile = Profile(google_user=google_user)
-      profile.put()
-      return profile
-
   def MergeFrom(self, source_profile):
     # This is non-transactional and racy (new messages can be introduced by the
-    # old client after we start). This is hard to solve because a) we're not in
-    # a single hierarchy and b) we don't revoke the old client ID, so it can
-    # still be used.
+    # old client after we start). This is hard to solve because we're not in
+    # a single hierarchy.
     for message in Message.all().filter('sender =', source_profile):
       message.sender = self;
       message.put()
@@ -83,11 +66,6 @@ class Client(db.Model):
     client = cls(key_name=client_id, profile=profile)
     client.put()
     return client
-
-  @classmethod
-  def FromGoogleUser(cls, client_id, google_user):
-    profile = Profile.FromGoogleUser(google_user)
-    return cls.FromProfile(client_id, profile)
 
 
 class Instance(db.Model):

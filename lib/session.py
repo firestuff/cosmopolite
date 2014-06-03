@@ -14,48 +14,50 @@
 
 import functools
 
-from google.appengine.api import users
+from google.appengine.ext import db
 
-from cosmopolite.lib import auth
 from cosmopolite.lib import models
 
 
-def _CheckClientAndGoogleUser(client, google_user):
-  if not google_user:
-    # Nothing to check. If there's a user on the profile, it can stay there.
-    return
+@db.transactional(xg=True)
+def CreateClientAndProfile(client_id, google_user):
+  if google_user:
+    # We're going to need a profile for this user regardless
+    profile = models.Profile.get_by_key_name(str(google_user))
+    if not profile:
+      profile = models.Profile(
+          key_name=str(google_user), google_user=google_user)
+      profile.put()
+  else:
+    profile = None
 
-  client_profile_google_user = client.profile.google_user
-  if client_profile_google_user:
-    if client_profile_google_user == google_user:
-      return
-    else:
-      client.profile = models.Profile.FromGoogleUser(google_user)
-      client.put()
-      return
+  client = models.Client.get_by_key_name(client_id)
 
-  # User just signed in. Their anonymous profile gets permanently
-  # associated with this Google account.
-  profiles = (models.Profile.all()
-              .filter('google_user =', google_user)
-              .fetch(1))
-  if profiles:
-    # We can't convert the anonymous profile because there's already
-    # a profile for this Google user. Create a new client_id pointing to that
-    # profile.
-    # TODO(flamingcow): Fetch-then-store uniqueness is a race.
-    google_profile = profiles[0]
-    google_profile.MergeFrom(
-        models.Client.profile.get_value_for_datastore(client))
-    client.profile = google_profile
+  if not client:
+    # First time seeing this client; create it
+    if not profile:
+      # Create an anonymous profile
+      profile = models.Profile()
+      profile.put()
+    client = models.Client(key_name=client_id, profile=profile)
     client.put()
-    return
+    return (client, None)
 
-  # First time signin.
-  client_profile = client.profile
-  client_profile.google_user = google_user
-  client_profile.put()
-  return
+  if not profile:
+    # No Google user, whatever profile we had is fine
+    return (client, None)
+
+  if (profile.key() !=
+      models.Client.profile.get_value_for_datastore(client)):
+    # Google user doesn't match. Create a new profile, ask our caller to
+    # merge profiles outside the transaction
+    old_profile = client.profile
+    client.profile = profile
+    client.put()
+    return (client, old_profile)
+
+  # Everything already exists and matches
+  return (client, None)
 
 
 def session_required(handler):
@@ -66,18 +68,12 @@ def session_required(handler):
 
   Make sure to wrap this in google_user_xsrf_protection.
   """
-
   @functools.wraps(handler)
   def FindOrCreateSession(self):
-    client_id = self.request_json['client_id']
-
-    self.client = models.Client.get_by_key_name(client_id)
-
-    if self.client:
-      _CheckClientAndGoogleUser(self.client, self.verified_google_user)
-    else:
-      self.client = models.Client.FromGoogleUser(
-          client_id, self.verified_google_user)
+    self.client, old_profile = CreateClientAndProfile(
+        self.request_json['client_id'], self.verified_google_user)
+    if old_profile:
+      self.client.profile.MergeFrom(old_profile)
 
     return handler(self)
 
