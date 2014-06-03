@@ -33,6 +33,7 @@ var onReady = function() {
     'onUnpin': onUnpin,
   }
   cosmo = new Cosmopolite(callbacks, null, null, 'UA-37845853-3');
+  cosmo.trackEvent('send', 'pageview');
 
   elements['messageText'].addEventListener('keypress', messageKeyPress);
   elements['pinText'].addEventListener('keypress', pinKeyPress);
