@@ -300,11 +300,11 @@ Cosmopolite.prototype.shutdown = function() {
  * @param {Cosmopolite.typeSubjectLoose} subject
  * @param {?number=} opt_messages Number of recent messages to request;
  *     0 for none, -1 for all
- * @param {?number=} opt_last_id ID of last message received; fetch messages
+ * @param {?number=} opt_lastID ID of last message received; fetch messages
  *     since
  * @return {Promise}
  */
-Cosmopolite.prototype.subscribe = function(subject, opt_messages, opt_last_id) {
+Cosmopolite.prototype.subscribe = function(subject, opt_messages, opt_lastID) {
   return new Promise(function(resolve, reject) {
     /** @type {Cosmopolite.typeSubject} */
     var canonicalSubject = this.canonicalSubject_(subject);
@@ -325,8 +325,8 @@ Cosmopolite.prototype.subscribe = function(subject, opt_messages, opt_last_id) {
     if (opt_messages) {
       args['messages'] = opt_messages;
     }
-    if (opt_last_id != null) {
-      args['last_id'] = opt_last_id;
+    if (opt_lastID != null) {
+      args['last_id'] = opt_lastID;
     }
 
     this.sendRPC_('subscribe', args, function(response) {
@@ -850,15 +850,15 @@ Cosmopolite.prototype.onReconnect_ = function() {
       continue;
     }
     /** @type {number} */
-    var last_id = 0;
+    var lastID = 0;
     if (subscription.messages.length > 0) {
-      last_id = subscription.messages[subscription.messages.length - 1]['id'];
+      lastID = subscription.messages[subscription.messages.length - 1]['id'];
     }
     rpcs.push({
       'command': 'subscribe',
       'arguments': {
         'subject': subscription['subject'],
-        'last_id': last_id
+        'last_id': lastID
       }
     });
   }
@@ -892,7 +892,6 @@ Cosmopolite.prototype.createChannel_ = function() {
       'onSuccess': this.onCreateChannel_
     }
   ];
-  // sendRPCs instead of sendRPC so we don't queue.
   this.sendRPCs_(rpcs);
 };
 
