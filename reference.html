@@ -62,7 +62,7 @@
     <li><a href="#sendMessage">sendMessage()</a></li>
     <li><a href="#getMessages">getMessages()</a></li>
     <li><a href="#getLastMessage">getLastMessage()</a></li>
-    <li><a href="#pin">pin()</a></li>
+    <li><a href="#pin_method">pin()</a></li>
     <li><a href="#unpin">unpin()</a></li>
     <li><a href="#getPins">getPins()</a></li>
     <li><a href="#trackEvent">trackEvent()</a></li>
@@ -279,7 +279,7 @@ succeeds.</p>
 <ol>
   <li><code>message</code>: A <a href="#message">message</a> object including metadata and message
   content.</li>
-</ol>
+</ol></p>
 
 <p>The onMessage callback is called when a historical or new message is received from the server.
 It is only called for <a href="#subject">subjects</a> that the client is currently subscribed to.
@@ -298,6 +298,10 @@ messages being retreived. onMessage will not fire twice for the same message unl
 <a href="#client">client</a>. You can filter messages by comparing their sender field to the return
 value of <a href="#currentProfile">currentProfile()</a> to avoid processing your own messages.</p>
 
+<p>onMessage may fire when we are not connected (per the <a href="#onConnect">onConnect</a> and
+<a href="#onDisconnect">onDisconnect</a> callbacks), as messages may be received in RPC responses
+instead of over the <a href="#channel">channel</a></p>
+
 
 <h4><a name="onPin">onPin</a></h4>
 
@@ -305,7 +309,7 @@ value of <a href="#currentProfile">currentProfile()</a> to avoid processing your
 <ol>
   <li><code>message</code>: A <a href="#message">message</a> object including metadata and message
   content.</li>
-</ol>
+</ol></p>
 
 <p>The onPin callback is called when a new pin is received from the server. It is only called for
 <a href="#subject">subjects</a> that the client is currently subscribed to.</p>
@@ -321,6 +325,10 @@ Promise returned by subscribe() is called. Any onPin events after that point are
 You can filter pins by comparing their sender field to the return value of
 <a href="#currentProfile">currentProfile()</a> to avoid processing your own pins.</p>
 
+<p>onPin may fire when we are not connected (per the <a href="#onConnect">onConnect</a> and
+<a href="#onDisconnect">onDisconnect</a> callbacks), as messages may be received in RPC responses
+instead of over the <a href="#channel">channel</a></p>
+
 
 <h4><a name="onUnpin">onUnpin</a></h4>
 
@@ -328,7 +336,7 @@ You can filter pins by comparing their sender field to the return value of
 <ol>
   <li><code>message</code>: A <a href="#message">message</a> object including metadata and message
   content.</li>
-</ol>
+</ol></p>
 
 <p>The onUnpin callback is called when a pin is deleted on from the server. It is also called when
 the <a href="#channel">channel</a> disconnects from the server, hence the server state of pins is
@@ -341,8 +349,131 @@ unknown.</p>
 You can filter pins by comparing their sender field to the return value of
 <a href="#currentProfile">currentProfile()</a> to avoid processing your own pins.</p>
 
+<p>onUnpin may fire when we are not connected (per the <a href="#onConnect">onConnect</a> and
+<a href="#onDisconnect">onDisconnect</a> callbacks), as messages may be received in RPC responses
+instead of over the <a href="#channel">channel</a></p>
 
-<h3><a name="methods">Methods</a></h4>
+
+<h3><a name="methods">Methods</a></h3>
+
+
+<h4><a name="constructor">Constructor</a></h4>
+
+<p>Arguments:
+<ol>
+  <li><code>callbacks</code> (optional): An object with <a href="#callbacks">callback</a> names as
+  keys and functions as values. All callbacks are optional.</li>
+  <li><code>urlPrefix</code> (optional): A string containing the URL path at which to find the
+  server-side cosmopolite endpoints. Defaults to "/cosmopolite". See the
+  <a href="overview#architecture">architecture</a> diagram.</li>
+  <li><code>namespace</code> (optional): A string containing a namespace prefix to be used for
+  entries in localStorage. Defaults to "cosmopolite". Changing this allows multiple local instances
+  of Cosmopolite to co-exist on the same domain without interfering.</li>
+  <li><code>trackingID</code> (optional): A string containing a
+  <a href="https://support.google.com/analytics/answer/1032385?hl=en">Google Analytics tracking /
+  web property ID</a> (usually starting with "UA-") identifying your analytics account. Passing
+  this argument enables event tracking and the <a href="#trackEvent">trackEvent()</a> method.</li>
+</ol></p>
+
+<p>Construct a new Cosmopolite instance. Always use the <code>new</code> keyword. All methods on
+the instance are available for immediate use, though some deferred initialization is occuring and
+some actions may be queued.</p>
+
+</ol>
+
+
+<h4><a name="shutdown">shutdown()</a></h4>
+
+<p>Arguments: <i>none</i></p>
+
+<p>Start shutdown of this instance. No callbacks will be fired after this call. Some RPCs may be
+outstanding and some cleanup may be deferred.</p>
+
+
+<h4><a name="getProfile">getProfile()</a></h4>
+
+<p>Arguments: <i>none</i></p>
+
+<p>Returns: A
+<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">
+Promise</a> to provide a <a href="#profile">profile</a> ID string.</p>
+
+<p>As the <a href="#profile">profile</a> ID is generated by the server, it requires a round trip
+to complete successfully before it is known to the client. getProfile() returns a promise that
+resolves immediately if the profile ID is already known, or fires when it becomes available.</p>
+
+
+<h4><a name="currentProfile">currentProfile()</a></h4>
+
+<p>Arguments: <i>none</i></p>
+
+<p>Returns: A <a href="#profile">profile</a> ID string, or null if unknown.</p>
+
+<p>currentProfile() has simpler semantics than <a href="getProfile()">getProfile()</a> but may
+return null if the initial RPC to the server is still outstanding. It is not safe to use just after
+construction. It is safe to use from callbacks and promises returned by other functions, as those
+require a server response.</p>
+
+
+<h4><a name="subscribe">subscribe()</a></h4>
+
+<p>Arguments:
+<ol>
+  <li><code>subject</code>: A valid <a href="#subject">subject</a> (string, number or object with
+  specific keys)</li>
+  <li><code>messages</code> (optional): An integer number of historical messages to retrieve from
+  this subject if available. 0 means no messages; -1 means all messages.</li>
+  <li><code>lastID</code> (optional): The id field from the last message received by the client.
+  The server will send historical messages starting from the message after that.</li>
+</ol>
+
+<p>Returns: A
+<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">
+Promise</a> that resolves with no arguments on success, or rejects with no arguments if the client
+is denied access to the subject.</p>
+
+<p>subscribe() creates a <a href="#subscription">subscription</a> on the server to a particular
+subject. The subscription is tied to our current <a href="#instance">instance</a> but is re-created
+by the client library when it reconnects, transparent to the application.</p>
+
+<p>Before the promise returned by subscribe() resolves, the <a href="#onMessage">onMessage</a> and
+<a href="#onPin">onPin</a> callbacks will fire for any historical messages requests and available
+and for any current pins. After the promise resolves, <a href="#message">messages</a> and
+<a href="#pin">pins</a> sent to this subject will cause the callbacks to fire when they are
+received. Additionally, the <a href="#onUnpin">onUnpin</a> callback will fire for deleted pins.</p>
+
+<p>Callbacks fire for messages sent by our own <a href="#profile">profile</a> and
+<a href="#client">client</a>. You can filter messages by comparing their sender field to the return
+value of <a href="#currentProfile">currentProfile()</a> to avoid processing your own messages.</p>
+
+<p>subscribe() may be called multiple times for the same subject to retrieve additional historical
+messages. The subscriptions do not stack, however; a single call to
+<a href="#unsubscribe">unsubscribe()</a> undoes all preceding subscribe() calls to that subject.
+</p>
+
+<p>subscribe() calls may fail (and reject the promise) when subscription is requested to a
+<a href="#subject">subject</a> that sets <code>readable_only_by</code> and that does not match our
+profile.</p>
+
+
+<h4><a name="unsubscribe">unsubscribe()</a></h4>
+
+<p>Arguments:
+<ol>
+  <li><code>subject</code>: A valid <a href="#subject">subject</a> (string, number or object with
+  specific keys)</li>
+</ol></p>
+
+<p>Returns: A
+<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">
+Promise</a> that resolves on RPC completion.</p>
+
+<p>Unsubscribe from a <a href="#subject">subject</a> and stop receiving
+<a href="#callbacks">callbacks</a> related to it. Callbacks stop immediately after calling
+unsubscribe().</p>
+
+<p>A single call to unsubscribe() undoes all calls to <a href="#subscribe">subscribe()</a> for the
+given subject.</a>
 
       </section>
     </div>
