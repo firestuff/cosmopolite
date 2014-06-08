@@ -23,6 +23,15 @@ handlers:
     X-Content-Type-Options: nosniff
     Strict-Transport-Security: max-age=31536000; includeSubDomains
 
+- url: /overview
+  static_files: overview.html
+  upload: overview.html
+  secure: always
+  http_headers:
+    X-Frame-Options: DENY
+    X-Content-Type-Options: nosniff
+    Strict-Transport-Security: max-age=31536000; includeSubDomains
+
 - url: /images
   static_dir: images
   secure: always
