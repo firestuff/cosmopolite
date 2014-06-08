@@ -47,6 +47,21 @@ class AccessDenied(Exception):
 class Profile(db.Model):
   google_user = db.UserProperty()
 
+  _cache = {}
+
+  @classmethod
+  @db.transactional()
+  def FindOrCreate(cls, google_user):
+    key_name = google_user.user_id()
+    if key_name in cls._cache:
+      return cls._cache[key_name]
+    profile = cls.get_by_key_name(key_name)
+    if not profile:
+      profile = cls(key_name=key_name, google_user=google_user)
+      profile.put()
+    cls._cache[key_name] = profile
+    return profile
+
   def MergeFrom(self, source_profile):
     # This is non-transactional and racy (new messages can be introduced by the
     # old client after we start). This is hard to solve because we're not in

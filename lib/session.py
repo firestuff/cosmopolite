@@ -23,11 +23,7 @@ from cosmopolite.lib import models
 def CreateClientAndProfile(client_id, google_user):
   if google_user:
     # We're going to need a profile for this user regardless
-    profile = models.Profile.get_by_key_name(google_user.user_id())
-    if not profile:
-      profile = models.Profile(
-          key_name=google_user.user_id(), google_user=google_user)
-      profile.put()
+    profile = models.Profile.FindOrCreate(google_user)
   else:
     profile = None
 
