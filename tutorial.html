@@ -11,7 +11,7 @@
   <body>
     <div class="wrapper">
       <header>
-        <h1 class="header">Cosmopolite</h1>
+        <h1 class="header"><a href="/">Cosmopolite</a></h1>
         <p class="header">Client/server publish/subscribe, presence and key/value storage for AppEngine</p>
 
         <ul>
@@ -81,17 +81,6 @@ cosmo.sendMessage('testsubject', 'test message');</pre></li>
   <li>Load <a href="http://localhost:8080/test.html" target="_blank">your test page</a></li>
   <li>The debug page should show the message from the test page</li>
   <li>You've written code that uses cosmopolite!</li>
-</ol>
-
-<h3>Time out for concepts</h3>
-
-<ol>
-  <li><b>Subject</b>: a topic that clients that publish and subscribe to, e.g. "books"</li>
-  <li><b>Message</b>: a single chunk of data transmitted to a single subject, e.g. "I love books!"</li>
-  <li><b>Pin</b>: an ephemeral message that is deleted when the client that pinned it disconnects</li>
-  <li><b>Instance</b>: a single instantiation of Cosmopolite() in a browser (destroyed on page close)</li>
-  <li><b>Client</b>: a persistent identifier for a browser (consistent across browser restarts)</li>
-  <li><b>Profile</b>: a collection of clients that all speak as the same user (and so should appear the same to subscribers)</li>
 </ol>
 
 <h3>Subscribe to a subject</h3>

@@ -164,6 +164,10 @@ code, pre {
   font-size:14px;
 }
 
+comment {
+  color:#00f;
+}
+
 pre {
 	padding: 4px 12px;
   background: #FDFEFB;
