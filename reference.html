@@ -509,6 +509,41 @@ current profile.</p>
 back from the server. You can filter messages by comparing their sender field to the return value
 of <a href="#currentProfile">currentProfile()</a> to avoid processing your own messages.</p>
 
+
+<h4><a name="getMessages">getMessages()</a></h4>
+
+<p>Arguments:
+<ol>
+  <li><code>subject</code>: A valid <a href="#subject">subject</a> (string, number or object with
+  specific keys)</li>
+</ol></p>
+
+<p>Returns: An ordered (oldest to newest) array of <a href="#message">message</a> objects.</p>
+
+<p>The client library keeps a cache of messages received from
+<a href="#subscription">subscriptions</a>. getMessage() returns the contents of that cache.</p>
+
+<p>Note that only subjects for which <a href="#subscribe">subscribe()</a> has been called are valid
+to pass to getMessage(), and that getMessage() only returns historical messages as specified by the
+arguments to subscribe(). To fetch more historical messages, call subscribe() again with different
+arguments.</p>
+
+
+<h4><a name="getLastMessage">getLastMessage()</a></h4>
+
+<p>Arguments:
+<ol>
+  <li><code>subject</code>: A valid <a href="#subject">subject</a> (string, number or object with
+  specific keys)</li>
+</ol></p>
+
+<p>Returns: The most recent <a href="#message">message</a> object received, or null if none.</p>
+
+<p>Similar to <a href="#getMessages">getMessages()</a>, but only returns the most recent message
+received from the server (in server sequence number ordering). This is useful for applications
+using Cosmopolite as a key/value store that don't need to interact with the historical messages.
+</p>
+
       </section>
     </div>
 <script>
