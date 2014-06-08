@@ -430,7 +430,7 @@ require a server response.</p>
 <p>Returns: A
 <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">
 Promise</a> that resolves with no arguments on success, or rejects with no arguments if the client
-is denied access to the subject.</p>
+is denied access to read the subject.</p>
 
 <p>subscribe() creates a <a href="#subscription">subscription</a> on the server to a particular
 subject. The subscription is tied to our current <a href="#instance">instance</a> but is re-created
@@ -474,6 +474,40 @@ unsubscribe().</p>
 
 <p>A single call to unsubscribe() undoes all calls to <a href="#subscribe">subscribe()</a> for the
 given subject.</a>
+
+
+<h4><a name="sendMessage">sendMessage()</a></h4>
+
+<p>Arguments:
+<ol>
+  <li><code>subject</code>: A valid <a href="#subject">subject</a> (string, number or object with
+  specific keys)</li>
+  <li><code>message</code>: The <a href="#message">message</a> data. Any value that JSON can
+  serialize is valid.</li>
+</ol></p>
+
+<p>Returns: A
+<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">
+Promise</a> that resolves with no arguments on success, or rejects with no arguments if the client
+is denied access to write to the subject.</p>
+
+<p>Sends a <a href="#message">message</a> to the given <a href="#subject">subject</a>. The message
+contents are serialized and sent to the server (see 
+<a href="overview#architecture">architecture</a>). The server adds metadata (sequence number,
+timestamp, sender profile ID), stores the message and sends it on to any current
+<a href="#subscription">subscribers</a> to the subject, including possibly back to the local
+client. Future subscribers can fetch the historical message from the server's storage (as opposed
+to a <a href="#pin">pin</a> which is ephemeral and tied to the current
+<a href="#instance">instance</a>).</p>
+
+<p>The message may be rejected by server (causing the promise to reject) if the
+<a href="#subject">subject</a> sets <code>writable_only_by</code> and it does not match our
+current profile.</p>
+
+<p>If we are also <a href="#subscribe">subscribed</a> to the given subject and have provided an
+<a href="#onMessage">onMessage</a> callback, it will fire for this message when it is received
+back from the server. You can filter messages by comparing their sender field to the return value
+of <a href="#currentProfile">currentProfile()</a> to avoid processing your own messages.</p>
 
       </section>
     </div>
