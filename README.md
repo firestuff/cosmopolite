@@ -1,6 +1,8 @@
 cosmopolite
 ===========
 
+See https://www.cosmopolite.org/ for tutorial, reference, etc.
+
 Client/server publish/subscribe and key/value storage for AppEngine.
 
 Components:
