@@ -544,6 +544,70 @@ received from the server (in server sequence number ordering). This is useful fo
 using Cosmopolite as a key/value store that don't need to interact with the historical messages.
 </p>
 
+
+<h4><a name="pin_method">pin()</a></h4>
+
+<p>Arguments:
+<ol>
+  <li><code>subject</code>: A valid <a href="#subject">subject</a> (string, number or object with
+  specific keys)</li>
+  <li><code>message</code>: The <a href="#message">message</a> data. Any value that JSON can
+  serialize is valid.</li>
+</ol></p>
+
+<p>Returns: A
+<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">
+Promise</a> that resolves on success, or rejects with no arguments if the client is denied access
+to write to the subject. If successful, it is passed a single string argument containing a unique
+identifier for the pin that can later be passed on <a href="#unpin">unpin()</a>.</p>
+
+<p>A <a href="#pin">pin</a> is like a <a href="#message">message</a>, with some differences: it is
+tied to the lifetime of the current <a href="#instance">instance</a> and
+<a href="#channel">channel</a>, it can be deleted by the publishing <a href="#client">client</a>
+(by calling <a href="#unpin">unpin()</a>, and it is unordered on the server.</p>
+
+<p>The pin may be rejected by server (causing the promise to reject) if the
+<a href="#subject">subject</a> sets <code>writable_only_by</code> and it does not match our
+current profile.</p>
+
+<p>If we are also <a href="#subscribe">subscribed</a> to the given subject and have provided an
+<a href="#onPin">onPin</a> callback, it will fire for this pin when it is received back from the
+server. You can filter pins by comparing their sender field to the return value of
+<a href="#currentProfile">currentProfile()</a> to avoid processing your own pins.</p>
+
+
+<h4><a name="unpin">unpin()</a></h4>
+
+<p>Arguments:
+<ol>
+  <li><code>id</code>: An ID string previously passed to the resolve callback of the promise
+  returned by <a href="#pin_method">pin()</a> or the <code>sender_message_id</code> from the
+  <a href="#onPin">onPin</a> callback or the return value of <a href="#getPins">getPins()</a>.</p>
+</ol></p>
+
+<p>Returns: A
+<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">
+Promise</a> that resolves with no arguments on RPC completion</p>
+
+<p>Remove a currently active <a href="#pin">pin</a>. The pin must have been added by this
+<a href="#client">client</a>, but not necessarily by this <a href="#instance">instance</a> (the
+client library automatically re-adds pins after reconnection).</p>
+
+
+<h4><a name="getPins">getPins()</a></h4>
+
+<p>Arguments:
+<ol>
+  <li><code>subject</code>: A valid <a href="#subject">subject</a> (string, number or object with
+  specific keys)</li>
+</ol></p>
+
+<p>Returns: An unordered array of <a href="#message">message</a>-like <a href="#pin"> objects.</a>
+</p>
+
+<p>The client library keeps a list of currently active pins
+<a href="#subscription">subscriptions</a>. getPins() returns the contents of that cache.</p>
+
       </section>
     </div>
 <script>
