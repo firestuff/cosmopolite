@@ -1,7 +1,10 @@
 cosmopolite
 ===========
 
-See https://www.cosmopolite.org/ for tutorial, reference, etc.
+* Website: https://www.cosmopolite.org/
+* Tutorial: https://www.cosmopolite.org/tutorial
+* Reference: https://www.cosmopolite.org/reference
+* Playground: https://playground.cosmopolite.org/
 
 Client/server publish/subscribe and key/value storage for AppEngine.
 
