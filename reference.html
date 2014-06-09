@@ -608,6 +608,22 @@ client library automatically re-adds pins after reconnection).</p>
 <p>The client library keeps a list of currently active pins
 <a href="#subscription">subscriptions</a>. getPins() returns the contents of that cache.</p>
 
+
+<h4><a name="trackEvent">trackEvent()</a></h4>
+
+<p>Arguments: the same as the
+<a href="https://developers.google.com/analytics/devguides/collection/analyticsjs/method-reference">ga()</a>
+function from Google Analytics.</p>
+
+<p>If trackingID was passed to the Cosmopolite <a href="#constructor">constructor</a>, Cosmopolite
+sends analytics events on load and subscribe. To avoid duplicate work initializing the analytics
+library, trackEvent() provides a passthrough to the analytics interface.</p>
+
+<p>Cosmopolite does not send a
+<a href="https://developers.google.com/analytics/devguides/collection/analyticsjs/pages">pageview</a>
+event. To tie together tracking data, it is recommended that you send at least one pageview from
+your application code.</p>
+
       </section>
     </div>
 <script>
@@ -617,6 +633,7 @@ client library automatically re-adds pins after reconnection).</p>
   })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
 
   ga('create', 'UA-37845853-2', 'auto');
+  ga('require', 'displayfeatures');
   ga('send', 'pageview');
 
 </script>
