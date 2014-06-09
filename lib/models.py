@@ -19,6 +19,7 @@ import logging
 import struct
 
 from google.appengine.api import channel
+from google.appengine.api import users
 from google.appengine.ext import db
 
 import utils
@@ -48,6 +49,8 @@ class Profile(db.Model):
   google_user = db.UserProperty()
 
   _cache = {}
+
+  ADMIN_KEY = db.Key.from_path('Profile', 'admin')
 
   @classmethod
   @db.transactional()
@@ -125,12 +128,18 @@ class Subject(db.Model):
   @classmethod
   def FindOrCreate(cls, subject):
     if 'readable_only_by' in subject:
-      readable_only_by = db.Key(subject['readable_only_by'])
+      if subject['readable_only_by'] == 'admin':
+        readable_only_by = Profile.ADMIN_KEY
+      else:
+        readable_only_by = db.Key(subject['readable_only_by'])
     else:
       readable_only_by = None
 
     if 'writable_only_by' in subject:
-      writable_only_by = db.Key(subject['writable_only_by'])
+      if subject['writable_only_by'] == 'admin':
+        writable_only_by = Profile.ADMIN_KEY
+      else:
+        writable_only_by = db.Key(subject['writable_only_by'])
     else:
       writable_only_by = None
 
@@ -213,13 +222,15 @@ class Subject(db.Model):
 
   def VerifyWritable(self, sender):
     writable_only_by = Subject.writable_only_by.get_value_for_datastore(self)
-    if (writable_only_by and
+    if (not users.is_current_user_admin() and
+        writable_only_by and
         writable_only_by != sender):
       raise AccessDenied
 
   def VerifyReadable(self, reader):
     readable_only_by = Subject.readable_only_by.get_value_for_datastore(self)
-    if (readable_only_by and
+    if (not users.is_current_user_admin() and
+        readable_only_by and
         readable_only_by != reader):
       raise AccessDenied
 
@@ -294,10 +305,16 @@ class Subject(db.Model):
     }
     readable_only_by = Subject.readable_only_by.get_value_for_datastore(self)
     if readable_only_by:
-      ret['readable_only_by'] = str(readable_only_by)
+      if readable_only_by == Profile.ADMIN_KEY:
+        ret['readable_only_by'] = 'admin'
+      else:
+        ret['readable_only_by'] = str(readable_only_by)
     writable_only_by = Subject.writable_only_by.get_value_for_datastore(self)
     if writable_only_by:
-      ret['writable_only_by'] = str(writable_only_by)
+      if writable_only_by == Profile.ADMIN_KEY:
+        ret['writable_only_by'] = 'admin'
+      else:
+        ret['writable_only_by'] = str(writable_only_by)
     return ret
 
   @db.transactional()

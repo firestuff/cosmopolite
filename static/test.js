@@ -629,3 +629,70 @@ asyncTest('Two channels, one client', function() {
     });
   });
 });
+
+asyncTest('subscribe admin ACL', function() {
+  expect(2);
+
+  var subject = randstring();
+
+  logout(function() {
+    var callbacks = {
+      'onLogin': function() {
+        cosmo.subscribe({
+          'name': subject,
+          'readable_only_by': 'admin'
+        }).then(function() {
+          ok(true, 'logged in succeeds');
+
+          cosmo.shutdown();
+          start();
+        });
+      }
+    };
+    var cosmo = new Cosmopolite(callbacks, null, randstring());
+    cosmo.subscribe({
+      'name': subject,
+      'readable_only_by': 'admin'
+    }).then(null, function() {
+      ok(true, 'logged out fails');
+
+      window.open(
+          '/_ah/login?email=test%40example.com&admin=True&action=Login' +
+          '&continue=/cosmopolite/static/login_complete.html');
+    });
+  });
+});
+
+asyncTest('sendMessage admin ACL', function() {
+  expect(2);
+
+  var subject = randstring();
+  var message = randstring();
+
+  logout(function() {
+    var callbacks = {
+      'onLogin': function() {
+        cosmo.sendMessage({
+          'name': subject,
+          'writable_only_by': 'admin'
+        }, message).then(function() {
+          ok(true, 'logged in succeeds');
+
+          cosmo.shutdown();
+          start();
+        });
+      }
+    };
+    var cosmo = new Cosmopolite(callbacks, null, randstring());
+    cosmo.sendMessage({
+      'name': subject,
+      'writable_only_by': 'admin'
+    }, message).then(null, function() {
+      ok(true, 'logged out fails');
+
+      window.open(
+          '/_ah/login?email=test%40example.com&admin=True&action=Login' +
+          '&continue=/cosmopolite/static/login_complete.html');
+    });
+  });
+});
