@@ -16,6 +16,7 @@ import json
 import logging
 import webapp2
 
+from google.appengine.api import channel
 from google.appengine.ext import db
 
 from cosmopolite.lib import auth
