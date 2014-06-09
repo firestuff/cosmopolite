@@ -175,7 +175,7 @@ class Subject(db.Model):
     return list(query)
 
   @db.transactional()
-  def PutMessage(self, message, sender, sender_message_id):
+  def PutMessage(self, message, sender, sender_message_id, sender_address):
     """Internal helper for SendMessage().
 
     Unless/until channel.send_message becomes transactional, we have to finish
@@ -205,6 +205,7 @@ class Subject(db.Model):
         message=message,
         sender=sender,
         sender_message_id=sender_message_id,
+        sender_address=sender_address,
         id_=message_id)
     obj.put()
 
@@ -222,15 +223,17 @@ class Subject(db.Model):
         readable_only_by != reader):
       raise AccessDenied
 
-  def SendMessage(self, message, sender, sender_message_id):
+  def SendMessage(self, message, sender, sender_message_id, sender_address):
     self.VerifyWritable(sender)
-    obj, subscriptions = self.PutMessage(message, sender, sender_message_id)
+    obj, subscriptions = self.PutMessage(
+        message, sender, sender_message_id, sender_address)
     event = obj.ToEvent()
     for subscription in subscriptions:
       subscription.SendMessage(event)
 
   @db.transactional()
-  def PutPin(self, message, sender, sender_message_id, instance):
+  def PutPin(self, message, sender, sender_message_id,
+             instance, sender_address):
     """Internal helper for Pin()."""
     # sender_message_id should be universal across all subjects, but we check
     # it within just this subject to allow in-transaction verification.
@@ -248,15 +251,16 @@ class Subject(db.Model):
         message=message,
         sender=sender,
         sender_message_id=sender_message_id,
+        sender_address=sender_address,
         instance=instance)
     obj.put()
 
     return (obj, list(Subscription.all().ancestor(self)))
 
-  def Pin(self, message, sender, sender_message_id, instance):
+  def Pin(self, message, sender, sender_message_id, sender_address, instance):
     self.VerifyWritable(sender)
     obj, subscriptions = self.PutPin(
-        message, sender, sender_message_id, instance)
+        message, sender, sender_message_id, instance, sender_address)
     event = obj.ToEvent()
     for subscription in subscriptions:
       subscription.SendMessage(event)
@@ -347,6 +351,7 @@ class Message(db.Model):
   message = db.TextProperty(required=True)
   sender = db.ReferenceProperty(required=True, reference_class=Profile)
   sender_message_id = db.StringProperty(required=True)
+  sender_address = db.StringProperty(required=True)
   # id is reserved
   id_ = db.IntegerProperty(required=True)
 
@@ -367,9 +372,10 @@ class Pin(db.Model):
 
   created = db.DateTimeProperty(required=True, auto_now_add=True)
   instance = db.ReferenceProperty(required=True, reference_class=Instance)
-  sender = db.ReferenceProperty(required=True, reference_class=Profile)
   message = db.TextProperty(required=True)
+  sender = db.ReferenceProperty(required=True, reference_class=Profile)
   sender_message_id = db.StringProperty(required=True)
+  sender_address = db.StringProperty(required=True)
 
   def ToEvent(self, event_type='pin'):
     return {

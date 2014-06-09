@@ -27,7 +27,7 @@ from cosmopolite.lib import utils
 import config
 
 
-def CreateChannel(google_user, client, instance_id, args):
+def CreateChannel(google_user, client, client_address, instance_id, args):
   models.Instance.FindOrCreate(instance_id)
 
   token = channel.create_channel(
@@ -52,7 +52,7 @@ def CreateChannel(google_user, client, instance_id, args):
   }
 
 
-def Pin(google_user, client, instance_id, args):
+def Pin(google_user, client, client_address, instance_id, args):
   instance = models.Instance.FromID(instance_id)
   if not instance or not instance.active:
     # Probably a race with the channel opening
@@ -69,6 +69,7 @@ def Pin(google_user, client, instance_id, args):
         message,
         models.Client.profile.get_value_for_datastore(client),
         sender_message_id,
+        client_address,
         instance)
   except models.DuplicateMessage:
     logging.warning('Duplicate pin: %s', sender_message_id)
@@ -86,7 +87,7 @@ def Pin(google_user, client, instance_id, args):
   }
 
 
-def SendMessage(google_user, client, instance_id, args):
+def SendMessage(google_user, client, client_address, instance_id, args):
   subject = args['subject']
   message = args['message']
   sender_message_id = args['sender_message_id']
@@ -95,7 +96,8 @@ def SendMessage(google_user, client, instance_id, args):
     models.Subject.FindOrCreate(subject).SendMessage(
         message,
         models.Client.profile.get_value_for_datastore(client),
-        sender_message_id)
+        sender_message_id,
+        client_address)
   except models.DuplicateMessage:
     logging.warning('Duplicate message: %s', sender_message_id)
     return {
@@ -112,7 +114,7 @@ def SendMessage(google_user, client, instance_id, args):
   }
 
 
-def Subscribe(google_user, client, instance_id, args):
+def Subscribe(google_user, client, client_address, instance_id, args):
   instance = models.Instance.FromID(instance_id)
   subject = models.Subject.FindOrCreate(args['subject'])
   messages = args.get('messages', 0)
@@ -141,7 +143,7 @@ def Subscribe(google_user, client, instance_id, args):
   }
 
 
-def Unpin(google_user, client, instance_id, args):
+def Unpin(google_user, client, client_address, instance_id, args):
   instance = models.Instance.FromID(instance_id)
   subject = args['subject']
   sender_message_id = args['sender_message_id']
@@ -162,7 +164,7 @@ def Unpin(google_user, client, instance_id, args):
   }
 
 
-def Unsubscribe(google_user, client, instance_id, args):
+def Unsubscribe(google_user, client, client_address, instance_id, args):
   instance = models.Instance.FromID(instance_id)
   subject = models.Subject.FindOrCreate(args['subject'])
   models.Subscription.Remove(subject, instance)
@@ -199,6 +201,7 @@ class APIWrapper(webapp2.RequestHandler):
       result = callback(
           self.verified_google_user,
           self.client,
+          self.request.remote_addr,
           self.request_json['instance_id'],
           command.get('arguments', {}))
       # Magic: if result contains "events", haul them up a level so the
