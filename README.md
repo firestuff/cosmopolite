@@ -5,6 +5,7 @@ cosmopolite
 * Tutorial: https://www.cosmopolite.org/tutorial
 * Reference: https://www.cosmopolite.org/reference
 * Playground: https://playground.cosmopolite.org/
+* Mailing list: https://groups.google.com/a/cosmopolite.org/forum/#!forum/discuss
 
 Client/server publish/subscribe and key/value storage for AppEngine.
 
