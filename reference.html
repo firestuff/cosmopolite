@@ -135,9 +135,13 @@ subjects:
   <li><code>{ name: "foo", readable_only_by: "XXXprofileXXX" }</code></li>
   <li><code>{ name: "foo", writable_only_by: "YYYprofileYYY" }</code></li>
   <li><code>{ name: "foo", readable_only_by: "XXXprofileXXX", writable_only_by: "YYYprofileYYY" }</code></li>
+  <li><code>{ name: "foo", readable_only_by: "admin" }</code></li>
+  <li><code>{ name: "foo", writable_only_by: "admin" }</code></li>
 </ul>
 
-(where XXXprofileXXX and YYYprofileYYY are profile keys)</p>
+where XXXprofileXXX and YYYprofileYYY are profile keys. <code>admin</code> is a magic value that
+only allows accounts marked as administrators in the AppEngine application to perform the action.
+</p>
 
 
 <h4><a name="subscription">Subscription</a></h4>
