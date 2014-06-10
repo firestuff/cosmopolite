@@ -197,6 +197,7 @@ class APIWrapper(webapp2.RequestHandler):
         'events': [],
     }
     for command in self.request_json['commands']:
+      logging.info('Command: %s', command)
       callback = self._COMMANDS[command['command']]
       result = callback(
           self.verified_google_user,

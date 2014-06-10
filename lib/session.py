@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import functools
 
 from google.appengine.ext import db
@@ -68,6 +69,9 @@ def session_required(handler):
   def FindOrCreateSession(self):
     self.client, old_profile = CreateClientAndProfile(
         self.request_json['client_id'], self.verified_google_user)
+    logging.info('Client: %s', self.client.key().name())
+    logging.info('Profile: %s',
+        models.Client.profile.get_value_for_datastore(self.client))
     if old_profile:
       self.client.profile.MergeFrom(old_profile)
 

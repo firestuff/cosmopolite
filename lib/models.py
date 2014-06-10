@@ -92,10 +92,12 @@ class Instance(db.Model):
 
   @classmethod
   def FromID(cls, instance_id):
+    logging.info('Instance: %s', instance_id)
     return cls.get_by_key_name(instance_id)
 
   @classmethod
   def FindOrCreate(cls, instance_id):
+    logging.info('Instance: %s', instance_id)
     return cls.get_or_insert(instance_id)
 
 
