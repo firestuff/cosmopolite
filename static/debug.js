@@ -39,6 +39,7 @@ var onReady = function() {
   elements['pinText'].addEventListener('keypress', pinKeyPress);
   document.getElementById('pin').addEventListener('click', pin);
   document.getElementById('sendMessage').addEventListener('click', sendMessage);
+  document.getElementById('sendJSON').addEventListener('click', sendJSON);
   document.getElementById('subscribe').addEventListener('click', subscribe);
 };
 
@@ -145,7 +146,7 @@ var addToList = function(msg, list, trackobj) {
           (new Date(msg['created'] * 1000)).toString()));
     item.appendChild(row);
   }
-  item.appendChild(document.createTextNode(msg['message']));
+  item.appendChild(document.createTextNode(JSON.stringify(msg['message'])));
 
   list.insertBefore(item, list.firstChild);
 
@@ -240,6 +241,22 @@ var sendMessage = function() {
     return;
   }
   cosmo.sendMessage(selectedSubject.subject, elements['messageText'].value);
+  elements['messageText'].value = '';
+};
+
+var sendJSON = function() {
+  if (!selectedSubject) {
+    alert('Please select a subject.');
+    return;
+  }
+  var parsed;
+  try {
+    parsed = JSON.parse(elements['messageText'].value);
+  } catch (err) {
+    alert('Invalid JSON: ' + err.message);
+    return;
+  }
+  cosmo.sendMessage(selectedSubject.subject, parsed);
   elements['messageText'].value = '';
 };
 
