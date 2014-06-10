@@ -134,7 +134,7 @@ var Cosmopolite = function(
   if (document.readyState == 'complete') {
     this.init_();
   } else {
-    document.addEventListener('DOMContentLoaded', this.init_.bind(this));
+    document.addEventListener('readystatechange', this.init_.bind(this));
   }
 };
 
@@ -508,6 +508,10 @@ Cosmopolite.prototype.trackEvent = function(var_args) {
  * @private
  */
 Cosmopolite.prototype.init_ = function() {
+  if (document.readyState != 'complete') {
+    return;
+  }
+
   /**
    * @type {Promise}
    * @private
