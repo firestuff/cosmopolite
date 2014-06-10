@@ -737,7 +737,7 @@ Cosmopolite.prototype.sendRPC_ = function(command, args, opt_onSuccess) {
  * backoff.
  *
  * @param {Array.<Cosmopolite.typeRPC_>} commands List of commands to execute
- * @param {number=} opt_delay Seconds waited before executing this call for
+ * @param {number=} opt_delay Milliseconds waited before executing this call for
  *     backoff
  * @private
  */
@@ -768,16 +768,25 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, opt_delay) {
   xhr.responseType = 'json';
 
   var retryAfterDelay = (function(newCommands) {
+    // Exponential backoff + random stagger values
+    var min_ms = 250;
+    var max_ms = 32000;
+    var exponent = 1.1;
+    var stagger_factor = 0.1;
+
     var intDelay =
         xhr.getResponseHeader('Retry-After') ||
-        Math.min(32, Math.max(2, opt_delay || 2));
+        Math.min(max_ms, Math.max(min_ms, opt_delay || min_ms));
+    intDelay += intDelay * stagger_factor * Math.random();
+    intDelay = Math.ceil(intDelay);
     console.log(
         this.loggingPrefix_(),
-        'RPC failed; will retry in ' + intDelay + ' seconds');
+        'RPC failed; will retry in ' + intDelay + 'ms');
     var retry = (function() {
-      this.sendRPCs_(newCommands, Math.pow(intDelay, 2));
+      var newDelay = Math.ceil(Math.pow(intDelay, exponent));
+      this.sendRPCs_(newCommands, newDelay);
     }).bind(this);
-    window.setTimeout(retry, intDelay * 1000);
+    window.setTimeout(retry, intDelay);
   }).bind(this);
 
   xhr.addEventListener('load', function(e) {
