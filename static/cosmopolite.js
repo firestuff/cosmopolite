@@ -63,6 +63,11 @@ var Cosmopolite = function(
    * @private
    */
   this.namespace_ = opt_namespace || 'cosmopolite';
+  /**
+   * @type {?string}
+   * @private
+   */
+  this.trackingID_ = opt_trackingID || null;
 
   /**
    * @type {Cosmopolite.ChannelState_}
@@ -126,59 +131,11 @@ var Cosmopolite = function(
     localStorage[this.messageQueueKey_] = JSON.stringify([]);
   }
 
-  /**
-   * @type {Promise}
-   * @private
-   */
-  this.channelAPIPromise_ = new Promise(function(resolve, reject) {
-    var script = document.createElement('script');
-    script.src = '/_ah/channel/jsapi';
-    script.async = true;
-    script.onload = resolve;
-    document.body.appendChild(script);
-  });
-
-  if (opt_trackingID) {
-    /**
-     * @type {string}
-     * @private
-     */
-    this.analyticsObjName_ = this.uuid_();
-    window['GoogleAnalyticsObject'] = this.analyticsObjName_;
-
-    var completeCallback = (function() {
-      /**
-      * @type {function(...)}
-      * @private
-      */
-      this.analyticsObj_ = window[this.analyticsObjName_];
-      delete window[this.analyticsObjName_];
-    }).bind(this);
-
-    window[this.analyticsObjName_] = {
-      'l': 1 * new Date(),
-      'q': []
-    };
-
-    var script = document.createElement('script');
-    script.src = 'https://www.google-analytics.com/analytics.js';
-    script.async = true;
-    script.onload = completeCallback;
-    document.body.appendChild(script);
-
-    this.trackEvent('create', opt_trackingID, {
-      'storage': 'none',
-      'clientId': localStorage[this.namespace_ + ':tracking_client_id']
-    });
-    this.trackEvent((function(analytics) {
-      localStorage[this.namespace_ + ':tracking_client_id'] =
-          analytics.get('clientId');
-    }).bind(this));
-    this.trackEvent('send', 'event', 'cosmopolite', 'load');
+  if (document.readyState == 'complete') {
+    this.init_();
+  } else {
+    document.addEventListener('DOMContentLoaded', this.init_.bind(this));
   }
-
-  this.registerMessageHandlers_();
-  this.createChannel_();
 };
 
 
@@ -542,6 +499,68 @@ Cosmopolite.prototype.trackEvent = function(var_args) {
   } else if (this.analyticsObjName_) {
     window[this.analyticsObjName_].q.push(arguments);
   }
+};
+
+
+/**
+ * Initialization that requires the DOM.
+ *
+ * @private
+ */
+Cosmopolite.prototype.init_ = function() {
+  /**
+   * @type {Promise}
+   * @private
+   */
+  this.channelAPIPromise_ = new Promise(function(resolve, reject) {
+    var script = document.createElement('script');
+    script.src = '/_ah/channel/jsapi';
+    script.async = true;
+    script.onload = resolve;
+    document.body.appendChild(script);
+  });
+
+  if (this.trackingID_) {
+    /**
+     * @type {string}
+     * @private
+     */
+    this.analyticsObjName_ = this.uuid_();
+    window['GoogleAnalyticsObject'] = this.analyticsObjName_;
+
+    var completeCallback = (function() {
+      /**
+      * @type {function(...)}
+      * @private
+      */
+      this.analyticsObj_ = window[this.analyticsObjName_];
+      delete window[this.analyticsObjName_];
+    }).bind(this);
+
+    window[this.analyticsObjName_] = {
+      'l': 1 * new Date(),
+      'q': []
+    };
+
+    var script = document.createElement('script');
+    script.src = 'https://www.google-analytics.com/analytics.js';
+    script.async = true;
+    script.onload = completeCallback;
+    document.body.appendChild(script);
+
+    this.trackEvent('create', this.trackingID_, {
+      'storage': 'none',
+      'clientId': localStorage[this.namespace_ + ':tracking_client_id']
+    });
+    this.trackEvent((function(analytics) {
+      localStorage[this.namespace_ + ':tracking_client_id'] =
+          analytics.get('clientId');
+    }).bind(this));
+    this.trackEvent('send', 'event', 'cosmopolite', 'load');
+  }
+
+  this.registerMessageHandlers_();
+  this.createChannel_();
 };
 
 
