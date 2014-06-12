@@ -262,7 +262,7 @@ Cosmopolite.prototype.shutdown = function() {
  * @return {Promise}
  */
 Cosmopolite.prototype.subscribe = function(subject, opt_messages, opt_lastID) {
-  return new Promise(function(resolve, reject) {
+  return this.newPromise_(function(resolve, reject) {
     /** @type {Cosmopolite.typeSubject} */
     var canonicalSubject = this.canonicalSubject_(subject);
     /** @type {string} */
@@ -301,7 +301,7 @@ Cosmopolite.prototype.subscribe = function(subject, opt_messages, opt_lastID) {
             'send', 'event', 'cosmopolite', 'subscribe', subjectString);
       } else {
         delete this.subscriptions_[subjectString];
-        reject();
+        reject(new Error(result));
       }
     });
   }.bind(this));
@@ -318,7 +318,7 @@ Cosmopolite.prototype.subscribe = function(subject, opt_messages, opt_lastID) {
  * @return {Promise}
  */
 Cosmopolite.prototype.unsubscribe = function(subject) {
-  return new Promise(function(resolve, reject) {
+  return this.newPromise_(function(resolve, reject) {
     /** @type {Cosmopolite.typeSubject} */
     var canonicalSubject = this.canonicalSubject_(subject);
     /** @type {string} */
@@ -340,7 +340,7 @@ Cosmopolite.prototype.unsubscribe = function(subject) {
  * @return {Promise}
  */
 Cosmopolite.prototype.sendMessage = function(subject, message) {
-  return new Promise(function(resolve, reject) {
+  return this.newPromise_(function(resolve, reject) {
     var args = {
       'subject': this.canonicalSubject_(subject),
       'message': JSON.stringify(message),
@@ -415,7 +415,7 @@ Cosmopolite.prototype.getPins = function(subject) {
  * @return {Promise}
  */
 Cosmopolite.prototype.getProfile = function() {
-  return new Promise(function(resolve, reject) {
+  return this.newPromise_(function(resolve, reject) {
     if (this.profile_) {
       resolve(this.profile_);
     } else {
@@ -449,7 +449,7 @@ Cosmopolite.prototype.currentProfile = function() {
  * @return {Promise}
  */
 Cosmopolite.prototype.pin = function(subject, message) {
-  return new Promise(function(resolve, reject) {
+  return this.newPromise_(function(resolve, reject) {
     /** @type {string} */
     var id = this.uuid_();
     var args = {
@@ -474,7 +474,7 @@ Cosmopolite.prototype.pin = function(subject, message) {
  * @return {Promise}
  */
 Cosmopolite.prototype.unpin = function(id) {
-  return new Promise(function(resolve, reject) {
+  return this.newPromise_(function(resolve, reject) {
     var pin = this.pins_[id];
     var args = {
       'subject': pin['subject'],
@@ -516,7 +516,7 @@ Cosmopolite.prototype.init_ = function() {
    * @type {Promise}
    * @private
    */
-  this.channelAPIPromise_ = new Promise(function(resolve, reject) {
+  this.channelAPIPromise_ = this.newPromise_(function(resolve, reject) {
     var script = document.createElement('script');
     script.src = '/_ah/channel/jsapi';
     script.async = true;
@@ -566,6 +566,25 @@ Cosmopolite.prototype.init_ = function() {
   this.registerMessageHandlers_();
   this.createChannel_();
 };
+
+
+/**
+ * Build a new Promise object with exception handling.
+ *
+ * @param {function(...)} callback
+ *
+ * @return {Promise}
+ * @private
+ */
+Cosmopolite.prototype.newPromise_ = function(callback) {
+  return new Promise(callback).catch(function(err) {
+    this.trackEvent('send', 'exception', {
+      'exDescription': err.message
+    });
+    console.log(err);
+    throw err;
+  }.bind(this));
+}
 
 
 /**
@@ -725,7 +744,7 @@ Cosmopolite.prototype.onMessageSent_ = function(
     }
   } else {
     if (reject) {
-      reject();
+      reject(new Error(result));
     }
   }
 };
