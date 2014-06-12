@@ -138,6 +138,30 @@ asyncTest('Message round trip without channel', function() {
   cosmo.subscribe(subject, -1);
 });
 
+asyncTest('Bulk subscribe', function() {
+  expect(2);
+
+  var subject1 = randstring();
+  var subject2 = randstring();
+  var message = randstring();
+
+  var messages = 0;
+
+  var callbacks = {
+    'onMessage': function(e) {
+      equal(e['message'], message, 'message matches');
+      if (++messages == 2) {
+        cosmo.shutdown();
+        start();
+      }
+    }
+  };
+
+  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.sendMessage(subject1, message);
+  cosmo.sendMessage(subject2, message);
+  cosmo.subscribe([subject1, subject2], -1);
+});
 
 asyncTest('Complex object', function() {
   expect(2);
