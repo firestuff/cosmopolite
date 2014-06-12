@@ -577,14 +577,15 @@ Cosmopolite.prototype.init_ = function() {
  * @private
  */
 Cosmopolite.prototype.newPromise_ = function(callback) {
-  return new Promise(callback).catch(function(err) {
+  var promise = new Promise(callback);
+  return /** @type {Promise} */ (promise.then(undefined, function(err) {
     this.trackEvent('send', 'exception', {
       'exDescription': err.message
     });
     console.log(err);
     throw err;
-  }.bind(this));
-}
+  }.bind(this)));
+};
 
 
 /**
@@ -725,7 +726,7 @@ Cosmopolite.prototype.registerMessageHandlers_ = function() {
  *
  * @param {Cosmopolite.typeMessage} message Message details.
  * @param {?function()} resolve Promise resolution callback.
- * @param {?function()} reject Promise rejection callback.
+ * @param {?function(Error)} reject Promise rejection callback.
  * @param {Object} response Server RPC response.
  * @private
  */
