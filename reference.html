@@ -425,7 +425,7 @@ require a server response.</p>
 <p>Arguments:
 <ol>
   <li><code>subject</code>: A valid <a href="#subject">subject</a> (string, number or object with
-  specific keys)</li>
+  specific keys), or an Array of subjects</li>
   <li><code>messages</code> (optional): An integer number of historical messages to retrieve from
   this subject if available. 0 means no messages; -1 means all messages.</li>
   <li><code>lastID</code> (optional): The id field from the last message received by the client.
@@ -435,7 +435,8 @@ require a server response.</p>
 <p>Returns: A
 <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">
 Promise</a> that resolves with no arguments on success, or rejects with no arguments if the client
-is denied access to read the subject.</p>
+is denied access to read the subject. If the <code>subject</code> argument was an Array of
+subjects, returns an Array of Promises that correspond.</p>
 
 <p>subscribe() creates a <a href="#subscription">subscription</a> on the server to a particular
 subject. The subscription is tied to our current <a href="#instance">instance</a> but is re-created
