@@ -1161,7 +1161,6 @@ Cosmopolite.prototype.onMessage_ = function(e) {
     return message['id'] == e.id;
   });
   if (duplicate) {
-    console.log(this.loggingPrefix_(), 'duplicate message:', e);
     return;
   }
   e['message'] = JSON.parse(e['message']);
