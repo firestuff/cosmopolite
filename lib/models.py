@@ -38,7 +38,9 @@ import utils
 
 
 class DuplicateMessage(Exception):
-  pass
+  def __init__(self, original):
+    self.original = original
+    super(DuplicateMessage, self).__init__(original)
 
 
 class AccessDenied(Exception):
@@ -205,7 +207,7 @@ class Subject(db.Model):
         .filter('sender_message_id =', sender_message_id)
         .fetch(1))
     if messages:
-      raise DuplicateMessage(sender_message_id)
+      raise DuplicateMessage(messages[0].ToEvent())
 
     message_id = subject.next_message_id
     subject.next_message_id += 1
@@ -243,6 +245,7 @@ class Subject(db.Model):
     event = obj.ToEvent()
     for subscription in subscriptions:
       subscription.SendMessage(event)
+    return event
 
   @db.transactional()
   def PutPin(self, message, sender, sender_message_id,
@@ -257,7 +260,7 @@ class Subject(db.Model):
         .filter('instance =', instance)
         .fetch(1))
     if pins:
-      raise DuplicateMessage(sender_message_id)
+      raise DuplicateMessage(pins[0].ToEvent())
 
     obj = Pin(
         parent=self,
@@ -277,6 +280,7 @@ class Subject(db.Model):
     event = obj.ToEvent()
     for subscription in subscriptions:
       subscription.SendMessage(event)
+    return event
 
   @db.transactional()
   def RemovePin(self, sender, sender_message_id, instance_key):

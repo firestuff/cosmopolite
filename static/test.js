@@ -193,14 +193,16 @@ asyncTest('Complex object', function() {
 });
 
 asyncTest('sendMessage Promise', function() {
-  expect(1);
+  expect(3);
 
   var subject = randstring();
   var message = randstring();
 
   var cosmo = new Cosmopolite({}, null, randstring());
-  cosmo.sendMessage(subject, message).then(function() {
+  cosmo.sendMessage(subject, message).then(function(msg) {
     ok(true, 'sendMessage Promise fulfilled');
+    equal(msg['subject']['name'], subject);
+    equal(msg['message'], message);
     cosmo.shutdown();
     start();
   });

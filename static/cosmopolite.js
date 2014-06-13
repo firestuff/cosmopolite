@@ -752,7 +752,8 @@ Cosmopolite.prototype.registerMessageHandlers_ = function() {
  * Callback for a sendMessage RPC ack by the server.
  *
  * @param {Cosmopolite.typeMessage} message Message details.
- * @param {?function()} resolve Promise resolution callback.
+ * @param {?function(Cosmopolite.typeMessage)} resolve Promise resolution
+ *     callback.
  * @param {?function(Error)} reject Promise rejection callback.
  * @param {Object} response Server RPC response.
  * @private
@@ -768,7 +769,9 @@ Cosmopolite.prototype.onMessageSent_ = function(
   var result = response['result'];
   if (result == 'ok' || result == 'duplicate_message') {
     if (resolve) {
-      resolve();
+      response['message']['message'] = JSON.parse(
+          response['message']['message']);
+      resolve(response['message']);
     }
   } else {
     if (reject) {

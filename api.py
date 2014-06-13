@@ -65,16 +65,17 @@ def Pin(google_user, client, client_address, instance_id, args):
   sender_message_id = args['sender_message_id']
 
   try:
-    models.Subject.FindOrCreate(subject).Pin(
+    pin = models.Subject.FindOrCreate(subject).Pin(
         message,
         models.Client.profile.get_value_for_datastore(client),
         sender_message_id,
         client_address,
         instance)
-  except models.DuplicateMessage:
+  except models.DuplicateMessage as e:
     logging.warning('Duplicate pin: %s', sender_message_id)
     return {
       'result': 'duplicate_message',
+      'message': e.original,
     }
   except models.AccessDenied:
     logging.warning('Pin access denied')
@@ -84,6 +85,7 @@ def Pin(google_user, client, client_address, instance_id, args):
 
   return {
     'result': 'ok',
+    'pin': pin,
   }
 
 
@@ -93,15 +95,16 @@ def SendMessage(google_user, client, client_address, instance_id, args):
   sender_message_id = args['sender_message_id']
 
   try:
-    models.Subject.FindOrCreate(subject).SendMessage(
+    msg = models.Subject.FindOrCreate(subject).SendMessage(
         message,
         models.Client.profile.get_value_for_datastore(client),
         sender_message_id,
         client_address)
-  except models.DuplicateMessage:
+  except models.DuplicateMessage as e:
     logging.warning('Duplicate message: %s', sender_message_id)
     return {
       'result': 'duplicate_message',
+      'message': e.original,
     }
   except models.AccessDenied:
     logging.warning('SendMessage access denied')
@@ -111,6 +114,7 @@ def SendMessage(google_user, client, client_address, instance_id, args):
 
   return {
     'result': 'ok',
+    'message': msg,
   }
 
 
