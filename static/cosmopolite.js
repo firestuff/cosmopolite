@@ -99,6 +99,11 @@ var Cosmopolite = function(
   if (!localStorage[this.namespace_ + ':client_id']) {
     localStorage[this.namespace_ + ':client_id'] = this.uuid_();
   }
+  /**
+   * @type {string}
+   * @private
+   */
+  this.clientID_ = localStorage[this.namespace_ + ':client_id'];
 
   /**
    * @type {string}
@@ -710,7 +715,8 @@ Cosmopolite.prototype.onReceiveMessage_ = function(data) {
       }
       break;
     case 'logout_complete':
-      localStorage[this.namespace_ + ':client_id'] = this.uuid_();
+      this.clientID_ = localStorage[this.namespace_ + ':client_id'] =
+          this.uuid_();
       localStorage.removeItem(this.namespace_ + ':google_user_id');
       if (this.socket_) {
         this.socket_.close();
@@ -820,7 +826,7 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, opt_delay) {
   }
   var request = {
     'instance_id': this.instanceID_,
-    'client_id': localStorage[this.namespace_ + ':client_id'],
+    'client_id': this.clientID_,
     'commands': []
   };
   commands.forEach(function(command) {
