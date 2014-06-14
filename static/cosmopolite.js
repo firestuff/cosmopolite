@@ -39,6 +39,7 @@ String.prototype.hashCode = function() {
 
 
 /**
+ * @see https://www.cosmopolite.org/reference#constructor
  * @constructor
  * @param {?Cosmopolite.typeCallbacks=} opt_callbacks
  * @param {?string=} opt_urlPrefix
@@ -161,15 +162,21 @@ Cosmopolite.typeCallbacks;
 Cosmopolite.typeEvent_;
 
 
-/** @typedef {{event_type: string,
-               profile: string,
-               google_user: string}} */
-Cosmopolite.typeLogin;
+/**
+ * @typedef {{event_type: string,
+ *            profile: string,
+ *            google_user: string}}
+ * @private
+ */
+Cosmopolite.typeLogin_;
 
 
-/** @typedef {{event_type: string,
-               profile: string}} */
-Cosmopolite.typeLogout;
+/**
+ * @typedef {{event_type: string,
+ *            profile: string}}
+ * @private
+ */
+Cosmopolite.typeLogout_;
 
 
 /** @typedef {{event_type: string,
@@ -238,9 +245,7 @@ Cosmopolite.SubscriptionState_ = {
 
 
 /**
- * Shutdown this instance.
- *
- * No callbacks will fire after this returns.
+ * @see https://www.cosmopolite.org/reference#shutdown
  */
 Cosmopolite.prototype.shutdown = function() {
   console.log(this.loggingPrefix_(), 'shutdown');
@@ -255,16 +260,11 @@ Cosmopolite.prototype.shutdown = function() {
 
 
 /**
- * Subscribe to a subject.
- *
- * Start receiving messages sent to this subject via the onMessage callback.
- *
+ * @see https://www.cosmopolite.org/reference#subscribe
  * @param {Cosmopolite.typeSubjectLoose|Array.<Cosmopolite.typeSubjectLoose>}
  *     subjects
- * @param {?number=} opt_messages Number of recent messages to request;
- *     0 for none, -1 for all
- * @param {?number=} opt_lastID ID of last message received; fetch messages
- *     since
+ * @param {?number=} opt_messages
+ * @param {?number=} opt_lastID
  * @return {Promise|Array.<Promise>}
  */
 Cosmopolite.prototype.subscribe = function(subjects, opt_messages, opt_lastID) {
@@ -341,11 +341,7 @@ Cosmopolite.prototype.subscribe = function(subjects, opt_messages, opt_lastID) {
 
 
 /**
- * Unsubscribe from a subject and destroy all listeners.
- *
- * Note that no reference counting is done, so a single call to unsubscribe()
- * undoes multiple calls to subscribe().
- *
+ * @see https://www.cosmopolite.org/reference#unsubscribe
  * @param {Cosmopolite.typeSubjectLoose} subject
  * @return {Promise}
  */
@@ -365,8 +361,7 @@ Cosmopolite.prototype.unsubscribe = function(subject) {
 
 
 /**
- * Post a message to the given subject, storing it and notifying all listeners.
- *
+ * @see https://www.cosmopolite.org/reference#sendMessage
  * @param {Cosmopolite.typeSubjectLoose} subject
  * @param {!*} message
  * @return {Promise}
@@ -392,8 +387,7 @@ Cosmopolite.prototype.sendMessage = function(subject, message) {
 
 
 /**
- * Fetch all received messages for a subject
- *
+ * @see https://www.cosmopolite.org/reference#getMessages
  * @param {Cosmopolite.typeSubjectLoose} subject
  * @return {Array.<Cosmopolite.typeMessage>}
  * @const
@@ -408,8 +402,7 @@ Cosmopolite.prototype.getMessages = function(subject) {
 
 
 /**
- * Fetch the most recent message for a subject
- *
+ * @see https://www.cosmopolite.org/reference#getLastMessage
  * @param {Cosmopolite.typeSubjectLoose} subject
  * @return {?Cosmopolite.typeMessage}
  * @const
@@ -426,8 +419,7 @@ Cosmopolite.prototype.getLastMessage = function(subject) {
 
 
 /**
- * Fetch all current pins for a subject
- *
+ * @see https://www.cosmopolite.org/reference#getPins
  * @param {Cosmopolite.typeSubjectLoose} subject
  * @return {Array.<Cosmopolite.typeMessage>}
  * @const
@@ -442,8 +434,7 @@ Cosmopolite.prototype.getPins = function(subject) {
 
 
 /**
- * Fetch our profile ID.
- *
+ * @see https://www.cosmopolite.org/reference#getProfile
  * @return {Promise}
  */
 Cosmopolite.prototype.getProfile = function() {
@@ -458,9 +449,8 @@ Cosmopolite.prototype.getProfile = function() {
 
 
 /**
- * Return our current profile ID, if known.
- *
- * @return {?string} Profile ID.
+ * @see https://www.cosmopolite.org/reference#currentProfile
+ * @return {?string}
  * @const
  */
 Cosmopolite.prototype.currentProfile = function() {
@@ -469,14 +459,8 @@ Cosmopolite.prototype.currentProfile = function() {
 
 
 /**
- * Pin a message to the given subject, storing it and notifying all listeners.
- *
- * The message is deleted on unpin() or when we disconnect.
- *
- * The resulting Promise resolve callback is passed an ID that can later be
- * passed to unpin().
- *
- * @param {Cosmopolite.typeSubjectLoose} subject Subject name or object
+ * @see https://www.cosmopolite.org/reference#pin_method
+ * @param {Cosmopolite.typeSubjectLoose} subject
  * @param {!*} message
  * @return {Promise}
  */
@@ -500,9 +484,8 @@ Cosmopolite.prototype.pin = function(subject, message) {
 
 
 /**
- * Unpin a message from the given subject, storing it and notifying listeners.
- *
- * @param {string} id ID returned by pin()'s resolve callback
+ * @see https://www.cosmopolite.org/reference#unpin
+ * @param {string} id
  * @return {Promise}
  */
 Cosmopolite.prototype.unpin = function(id) {
@@ -521,8 +504,7 @@ Cosmopolite.prototype.unpin = function(id) {
 
 
 /**
- * Log an event to analytics.
- *
+ * @see https://www.cosmopolite.org/reference#trackEvent
  * @param {...*} var_args
  */
 Cosmopolite.prototype.trackEvent = function(var_args) {
@@ -601,9 +583,8 @@ Cosmopolite.prototype.init_ = function() {
 
 
 /**
- * Generate a v4 UUID.
- *
- * @return {string} A universally-unique random value.
+ * @see https://www.cosmopolite.org/reference#uuid
+ * @return {string}
  * @const
  */
 Cosmopolite.prototype.uuid = function() {
@@ -1119,7 +1100,7 @@ Cosmopolite.prototype.onClose_ = function() {
 /**
  * Callback on receiving a 'login' event from the server
  *
- * @param {Cosmopolite.typeLogin} e
+ * @param {Cosmopolite.typeLogin_} e
  * @private
  */
 Cosmopolite.prototype.onLogin_ = function(e) {
@@ -1134,7 +1115,7 @@ Cosmopolite.prototype.onLogin_ = function(e) {
 /**
  * Callback on receiving a 'logout' event from the server
  *
- * @param {Cosmopolite.typeLogout} e
+ * @param {Cosmopolite.typeLogout_} e
  * @private
  */
 Cosmopolite.prototype.onLogout_ = function(e) {
@@ -1288,10 +1269,10 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
       this.onClose_();
       break;
     case 'login':
-      this.onLogin_(/** @type {Cosmopolite.typeLogin} */ (e));
+      this.onLogin_(/** @type {Cosmopolite.typeLogin_} */ (e));
       break;
     case 'logout':
-      this.onLogout_(/** @type {Cosmopolite.typeLogout} */ (e));
+      this.onLogout_(/** @type {Cosmopolite.typeLogout_} */ (e));
       break;
     case 'message':
       this.onMessage_(/** @type {Cosmopolite.typeMessage} */ (e));
