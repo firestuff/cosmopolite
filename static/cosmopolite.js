@@ -97,7 +97,7 @@ var Cosmopolite = function(
   this.profilePromises_ = [];
 
   if (!localStorage[this.namespace_ + ':client_id']) {
-    localStorage[this.namespace_ + ':client_id'] = this.uuid_();
+    localStorage[this.namespace_ + ':client_id'] = this.uuid();
   }
   /**
    * @type {string}
@@ -109,7 +109,7 @@ var Cosmopolite = function(
    * @type {string}
    * @private
    */
-  this.instanceID_ = this.uuid_();
+  this.instanceID_ = this.uuid();
 
   /**
    * @type {string}
@@ -376,7 +376,7 @@ Cosmopolite.prototype.sendMessage = function(subject, message) {
     var args = {
       'subject': this.canonicalSubject_(subject),
       'message': JSON.stringify(message),
-      'sender_message_id': this.uuid_()
+      'sender_message_id': this.uuid()
     };
 
     // No message left behind.
@@ -483,7 +483,7 @@ Cosmopolite.prototype.currentProfile = function() {
 Cosmopolite.prototype.pin = function(subject, message) {
   return this.newPromise_(function(resolve, reject) {
     /** @type {string} */
-    var id = this.uuid_();
+    var id = this.uuid();
     var args = {
       'subject': this.canonicalSubject_(subject),
       'message': JSON.stringify(message),
@@ -561,7 +561,7 @@ Cosmopolite.prototype.init_ = function() {
      * @type {string}
      * @private
      */
-    this.analyticsObjName_ = this.uuid_();
+    this.analyticsObjName_ = this.uuid();
     window['GoogleAnalyticsObject'] = this.analyticsObjName_;
 
     var completeCallback = (function() {
@@ -601,6 +601,25 @@ Cosmopolite.prototype.init_ = function() {
 
 
 /**
+ * Generate a v4 UUID.
+ *
+ * @return {string} A universally-unique random value.
+ * @const
+ */
+Cosmopolite.prototype.uuid = function() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    /** @type {number} */
+    var r = (Math.random() * 16) | 0;
+    if (c == 'x') {
+      return r.toString(16);
+    } else {
+      return (r & (0x03 | 0x08)).toString(16);
+    }
+  });
+};
+
+
+/**
  * Build a new Promise object with exception handling.
  *
  * @param {function(...)} callback
@@ -633,26 +652,6 @@ Cosmopolite.prototype.loggingPrefix_ = function() {
   } else {
     return 'cosmopolite (' + this.namespace_ + '):';
   }
-};
-
-
-/**
- * Generate a v4 UUID.
- *
- * @return {string} A universally-unique random value.
- * @const
- * @private
- */
-Cosmopolite.prototype.uuid_ = function() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    /** @type {number} */
-    var r = (Math.random() * 16) | 0;
-    if (c == 'x') {
-      return r.toString(16);
-    } else {
-      return (r & (0x03 | 0x08)).toString(16);
-    }
-  });
 };
 
 
@@ -716,7 +715,7 @@ Cosmopolite.prototype.onReceiveMessage_ = function(data) {
       break;
     case 'logout_complete':
       this.clientID_ = localStorage[this.namespace_ + ':client_id'] =
-          this.uuid_();
+          this.uuid();
       localStorage.removeItem(this.namespace_ + ':google_user_id');
       if (this.socket_) {
         this.socket_.close();
@@ -1072,7 +1071,7 @@ Cosmopolite.prototype.onSocketClose_ = function() {
     }, this);
   }
 
-  this.instanceID_ = this.uuid_();
+  this.instanceID_ = this.uuid();
 
   this.createChannel_();
 };
