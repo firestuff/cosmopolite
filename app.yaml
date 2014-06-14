@@ -59,6 +59,15 @@ handlers:
     X-Content-Type-Options: nosniff
     Strict-Transport-Security: max-age=31536000; includeSubDomains
 
+- url: /externs
+  static_dir: externs
+  secure: always
+  expiration: 7d
+  http_headers:
+    X-Frame-Options: DENY
+    X-Content-Type-Options: nosniff
+    Strict-Transport-Security: max-age=31536000; includeSubDomains
+
 pagespeed:
   enabled_rewriters:
   - InlineImages
