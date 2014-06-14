@@ -44,6 +44,7 @@ handlers:
 - url: /images
   static_dir: images
   secure: always
+  expiration: 1w
   http_headers:
     X-Frame-Options: DENY
     X-Content-Type-Options: nosniff
@@ -52,6 +53,7 @@ handlers:
 - url: /stylesheets
   static_dir: stylesheets
   secure: always
+  expiration: 1w
   http_headers:
     X-Frame-Options: DENY
     X-Content-Type-Options: nosniff
