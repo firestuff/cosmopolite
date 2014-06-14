@@ -66,6 +66,7 @@
     <li><a href="#unpin">unpin()</a></li>
     <li><a href="#getPins">getPins()</a></li>
     <li><a href="#trackEvent">trackEvent()</a></li>
+    <li><a href="#uuid">uuid()</a></li>
   </ul>
   </li>
 </ul>
@@ -630,6 +631,18 @@ library, trackEvent() provides a passthrough to the analytics interface.</p>
 <a href="https://developers.google.com/analytics/devguides/collection/analyticsjs/pages">pageview</a>
 event. To tie together tracking data, it is recommended that you send at least one pageview from
 your application code.</p>
+
+
+<h4><a name="uuid">uuid()</a></h4>
+
+<p>Arguments: <i>none</i></p>
+
+<p>Returns: A new, random universally unique identifier string</p>
+
+<p>Generate and return a new
+<a href="https://en.wikipedia.org/wiki/Universally_unique_identifier">UUID</a>. This generates a
+fully random verison 4 UUID; it is not MAC-based.</p>
+
 
       </section>
     </div>
