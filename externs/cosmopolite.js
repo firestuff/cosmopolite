@@ -7,6 +7,45 @@
  */
 
 /**
+ * @see https://www.cosmopolite.org/reference#callbacks
+ * @typedef {{onConnect: (function()|undefined),
+ *            onDisconnect: (function()|undefined),
+ *            onLogin: (function(string, string)|undefined),
+ *            onLogout: (function(string)|undefined),
+ *            onMessage: (function(Cosmopolite.typeMessage)|undefined),
+ *            onPin: (function(Cosmopolite.typeMessage)|undefined),
+ *            onUnpin: (function(Cosmopolite.typeMessage)|undefined)}}
+ */
+Cosmopolite.typeCallbacks;
+
+
+/**
+ * @see https://www.cosmopolite.org/reference#message
+ * @typedef {{event_type: string,
+ *            id: number,
+ *            created: number,
+ *            sender: string,
+ *            subject: Cosmopolite.typeSubject,
+ *            message: *}}
+ */
+Cosmopolite.typeMessage;
+
+
+/**
+ * @see https://www.cosmopolite.org/reference#subject
+ * @typedef {{name: string,
+ *            readable_only_by: (string|undefined),
+ *            writable_only_by: (string|undefined)}}
+ */
+Cosmopolite.typeSubject;
+
+
+/** @typedef {(Cosmopolite.typeSubject|string|number)} */
+Cosmopolite.typeSubjectLoose;
+
+
+
+/**
  * @see https://www.cosmopolite.org/reference#constructor
  * @constructor
  * @param {?Cosmopolite.typeCallbacks=} opt_callbacks
