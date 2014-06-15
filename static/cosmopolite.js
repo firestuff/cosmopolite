@@ -50,22 +50,26 @@ var Cosmopolite = function(
     opt_callbacks, opt_urlPrefix, opt_namespace, opt_trackingID) {
   /**
    * @type {Cosmopolite.typeCallbacks}
+   * @const
    * @private
    */
   this.callbacks_ =
       opt_callbacks || /** @type {Cosmopolite.typeCallbacks} */ ({});
   /**
    * @type {string}
+   * @const
    * @private
    */
   this.urlPrefix_ = opt_urlPrefix || '/cosmopolite';
   /**
    * @type {string}
+   * @const
    * @private
    */
   this.namespace_ = opt_namespace || 'cosmopolite';
   /**
    * @type {?string}
+   * @const
    * @private
    */
   this.trackingID_ = opt_trackingID || null;
@@ -83,16 +87,19 @@ var Cosmopolite = function(
 
   /**
    * @type {Object.<string, Cosmopolite.typeSubscription_>}
+   * @const
    * @private
    */
   this.subscriptions_ = {};
   /**
    * @type {Object.<string, Cosmopolite.typeMessage>}
+   * @const
    * @private
    */
   this.pins_ = {};
   /**
    * @type {Array.<function(string)>}
+   * @const
    * @private
    */
   this.profilePromises_ = [];
@@ -114,6 +121,7 @@ var Cosmopolite = function(
 
   /**
    * @type {string}
+   * @const
    * @private
    */
   this.messageQueueKey_ = this.namespace_ + ':message_queue';
@@ -1262,7 +1270,7 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
     this.profilePromises_.forEach(function(resolve) {
       resolve(this.profile_);
     }, this);
-    this.profilePromises_ = [];
+    this.profilePromises_.length = 0;
   }
   switch (e['event_type']) {
     case 'close':
