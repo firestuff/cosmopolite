@@ -6,6 +6,15 @@
  * @author ian@cosmopolite.org (Ian Gulliver)
  */
 
+
+
+/**
+ * @return {number}
+ */
+String.prototype.hashCode = function() {};
+
+
+
 /**
  * @see https://www.cosmopolite.org/reference#callbacks
  * @typedef {{onConnect: (function()|undefined),
