@@ -266,6 +266,15 @@ Cosmopolite.prototype.shutdown = function() {
 
 
 /**
+ * @see https://www.cosmopolite.org/reference#connected
+ * @return {boolean}
+ */
+Cosmopolite.prototype.connected = function() {
+  return this.channelState_ == Cosmopolite.ChannelState_.OPEN;
+};
+
+
+/**
  * @see https://www.cosmopolite.org/reference#subscribe
  * @param {Cosmopolite.typeSubjectLoose|Array.<Cosmopolite.typeSubjectLoose>}
  *     subjects
