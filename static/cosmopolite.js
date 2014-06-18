@@ -172,7 +172,6 @@ Cosmopolite.typeEvent_;
 
 /**
  * @typedef {{event_type: string,
- *            profile: string,
  *            google_user: string}}
  * @private
  */
@@ -180,8 +179,7 @@ Cosmopolite.typeLogin_;
 
 
 /**
- * @typedef {{event_type: string,
- *            profile: string}}
+ * @typedef {{event_type: string}}
  * @private
  */
 Cosmopolite.typeLogout_;
@@ -842,6 +840,14 @@ Cosmopolite.prototype.onRPCResponse_ =
     return;
   }
 
+  /** @type {string} */
+  this.profile_ = data['profile'];
+  this.trackEvent('set', 'userId', this.profile_);
+  var resolve;
+  while (resolve = this.profilePromises_.pop()) {
+    resolve(this.profile_);
+  }
+
   for (var i = 0; i < data['responses'].length; i++) {
     var response = data['responses'][i];
     if (response['result'] == 'retry') {
@@ -1297,15 +1303,6 @@ Cosmopolite.prototype.onUnpin_ = function(e) {
 Cosmopolite.prototype.onServerEvent_ = function(e) {
   if (this.shutdown_) {
     return;
-  }
-  if (e['profile']) {
-    /** @type {string} */
-    this.profile_ = e['profile'];
-    this.trackEvent('set', 'userId', this.profile_);
-    this.profilePromises_.forEach(function(resolve) {
-      resolve(this.profile_);
-    }, this);
-    this.profilePromises_.length = 0;
   }
   switch (e['event_type']) {
     case 'close':

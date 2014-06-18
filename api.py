@@ -37,13 +37,11 @@ def CreateChannel(google_user, client, client_address, instance_id, args):
   if google_user:
     events.append({
       'event_type':  'login',
-      'profile':     str(models.Client.profile.get_value_for_datastore(client)),
       'google_user': google_user.email(),
     })
   else:
     events.append({
       'event_type': 'logout',
-      'profile':    str(models.Client.profile.get_value_for_datastore(client)),
     })
 
   return {
@@ -195,8 +193,11 @@ class APIWrapper(webapp2.RequestHandler):
   @security.weak_security_checks
   @session.session_required
   def post(self):
+    profile_str = str(
+        models.Client.profile.get_value_for_datastore(self.client))
     ret = {
         'status': 'ok',
+        'profile': profile_str,
         'responses': [],
         'events': [],
     }
