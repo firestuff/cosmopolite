@@ -312,6 +312,18 @@ Cosmopolite.prototype.subscribe = function(subjects, opt_messages, opt_lastID) {
         args['last_id'] = opt_lastID;
       }
 
+      var preEvents = function(response) {
+        var subscription = this.subscriptions_[subjectString];
+        if (!subscription) {
+          return;
+        }
+        subscription.pins.forEach(function(pin) {
+          // Stupid hack that saves complexity elsewhere
+          pin['message'] = JSON.stringify(pin['message']);
+          this.onUnpin_(pin);
+        }, this);
+      };
+
       var onSuccess = function(response) {
         /** @type {string} */
         var result = response['result'];
@@ -333,6 +345,7 @@ Cosmopolite.prototype.subscribe = function(subjects, opt_messages, opt_lastID) {
       rpcs.push({
         'command': 'subscribe',
         'arguments': args,
+        'preEvents': preEvents,
         'onSuccess': onSuccess
       });
     }.bind(this)));
@@ -797,6 +810,75 @@ Cosmopolite.prototype.sendRPC_ = function(command, args, opt_onSuccess) {
 
 
 /**
+ * Callback for XHR load.
+ *
+ * @param {XMLHttpRequest} xhr
+ * @param {function(Array.<Cosmopolite.typeRPC_>)} retryAfterDelay
+ * @param {Array.<Cosmopolite.typeRPC_>} commands
+ * @private
+ */
+Cosmopolite.prototype.onRPCResponse_ =
+    function(xhr, retryAfterDelay, commands) {
+  if (xhr.status != 200) {
+    retryAfterDelay(commands);
+    return;
+  }
+  var data = xhr.response;
+
+  if ('google_user_id' in data) {
+    localStorage[this.namespace_ + ':google_user_id'] =
+        data['google_user_id'];
+  }
+
+  if (data['status'] == 'retry') {
+    // Discard delay
+    this.sendRPCs_(commands);
+    return;
+  }
+  if (data['status'] != 'ok') {
+    console.log(this.loggingPrefix_(),
+        'server returned unknown status:', data['status']);
+    // TODO(flamingcow): Refresh the page? Show an alert?
+    return;
+  }
+
+  for (var i = 0; i < data['responses'].length; i++) {
+    var response = data['responses'][i];
+    if (response['result'] == 'retry') {
+      continue;
+    }
+    if (commands[i]['preEvents']) {
+      commands[i]['preEvents'].bind(this)(data['responses'][i]);
+    }
+  }
+
+  // Handle events that were immediately available as if they came over the
+  // channel. Fire them before the message callbacks, so clients can use
+  // events like the subscribe promise fulfillment as a barrier for initial
+  // data.
+  data['events'].forEach(this.onServerEvent_, this);
+
+  /** @type {Array.<Cosmopolite.typeRPC_>} */
+  var retryCommands = [];
+
+  for (var i = 0; i < data['responses'].length; i++) {
+    var response = data['responses'][i];
+    if (response['result'] == 'retry') {
+      retryCommands.push(commands[i]);
+      continue;
+    }
+    if (commands[i]['onSuccess']) {
+      commands[i]['onSuccess'].bind(this)(data['responses'][i]);
+    }
+  }
+
+  if (retryCommands.length) {
+    retryAfterDelay(retryCommands);
+  }
+};
+
+
+/**
  * Send one or more RPCs to the server.
  *
  * Wraps handling of authentication to the server, even in cases where we need
@@ -856,55 +938,8 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, opt_delay) {
     window.setTimeout(retry, intDelay);
   }).bind(this);
 
-  xhr.addEventListener('load', function(e) {
-    if (xhr.status != 200) {
-      retryAfterDelay(commands);
-      return;
-    }
-    var data = xhr.response;
-
-    if ('google_user_id' in data) {
-      localStorage[this.namespace_ + ':google_user_id'] =
-          data['google_user_id'];
-    }
-
-    if (data['status'] == 'retry') {
-      // Discard delay
-      this.sendRPCs_(commands);
-      return;
-    }
-    if (data['status'] != 'ok') {
-      console.log(this.loggingPrefix_(),
-          'server returned unknown status:', data['status']);
-      // TODO(flamingcow): Refresh the page? Show an alert?
-      return;
-    }
-
-    // Handle events that were immediately available as if they came over the
-    // channel. Fire them before the message callbacks, so clients can use
-    // events like the subscribe promise fulfillment as a barrier for initial
-    // data.
-    data['events'].forEach(this.onServerEvent_, this);
-
-    /** @type {Array.<Cosmopolite.typeRPC_>} */
-    var retryCommands = [];
-
-    for (var i = 0; i < data['responses'].length; i++) {
-      var response = data['responses'][i];
-      if (response['result'] == 'retry') {
-        retryCommands.push(commands[i]);
-        continue;
-      }
-      if (commands[i]['onSuccess']) {
-        commands[i]['onSuccess'].bind(this)(data['responses'][i]);
-      }
-    }
-
-    if (retryCommands.length) {
-      retryAfterDelay(retryCommands);
-    }
-  }.bind(this));
-
+  xhr.addEventListener(
+      'load', this.onRPCResponse_.bind(this, xhr, retryAfterDelay, commands));
   xhr.addEventListener('error', retryAfterDelay.bind(null, commands));
   xhr.open('POST', this.urlPrefix_ + '/api');
   xhr.send(JSON.stringify(request));
