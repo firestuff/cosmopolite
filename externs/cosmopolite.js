@@ -77,6 +77,14 @@ Cosmopolite.prototype.shutdown = function() {};
 
 
 /**
+ * @see https://www.cosmopolite.org/reference#connected
+ * @return {boolean}
+ * @nosideeffects
+ */
+Cosmopolite.prototype.connected = function() {};
+
+
+/**
  * @see https://www.cosmopolite.org/reference#getProfile
  * @return {Promise}
  * @nosideeffects
