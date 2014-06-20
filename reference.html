@@ -138,10 +138,16 @@ subjects:
   <li><code>{ name: "foo", readable_only_by: "XXXprofileXXX", writable_only_by: "YYYprofileYYY" }</code></li>
   <li><code>{ name: "foo", readable_only_by: "admin" }</code></li>
   <li><code>{ name: "foo", writable_only_by: "admin" }</code></li>
+  <li><code>{ name: "foo", readable_only_by: "me" }</code></li>
+  <li><code>{ name: "foo", writable_only_by: "me" }</code></li>
 </ul>
 
 where XXXprofileXXX and YYYprofileYYY are profile keys. <code>admin</code> is a magic value that
 only allows accounts marked as administrators in the AppEngine application to perform the action.
+<code>me</code> is s placeholder that is replaced on the server side with the current profile ID
+in both requests and responses. Using the result of <a href="#currentProfile">currentProfile()</a>
+instead of <code>me</code> will fetch the same data from the server but appear as a different
+group in the client.
 </p>
 
 
