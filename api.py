@@ -63,12 +63,13 @@ def Pin(google_user, client, client_address, instance_id, args):
   sender_message_id = args['sender_message_id']
 
   try:
-    pin = models.Subject.FindOrCreate(subject).Pin(
+    pin = models.Subject.FindOrCreate(subject, client).Pin(
         message,
         models.Client.profile.get_value_for_datastore(client),
         sender_message_id,
         client_address,
-        instance)
+        instance,
+        subject)
   except models.DuplicateMessage as e:
     logging.warning('Duplicate pin: %s', sender_message_id)
     return {
@@ -93,11 +94,12 @@ def SendMessage(google_user, client, client_address, instance_id, args):
   sender_message_id = args['sender_message_id']
 
   try:
-    msg = models.Subject.FindOrCreate(subject).SendMessage(
+    msg = models.Subject.FindOrCreate(subject, client).SendMessage(
         message,
         models.Client.profile.get_value_for_datastore(client),
         sender_message_id,
-        client_address)
+        client_address,
+        subject)
   except models.DuplicateMessage as e:
     logging.warning('Duplicate message: %s', sender_message_id)
     return {
@@ -118,7 +120,7 @@ def SendMessage(google_user, client, client_address, instance_id, args):
 
 def Subscribe(google_user, client, client_address, instance_id, args):
   instance = models.Instance.FromID(instance_id)
-  subject = models.Subject.FindOrCreate(args['subject'])
+  subject = models.Subject.FindOrCreate(args['subject'], client)
   messages = args.get('messages', 0)
   last_id = args.get('last_id', None)
 
@@ -141,7 +143,7 @@ def Subscribe(google_user, client, client_address, instance_id, args):
   return {
     'result': 'ok',
     'events': models.Subscription.FindOrCreate(
-        subject, client, instance, messages, last_id),
+        subject, client, instance, args['subject'], messages, last_id),
   }
 
 
@@ -151,7 +153,7 @@ def Unpin(google_user, client, client_address, instance_id, args):
   sender_message_id = args['sender_message_id']
 
   try:
-    models.Subject.FindOrCreate(subject).Unpin(
+    models.Subject.FindOrCreate(subject, client).Unpin(
         models.Client.profile.get_value_for_datastore(client),
         sender_message_id,
         instance.key())
@@ -168,8 +170,8 @@ def Unpin(google_user, client, client_address, instance_id, args):
 
 def Unsubscribe(google_user, client, client_address, instance_id, args):
   instance = models.Instance.FromID(instance_id)
-  subject = models.Subject.FindOrCreate(args['subject'])
-  models.Subscription.Remove(subject, instance)
+  subject = models.Subject.FindOrCreate(args['subject'], client)
+  models.Subscription.Remove(subject, instance, args['subject'])
 
   return {}
 

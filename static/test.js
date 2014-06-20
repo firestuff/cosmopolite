@@ -470,6 +470,36 @@ asyncTest('sendMessage ACL', function() {
   });
 });
 
+asyncTest('"me" ACL', function() {
+  expect(7);
+
+  var subject = {
+    'name': randstring(),
+    'readable_only_by': 'me',
+    'writable_only_by': 'me'
+  };
+  var message = randstring();
+
+  var callbacks = {
+    'onMessage': function(e) {
+      equal(e['subject']['name'], subject['name'], 'subject matches');
+      equal(e['subject']['readable_only_by'], 'me', 'readable_only_by matches');
+      equal(e['subject']['writable_only_by'], 'me', 'writable_only_by matches');
+      equal(e['message'], message, 'message matches');
+      cosmo.shutdown();
+      start();
+    }
+  };
+
+  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.sendMessage(subject, message).then(function(msg) {
+    equal(msg['subject']['name'], subject['name'], 'subject matches');
+    equal(msg['subject']['readable_only_by'], 'me', 'readable_only_by matches');
+    equal(msg['subject']['writable_only_by'], 'me', 'writable_only_by matches');
+  });
+  cosmo.subscribe(subject, -1);
+});
+
 asyncTest('pin/unpin', function() {
   expect(5);
 

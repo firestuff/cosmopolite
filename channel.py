@@ -35,7 +35,8 @@ class OnChannelConnect(webapp2.RequestHandler):
       message = {
         'event_type': 'close',
       }
-      channel.send_message(instance_id, json.dumps(msg, default=utils.EncodeJSON))
+      channel.send_message(
+          instance_id, json.dumps(message, default=utils.EncodeJSON))
       return
     instance.active = True
     instance.put()

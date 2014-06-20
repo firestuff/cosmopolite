@@ -130,10 +130,12 @@ class Subject(db.Model):
     return hashobj.hexdigest()
 
   @classmethod
-  def FindOrCreate(cls, subject):
+  def FindOrCreate(cls, subject, client):
     if 'readable_only_by' in subject:
       if subject['readable_only_by'] == 'admin':
         readable_only_by = Profile.ADMIN_KEY
+      elif subject['readable_only_by'] == 'me':
+        readable_only_by = Client.profile.get_value_for_datastore(client)
       else:
         readable_only_by = db.Key(subject['readable_only_by'])
     else:
@@ -142,6 +144,8 @@ class Subject(db.Model):
     if 'writable_only_by' in subject:
       if subject['writable_only_by'] == 'admin':
         writable_only_by = Profile.ADMIN_KEY
+      elif subject['writable_only_by'] == 'me':
+        writable_only_by = Client.profile.get_value_for_datastore(client)
       else:
         writable_only_by = db.Key(subject['writable_only_by'])
     else:
@@ -238,14 +242,22 @@ class Subject(db.Model):
         readable_only_by != reader):
       raise AccessDenied
 
-  def SendMessage(self, message, sender, sender_message_id, sender_address):
+  def SendMessage(
+      self, message, sender, sender_message_id, sender_address, request):
     self.VerifyWritable(sender)
-    obj, subscriptions = self.PutMessage(
-        message, sender, sender_message_id, sender_address)
+    readable_only_by_me = (request.get('readable_only_by') == 'me')
+    writable_only_by_me = (request.get('writable_only_by') == 'me')
+    try:
+      obj, subscriptions = self.PutMessage(
+          message, sender, sender_message_id, sender_address)
+    except DuplicateMessage as e:
+      e.original = self.TranslateEvent(
+          e.original, readable_only_by_me, writable_only_by_me)
+      raise e
     event = obj.ToEvent()
     for subscription in subscriptions:
       subscription.SendMessage(event)
-    return event
+    return self.TranslateEvent(event, readable_only_by_me, writable_only_by_me)
 
   @db.transactional()
   def PutPin(self, message, sender, sender_message_id,
@@ -273,14 +285,22 @@ class Subject(db.Model):
 
     return (obj, list(Subscription.all().ancestor(self)))
 
-  def Pin(self, message, sender, sender_message_id, sender_address, instance):
+  def Pin(self, message, sender, sender_message_id, sender_address, instance,
+          request):
     self.VerifyWritable(sender)
-    obj, subscriptions = self.PutPin(
-        message, sender, sender_message_id, instance, sender_address)
+    readable_only_by_me = (request.get('readable_only_by') == 'me')
+    writable_only_by_me = (request.get('writable_only_by') == 'me')
+    try:
+      obj, subscriptions = self.PutPin(
+          message, sender, sender_message_id, instance, sender_address)
+    except DuplicateMessage as e:
+      e.original = self.TranslateEvent(
+          e.original, readable_only_by_me, writable_only_by_me)
+      raise e
     event = obj.ToEvent()
     for subscription in subscriptions:
       subscription.SendMessage(event)
-    return event
+    return self.TranslateEvent(event, readable_only_by_me, writable_only_by_me)
 
   @db.transactional()
   def RemovePin(self, sender, sender_message_id, instance_key):
@@ -323,6 +343,19 @@ class Subject(db.Model):
         ret['writable_only_by'] = str(writable_only_by)
     return ret
 
+  @classmethod
+  def TranslateEvent(cls, event, readable_only_by_me, writable_only_by_me):
+    if readable_only_by_me:
+      event['subject']['readable_only_by'] = 'me'
+    if writable_only_by_me:
+      event['subject']['writable_only_by'] = 'me'
+    return event
+
+  @classmethod
+  def TranslateEvents(cls, events, readable_only_by_me, writable_only_by_me):
+    return [cls.TranslateEvent(event, readable_only_by_me, writable_only_by_me)
+            for event in events]
+
   @db.transactional()
   def GetEvents(self, messages, last_id):
     events = [m.ToEvent() for m in self.GetPins()]
@@ -337,26 +370,39 @@ class Subscription(db.Model):
   # parent=Subject
 
   instance = db.ReferenceProperty(reference_class=Instance, required=True)
+  readable_only_by_me = db.BooleanProperty(required=True, default=False)
+  writable_only_by_me = db.BooleanProperty(required=True, default=False)
 
   @classmethod
   @db.transactional()
-  def FindOrCreate(cls, subject, client, instance, messages=0, last_id=None):
+  def FindOrCreate(cls, subject, client, instance, request,
+                   messages=0, last_id=None):
+    readable_only_by_me = (request.get('readable_only_by') == 'me')
+    writable_only_by_me = (request.get('writable_only_by') == 'me')
     subscriptions = (
         cls.all(keys_only=True)
         .ancestor(subject)
         .filter('instance =', instance)
+        .filter('readable_only_by_me =', readable_only_by_me)
+        .filter('writable_only_by_me =', writable_only_by_me)
         .fetch(1))
     if not subscriptions:
       cls(parent=subject, instance=instance).put()
-    return subject.GetEvents(messages, last_id)
+    return subject.TranslateEvents(
+        subject.GetEvents(messages, last_id),
+        readable_only_by_me, writable_only_by_me)
 
   @classmethod
   @db.transactional()
-  def Remove(cls, subject, instance):
+  def Remove(cls, subject, instance, request):
+    readable_only_by_me = (request.get('readable_only_by') == 'me')
+    writable_only_by_me = (request.get('writable_only_by') == 'me')
     subscriptions = (
         cls.all()
         .ancestor(subject)
-        .filter('instance =', instance))
+        .filter('instance =', instance)
+        .filter('readable_only_by_me =', readable_only_by_me)
+        .filter('writable_only_by_me =', writable_only_by_me))
     for subscription in subscriptions:
       subscription.delete()
 
