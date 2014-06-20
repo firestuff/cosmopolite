@@ -357,13 +357,17 @@ class Subject(db.Model):
             for event in events]
 
   @db.transactional()
-  def GetEvents(self, messages, last_id):
+  def GetEvents(self, messages, last_id, request):
     events = [m.ToEvent() for m in self.GetPins()]
     if messages:
       events.extend(m.ToEvent() for m in self.GetRecentMessages(messages))
     if last_id is not None:
       events.extend(m.ToEvent() for m in self.GetMessagesSince(last_id))
-    return events
+
+    readable_only_by_me = (request.get('readable_only_by') == 'me')
+    writable_only_by_me = (request.get('writable_only_by') == 'me')
+    return self.TranslateEvents(
+        events, readable_only_by_me, writable_only_by_me)
 
 
 class Subscription(db.Model):
@@ -388,9 +392,7 @@ class Subscription(db.Model):
         .fetch(1))
     if not subscriptions:
       cls(parent=subject, instance=instance).put()
-    return subject.TranslateEvents(
-        subject.GetEvents(messages, last_id),
-        readable_only_by_me, writable_only_by_me)
+    return subject.GetEvents(messages, last_id, request)
 
   @classmethod
   @db.transactional()
