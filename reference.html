@@ -55,6 +55,7 @@
   <ul>
     <li><a href="#constructor">Constructor</a></li>
     <li><a href="#shutdown">shutdown()</a></li>
+    <li><a href="#connected">connected()</a></li>
     <li><a href="#getProfile">getProfile()</a></li>
     <li><a href="#currentProfile">currentProfile()</a></li>
     <li><a href="#subscribe">subscribe()</a></li>
@@ -393,6 +394,16 @@ some actions may be queued.</p>
 
 <p>Start shutdown of this instance. No callbacks will be fired after this call. Some RPCs may be
 outstanding and some cleanup may be deferred.</p>
+
+
+<h4><a name="shutdown">connected()</a></h4>
+
+<p>Arguments: <i>none</i></p>
+
+<p>Returns: A <code>boolean</code> indicating whether we currently believe that we are
+connected to the server.</p>
+
+<p>Note that this information may lag by the detection delay built into the channel API.</p>
 
 
 <h4><a name="getProfile">getProfile()</a></h4>
