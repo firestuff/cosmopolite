@@ -216,16 +216,10 @@ var subscribe = function() {
   };
   if (elements['readID'].value != '(all)') {
     var value = elements['readID'].value;
-    if (value == 'me') {
-      value = cosmo.currentProfile();
-    }
     subject['readable_only_by'] = value;
   }
   if (elements['writeID'].value != '(all)') {
     var value = elements['writeID'].value;
-    if (value == 'me') {
-      value = cosmo.currentProfile();
-    }
     subject['writable_only_by'] = value;
   }
   cosmo.subscribe(subject, -1).then(function() {
