@@ -256,7 +256,10 @@ class Subject(db.Model):
       raise e
     event = obj.ToEvent()
     for subscription in subscriptions:
-      subscription.SendMessage(event)
+      subscription.SendMessage(self.TranslateEvent(
+          event,
+          subscription.readable_only_by_me,
+          subscription.writable_only_by_me))
     return self.TranslateEvent(event, readable_only_by_me, writable_only_by_me)
 
   @db.transactional()
@@ -299,7 +302,10 @@ class Subject(db.Model):
       raise e
     event = obj.ToEvent()
     for subscription in subscriptions:
-      subscription.SendMessage(event)
+      subscription.SendMessage(self.TranslateEvent(
+          event,
+          subscription.readable_only_by_me,
+          subscription.writable_only_by_me))
     return self.TranslateEvent(event, readable_only_by_me, writable_only_by_me)
 
   @db.transactional()
@@ -391,7 +397,10 @@ class Subscription(db.Model):
         .filter('writable_only_by_me =', writable_only_by_me)
         .fetch(1))
     if not subscriptions:
-      cls(parent=subject, instance=instance).put()
+      cls(parent=subject,
+          instance=instance,
+          readable_only_by_me=readable_only_by_me,
+          writable_only_by_me=writable_only_by_me).put()
     return subject.GetEvents(messages, last_id, request)
 
   @classmethod

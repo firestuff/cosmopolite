@@ -1199,8 +1199,9 @@ Cosmopolite.prototype.onMessage_ = function(e) {
     console.log(
         this.loggingPrefix_(),
         'message from unrecognized subject:', e);
-    console.log(this.subscriptions_);
-    console.log(subjectString);
+    console.log(
+        this.loggingPrefix_(),
+        'subscriptions:', this.subscriptions_);
     return;
   }
   /** @type {boolean} */
