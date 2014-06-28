@@ -337,7 +337,8 @@ QUnit.asyncTest('resubscribe', function(assert) {
       cosmo.subscribe(subject, -1).then(function() {
         var messages = cosmo.getMessages(subject);
         assert.equal(messages.length, 1, 'one message');
-        assert.equal(messages[0]['subject']['name'], subject, 'subject matches');
+        assert.equal(messages[0]['subject']['name'], subject,
+            'subject matches');
         assert.equal(messages[0]['message'], message, 'message matches');
         cosmo.shutdown();
         QUnit.start();
@@ -483,8 +484,10 @@ QUnit.asyncTest('"me" ACL', function(assert) {
   var callbacks = {
     'onMessage': function(e) {
       assert.equal(e['subject']['name'], subject['name'], 'subject matches');
-      assert.equal(e['subject']['readable_only_by'], 'me', 'readable_only_by matches');
-      assert.equal(e['subject']['writable_only_by'], 'me', 'writable_only_by matches');
+      assert.equal(e['subject']['readable_only_by'], 'me',
+          'readable_only_by matches');
+      assert.equal(e['subject']['writable_only_by'], 'me',
+          'writable_only_by matches');
       assert.equal(e['message'], message, 'message matches');
       cosmo.shutdown();
       QUnit.start();
@@ -494,8 +497,10 @@ QUnit.asyncTest('"me" ACL', function(assert) {
   var cosmo = new Cosmopolite(callbacks, null, randstring());
   cosmo.sendMessage(subject, message).then(function(msg) {
     assert.equal(msg['subject']['name'], subject['name'], 'subject matches');
-    assert.equal(msg['subject']['readable_only_by'], 'me', 'readable_only_by matches');
-    assert.equal(msg['subject']['writable_only_by'], 'me', 'writable_only_by matches');
+    assert.equal(msg['subject']['readable_only_by'], 'me',
+        'readable_only_by matches');
+    assert.equal(msg['subject']['writable_only_by'], 'me',
+        'writable_only_by matches');
   });
   cosmo.subscribe(subject, -1);
 });
@@ -611,7 +616,8 @@ QUnit.asyncTest('Login', function(assert) {
       },
       'onLogin': function(login_url) {
         assert.ok(true, 'onLogin fired');
-        assert.notEqual(anonymousProfile, cosmo.currentProfile(), 'profile changed');
+        assert.notEqual(anonymousProfile, cosmo.currentProfile(),
+            'profile changed');
         cosmo.shutdown();
         logout();
         QUnit.start();
@@ -634,11 +640,11 @@ QUnit.asyncTest('Profile merge', function(assert) {
       'onMessage': function(msg) {
         messages++;
         assert.equal(msg['subject']['name'], subject,
-              'message #' + messages + ': subject matches');
+            'message #' + messages + ': subject matches');
         assert.equal(msg['message'], message,
-              'message #' + messages + ': message matches');
+            'message #' + messages + ': message matches');
         assert.equal(msg['sender'], cosmo.currentProfile(),
-              'message #' + messages + ': profile matches');
+            'message #' + messages + ': profile matches');
         if (messages == 1) {
           cosmo.unsubscribe(subject);
           // Entirely magic URL that sets the login cookie and redirects.
