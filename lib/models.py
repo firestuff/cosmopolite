@@ -16,6 +16,7 @@
 import json
 import hashlib
 import logging
+import random
 import struct
 
 from google.appengine.api import channel
@@ -223,6 +224,7 @@ class Subject(db.Model):
         sender=sender,
         sender_message_id=sender_message_id,
         sender_address=sender_address,
+        random_value=random.randint(0, 2 ** 32 - 1),
         id_=message_id)
     obj.put()
 
@@ -434,6 +436,7 @@ class Message(db.Model):
   sender_address = db.StringProperty(required=True)
   # id is reserved
   id_ = db.IntegerProperty(required=True)
+  random_value = db.IntegerProperty(required=True)
 
   def ToEvent(self):
     return {
@@ -443,6 +446,7 @@ class Message(db.Model):
       'subject':           self.parent().ToDict(),
       'created':           self.created,
       'sender_message_id': self.sender_message_id,
+      'random_value':      self.random_value,
       'message':           self.message,
     }
 
