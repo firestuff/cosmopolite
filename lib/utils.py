@@ -15,6 +15,7 @@
 import datetime
 import functools
 import json
+import logging
 import random
 import time
 
@@ -49,6 +50,7 @@ def chaos_monkey(handler):
   @functools.wraps(handler)
   def IntroduceFailures(self):
     if random.random() < config.CHAOS_PROBABILITY:
+      logging.info('Chaos: returning pre-processing 503')
       self.response.headers['Retry-After'] = '0'
       self.error(503)
       return
@@ -56,6 +58,7 @@ def chaos_monkey(handler):
     ret = handler(self)
 
     if random.random() < config.CHAOS_PROBABILITY:
+      logging.info('Chaos: returning post-processing 503')
       self.response.headers['Retry-After'] = '0'
       self.error(503)
       return
@@ -69,7 +72,6 @@ def local_namespace(handler):
 
   @functools.wraps(handler)
   def SetNamespace(self):
-    import logging
     namespace_manager.set_namespace(config.NAMESPACE)
     return handler(self)
 
