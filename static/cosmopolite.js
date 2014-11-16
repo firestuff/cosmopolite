@@ -929,7 +929,6 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, opt_delay) {
   }
 
   var xhr = new XMLHttpRequest();
-  xhr.responseType = 'json';
 
   var retryAfterDelay = (function(newCommands) {
     // Exponential backoff + random stagger values
@@ -957,6 +956,7 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, opt_delay) {
       'load', this.onRPCResponse_.bind(this, xhr, retryAfterDelay, commands));
   xhr.addEventListener('error', retryAfterDelay.bind(null, commands));
   xhr.open('POST', this.urlPrefix_ + '/api');
+  xhr.responseType = 'json';
   xhr.send(JSON.stringify(request));
 };
 
