@@ -50,7 +50,9 @@ var logout = function(callback) {
       return;
     }
     if (callback) {
-      callback();
+      // Break the callback out from the message handling flow, so a
+      // Cosmopolite instance created by the callback doesn't see the message.
+      window.setTimeout(callback, 100);
     }
   };
 
