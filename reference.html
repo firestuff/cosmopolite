@@ -39,15 +39,15 @@
   </ul>
   </li>
 
-  <li><a href="#callbacks">Callbacks</a>
+  <li><a href="#events">Events</a>
   <ul>
-    <li><a href="#onConnect">onConnect</a></li>
-    <li><a href="#onDisconnect">onDisconnect</a></li>
-    <li><a href="#onLogin">onLogin</a></li>
-    <li><a href="#onLogout">onLogout</a></li>
-    <li><a href="#onMessage">onMessage</a></li>
-    <li><a href="#onPin">onPin</a></li>
-    <li><a href="#onUnpin">onUnpin</a></li>
+    <li><a href="#connect">connect</a></li>
+    <li><a href="#disconnect">disconnect</a></li>
+    <li><a href="#login">login</a></li>
+    <li><a href="#logout">logout</a></li>
+    <li><a href="#message_event">message</a></li>
+    <li><a href="#pin_event">pin</a></li>
+    <li><a href="#unpin_event">unpin</a></li>
   </ul>
   </li>
 
@@ -121,7 +121,7 @@ uses Google AppEngine's
 
 <p>In addition to message passing, the channel library also provides notification of connection
 state to the server. This is passed to the application code using the
-<a href="#onConnect">onConnect</a> and <a href="#onDisconnect">onDisconnect</a> callbacks.</p>
+<a href="#connect">connect</a> and <a href="#disconnect">disconnect</a> events.</p>
 
 
 <h4><a name="subject">Subject</a></h4>
@@ -186,7 +186,7 @@ method.</p>
 null, arrays and objects composed of these values (or of other arrays and objects). Serialization
 and deserialization is handled by Cosmopolite.</p>
 
-<p>When a message is received (via the <a href="#onMessage">onMessage callback</a> or the return
+<p>When a message is received (via a <a href="#message_event">message</a> event or the return
 result from <a href="#getMessages">getMessages()</a> or
 <a href="#getLastMessage">getLastMessage()</a>), metadata is attached, packaged into an object with
 the message data itself:
@@ -224,145 +224,150 @@ method.</p>
 
 <p>A pin is a <a href="#message">message</a> that is deleted when the
 <a href="#instance">instance</a> that sent it disconnects. Subscribers to the pin's
-<a href="#subject">subject</a> are notified (via the <a href="#onPin">onPin</a> and
-<a href="#onUnpin">onUnpin</a> callbacks) when it is added and deleted. This allows pins to be
+<a href="#subject">subject</a> are notified (via the <a href="#pin_event">pin</a> and
+<a href="#unpin_event">unpin</a> events) when it is added and deleted. This allows pins to be
 used for presence detection.</p>
 
 <p>Pins are added and deleted by the application using the <a href="#pin_method">pin()</a>
 and <a href="#unpin">unpin()</a> methods.</p>
 
 
-<h3><a name="callbacks">Callbacks</a></h3>
+<h3><a name="events">Events</a></h3>
 
-Callbacks are used by the Cosmopolite client library to notify the application of events. Callbacks
-are passed to the Cosmopolite constructor in an object. The object itself and all callbacks are
-optional.
+<p>The Cosmopolite client library uses JavaScript Events by implementing
+<a href="https://developer.mozilla.org/en-US/docs/Web/API/EventTarget">EventTarget</a>.
+Listening for these events is the primary means to receive notification of changes in status and
+incoming messages. Event listeners may be added at any time, but are most useful when
+added immediately after construction. Adding listeners later won't replay events sent in the
+interim.</p>
+
+<p>Note that all the event-specific values mentioned below are contained within the Event's
+<i>detail</i> member, not on the top-level Event object.</p>
 
 
-<h4><a name="onConnect">onConnect</a></h4>
+<h4><a name="connect">connect</a></h4>
 
-<p>Arguments: <i>none</i></p>
+<p>Values: <i>none</i></p>
 
-<p>The onConnect callback is called when the <a href="#channel">channel</a> is established to the
-server. It is paired with the <a href="#onDisconnect">onDisconnect</a> callback except when
+<p>The connect event is called when the <a href="#channel">channel</a> is established to the
+server. It is paired with the <a href="#disconnect">disconnect</a> event except when
 <a href="#shutdown">shutdown()</a> is called.</p>
 
 
-<h4><a name="onDisconnect">onDisconnect</a></h4>
+<h4><a name="disconnect">disconnect</a></h4>
 
-<p>Arguments: <i>none</i></p>
+<p>Values: <i>none</i></p>
 
-<p>The onDisconnect callback is called when the <a href="#channel">channel</a> is disconnected.
+<p>The disconnect event fires when the <a href="#channel">channel</a> is disconnected.
 This can happen due to connectivity problems, server outages or periodically when the channel
 expires.</p>
 
 
-<h4><a name="onLogin">onLogin</a></h4>
+<h4><a name="login">login</a></h4>
 
-<p>Arguments:
+<p>Values:
 <ol>
   <li><code>username</code>: The user's Google username string.</li>
   <li><code>logout_url</code>: A URL that the user can load to terminate their session. This should
   be opened in a new window (using <code>target="_blank"</code>).</li>
 </ol></p>
 
-<p>The onLogin callback is called when the user logs in. It is also called after the first RPC
-to the server succeeds if the user was already logged in. It is guaranteed that either onLogin
-or <a href="#onLogout">onLogout</a> is called after the first RPC succeeds.</p>
+<p>The login event fires when the user logs in. It also fires after the first RPC
+to the server succeeds if the user was already logged in. It is guaranteed that either login
+or <a href="#logout">logout</a> will fire after the first RPC succeeds.</p>
 
 
-<h4><a name="onLogout">onLogout</a></h4>
+<h4><a name="logout">logout</a></h4>
 
-<p>Arguments:
+<p>Values:
 <ol>
   <li><code>login_url</code>: A URL that the user cna load to log in to their Google account. This
   should be opened in a new window (using <code>target="_blank"</code>).</li>
 </ol></p>
 
-<p>The onLogin callback is called when the user logs out or is logged out by Google. It is also
-called after the first RPC to the server succeeds if the user was not already logged in. It is
-guaranteed that either <a href="#onLogin">onLogin</a> or onLogout is called after the first RPC
-succeeds.</p>
+<p>The login event fires when the user logs out or is logged out by Google. It also
+fires after the first RPC to the server succeeds if the user was not already logged in. It is
+guaranteed that either <a href="#login">login</a> or logout fires after the first RPC succeeds.</p>
 
 
-<h4><a name="onMessage">onMessage</a></h4>
+<h4><a name="message_event">message</a></h4>
 
-<p>Arguments:
+<p>Values:
 <ol>
   <li><code>message</code>: A <a href="#message">message</a> object including metadata and message
   content.</li>
 </ol></p>
 
-<p>The onMessage callback is called when a historical or new message is received from the server.
-It is only called for <a href="#subject">subjects</a> that the client is currently subscribed to.
+<p>The message event fires when a historical or new message is received from the server.
+It only fires for <a href="#subject">subjects</a> that the client is currently subscribed to.
 </p>
 
-<p>After a call to <a href="#subscribe">subscribe()</a>, onMessage fires once for each historical
+<p>After a call to <a href="#subscribe">subscribe()</a>, message fires once for each historical
 message received from the server. After all historical messages have been processed, the resolve
-callback for the Promise returned by subscribe() is called. Any onMessage events after that point
+callback for the Promise returned by subscribe() is called. Any message events after that point
 are for new messages.</p>
 
 <p>Calling <a href="#subscribe">subscribe()</a> more than once may lead to additional historical
-messages being retreived. onMessage will not fire twice for the same message unless
+messages being retreived. message will not fire twice for the same message unless
 <a href="#unsubscribe">unsubscribe()</a> is called in the interim.</p>
 
-<p>onMessage fires for messages sent by our own <a href="#profile">profile</a> and
+<p>message fires for messages sent by our own <a href="#profile">profile</a> and
 <a href="#client">client</a>. You can filter messages by comparing their sender field to the return
 value of <a href="#currentProfile">currentProfile()</a> to avoid processing your own messages.</p>
 
-<p>onMessage may fire when we are not connected (per the <a href="#onConnect">onConnect</a> and
-<a href="#onDisconnect">onDisconnect</a> callbacks), as messages may be received in RPC responses
+<p>message may fire when we are not connected (per the <a href="#connect">connect</a> and
+<a href="#disconnect">disconnect</a> events), as messages may be received in RPC responses
 instead of over the <a href="#channel">channel</a></p>
 
 
-<h4><a name="onPin">onPin</a></h4>
+<h4><a name="pin_event">pin</a></h4>
 
-<p>Arguments:
+<p>Values:
 <ol>
   <li><code>message</code>: A <a href="#message">message</a> object including metadata and message
   content.</li>
 </ol></p>
 
-<p>The onPin callback is called when a new pin is received from the server. It is only called for
+<p>The pin event fires when a new pin is received from the server. It only fires for
 <a href="#subject">subjects</a> that the client is currently subscribed to.</p>
 
-<p>After a call to <a href="#subscribe">subscribe()</a>, onPin fires once for each pin already
+<p>After a call to <a href="#subscribe">subscribe()</a>, pin fires once for each pin already
 present in the subject. After all standing pins have been processed, the resolve callback for the
-Promise returned by subscribe() is called. Any onPin events after that point are for new pins.</p>
+Promise returned by subscribe() is called. Any pin events after that point are for new pins.</p>
 
-<p>onPin callbacks are paired with <a href="#onUnpin">onUnpin</a> callbacks except when
+<p>pin events are paired with <a href="#unpin_event">unpin</a> events except when
 <a href="#shutdown">shutdown()</a> is called.</p>
 
-<p>onPin fires for pins from own <a href="#profile">profile</a> and <a href="#client">client</a>.
+<p>pin fires for pins from our own <a href="#profile">profile</a> and <a href="#client">client</a>.
 You can filter pins by comparing their sender field to the return value of
 <a href="#currentProfile">currentProfile()</a> to avoid processing your own pins.</p>
 
-<p>onPin may fire when we are not connected (per the <a href="#onConnect">onConnect</a> and
-<a href="#onDisconnect">onDisconnect</a> callbacks), as messages may be received in RPC responses
+<p>pin may fire when we are not connected (per the <a href="#connect">connect</a> and
+<a href="#disconnect">disconnect</a> events), as messages may be received in RPC responses
 instead of over the <a href="#channel">channel</a></p>
 
 
-<h4><a name="onUnpin">onUnpin</a></h4>
+<h4><a name="unpin_event">unpin</a></h4>
 
-<p>Arguments:
+<p>Values:
 <ol>
   <li><code>message</code>: A <a href="#message">message</a> object including metadata and message
   content.</li>
 </ol></p>
 
-<p>The onUnpin callback is called when a pin is deleted on from the server. It is also called when
+<p>The unpin event fires when a pin is deleted on from the server. It also fires when
 the <a href="#channel">channel</a> disconnects from the server, hence the server state of pins is
 unknown.</p>
 
-<p>onUnpin callbacks are paired with <a href="#onPin">onPin</a> callbacks except when
+<p>unpin events are paired with <a href="#pin_event">pin</a> events except when
 <a href="#shutdown">shutdown()</a> is called.</p>
 
-<p>onUnpin fires for pins from own <a href="#profile">profile</a> and <a href="#client">client</a>.
+<p>unpin fires for pins from own <a href="#profile">profile</a> and <a href="#client">client</a>.
 You can filter pins by comparing their sender field to the return value of
 <a href="#currentProfile">currentProfile()</a> to avoid processing your own pins.</p>
 
-<p>onUnpin may fire when we are not connected (per the <a href="#onConnect">onConnect</a> and
-<a href="#onDisconnect">onDisconnect</a> callbacks), as messages may be received in RPC responses
+<p>unpin may fire when we are not connected (per the <a href="#connect">connect</a> and
+<a href="#disconnect">disconnect</a> events), as messages may be received in RPC responses
 instead of over the <a href="#channel">channel</a></p>
 
 
@@ -373,8 +378,6 @@ instead of over the <a href="#channel">channel</a></p>
 
 <p>Arguments:
 <ol>
-  <li><code>callbacks</code> (optional): An object with <a href="#callbacks">callback</a> names as
-  keys and functions as values. All callbacks are optional.</li>
   <li><code>urlPrefix</code> (optional): A string containing the URL path at which to find the
   server-side cosmopolite endpoints. Defaults to "/cosmopolite". See the
   <a href="overview#architecture">architecture</a> diagram.</li>
@@ -398,7 +401,7 @@ some actions may be queued.</p>
 
 <p>Arguments: <i>none</i></p>
 
-<p>Start shutdown of this instance. No callbacks will be fired after this call. Some RPCs may be
+<p>Start shutdown of this instance. No events will be fired after this call. Some RPCs may be
 outstanding and some cleanup may be deferred.</p>
 
 
@@ -433,8 +436,8 @@ resolves immediately if the profile ID is already known, or fires when it become
 
 <p>currentProfile() has simpler semantics than <a href="getProfile()">getProfile()</a> but may
 return null if the initial RPC to the server is still outstanding. It is not safe to use just after
-construction. It is safe to use from callbacks and promises returned by other functions, as those
-require a server response.</p>
+construction. It is safe to use from event listeners and promises returned by other functions, as
+those require a server response.</p>
 
 
 <h4><a name="subscribe">subscribe()</a></h4>
@@ -459,11 +462,11 @@ subjects, returns an Array of Promises that correspond.</p>
 subject. The subscription is tied to our current <a href="#instance">instance</a> but is re-created
 by the client library when it reconnects, transparent to the application.</p>
 
-<p>Before the promise returned by subscribe() resolves, the <a href="#onMessage">onMessage</a> and
-<a href="#onPin">onPin</a> callbacks will fire for any historical messages requests and available
+<p>Before the promise returned by subscribe() resolves, the <a href="#message_event">message</a> and
+<a href="#pin_event">pin</a> events will fire for any historical messages requests and available
 and for any current pins. After the promise resolves, <a href="#message">messages</a> and
-<a href="#pin">pins</a> sent to this subject will cause the callbacks to fire when they are
-received. Additionally, the <a href="#onUnpin">onUnpin</a> callback will fire for deleted pins.</p>
+<a href="#pin">pins</a> sent to this subject will cause events to fire when they are
+received. Additionally, the <a href="#unpin">unpin</a> event will fire for deleted pins.</p>
 
 <p>Callbacks fire for messages sent by our own <a href="#profile">profile</a> and
 <a href="#client">client</a>. You can filter messages by comparing their sender field to the return
@@ -492,7 +495,7 @@ profile.</p>
 Promise</a> that resolves on RPC completion.</p>
 
 <p>Unsubscribe from a <a href="#subject">subject</a> and stop receiving
-<a href="#callbacks">callbacks</a> related to it. Callbacks stop immediately after calling
+<a href="#events">events</a> related to it. Events stop immediately after calling
 unsubscribe().</p>
 
 <p>A single call to unsubscribe() undoes all calls to <a href="#subscribe">subscribe()</a> for the
@@ -513,7 +516,7 @@ given subject.</a>
 <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">
 Promise</a> that resolves on success, or rejects with no arguments if the client is denied access
 to write to the subject. On success, a <a href="#message">message</a> argument is passed to the
-resolution callback; it differs from the original <code>message</code> argument in that it has
+resolve callback; it differs from the original <code>message</code> argument in that it has
 metadata added by the server.</p>
 
 <p>Sends a <a href="#message">message</a> to the given <a href="#subject">subject</a>. The message
@@ -529,10 +532,11 @@ to a <a href="#pin">pin</a> which is ephemeral and tied to the current
 <a href="#subject">subject</a> sets <code>writable_only_by</code> and it does not match our
 current profile.</p>
 
-<p>If we are also <a href="#subscribe">subscribed</a> to the given subject and have provided an
-<a href="#onMessage">onMessage</a> callback, it will fire for this message when it is received
-back from the server. You can filter messages by comparing their sender field to the return value
-of <a href="#currentProfile">currentProfile()</a> to avoid processing your own messages.</p>
+<p>If we are also <a href="#subscribe">subscribed</a> to the given subject and are listening to
+<a href="#message_event">message</a> events, listeners will fire for this message when it
+is received back from the server. You can filter messages by comparing their sender field to the
+return value of <a href="#currentProfile">currentProfile()</a> to avoid processing your own
+messages.</p>
 
 
 <h4><a name="getMessages">getMessages()</a></h4>
@@ -595,9 +599,9 @@ tied to the lifetime of the current <a href="#instance">instance</a> and
 <a href="#subject">subject</a> sets <code>writable_only_by</code> and it does not match our
 current profile.</p>
 
-<p>If we are also <a href="#subscribe">subscribed</a> to the given subject and have provided an
-<a href="#onPin">onPin</a> callback, it will fire for this pin when it is received back from the
-server. You can filter pins by comparing their sender field to the return value of
+<p>If we are also <a href="#subscribe">subscribed</a> to the given subject and are listening to
+<a href="#pin_event">pin</a> events, listeners will fire for this pin when it is received back
+from the server. You can filter pins by comparing their sender field to the return value of
 <a href="#currentProfile">currentProfile()</a> to avoid processing your own pins.</p>
 
 
@@ -607,7 +611,7 @@ server. You can filter pins by comparing their sender field to the return value 
 <ol>
   <li><code>id</code>: An ID string previously passed to the resolve callback of the promise
   returned by <a href="#pin_method">pin()</a> or the <code>sender_message_id</code> from the
-  <a href="#onPin">onPin</a> callback or the return value of <a href="#getPins">getPins()</a>.</p>
+  <a href="#pin_event">pin</a> event or the return value of <a href="#getPins">getPins()</a>.</p>
 </ol></p>
 
 <p>Returns: A
