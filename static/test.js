@@ -67,7 +67,7 @@ QUnit.module('All platforms');
 
 QUnit.test('Construct/shutdown', function(assert) {
   assert.expect(2);
-  var cosmo = new Cosmopolite({}, null, randstring());
+  var cosmo = new Cosmopolite(null, randstring());
   assert.ok(true, 'new Cosmopolite() succeeds');
   cosmo.shutdown();
   assert.ok(true, 'shutdown() succeeds');
@@ -79,23 +79,23 @@ QUnit.asyncTest('onConnect/onLogout fires', function(assert) {
   var numCallbacks = 0;
 
   logout(function() {
-    var callbacks = {
-      'onConnect': function() {
-        assert.ok(true, 'onConnect fired');
-        if (++numCallbacks == 2) {
-          cosmo.shutdown();
-          QUnit.start();
-        }
-      },
-      'onLogout': function(login_url) {
-        assert.ok(true, 'onLogout fired');
-        if (++numCallbacks == 2) {
-          cosmo.shutdown();
-          QUnit.start();
-        }
+    var cosmo = new Cosmopolite(null, randstring());
+
+    cosmo.addEventListener('connect', function(e) {
+      assert.ok(true, 'onConnect fired');
+      if (++numCallbacks == 2) {
+        cosmo.shutdown();
+        QUnit.start();
       }
-    };
-    var cosmo = new Cosmopolite(callbacks, null, randstring());
+    });
+
+    cosmo.addEventListener('logout', function(e) {
+      assert.ok(true, 'onLogout fired');
+      if (++numCallbacks == 2) {
+        cosmo.shutdown();
+        QUnit.start();
+      }
+    });
   });
 });
 
@@ -105,16 +105,15 @@ QUnit.asyncTest('Message round trip', function(assert) {
   var subject = randstring();
   var message = randstring();
 
-  var callbacks = {
-    'onMessage': function(e) {
-      assert.equal(e['subject']['name'], subject, 'subject matches');
-      assert.equal(e['message'], message, 'message matches');
-      cosmo.shutdown();
-      QUnit.start();
-    }
-  };
+  var cosmo = new Cosmopolite(null, randstring());
 
-  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.addEventListener('message', function(e) {
+    assert.equal(e.detail['subject']['name'], subject, 'subject matches');
+    assert.equal(e.detail['message'], message, 'message matches');
+    cosmo.shutdown();
+    QUnit.start();
+  });
+
   cosmo.sendMessage(subject, message);
   cosmo.subscribe(subject, -1);
 });
@@ -125,16 +124,15 @@ QUnit.asyncTest('Message round trip without channel', function(assert) {
   var subject = randstring();
   var message = randstring();
 
-  var callbacks = {
-    'onMessage': function(e) {
-      assert.equal(e['subject']['name'], subject, 'subject matches');
-      assert.equal(e['message'], message, 'message matches');
-      cosmo.shutdown();
-      QUnit.start();
-    }
-  };
+  var cosmo = new Cosmopolite(null, randstring());
 
-  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.addEventListener('message', function(e) {
+    assert.equal(e.detail['subject']['name'], subject, 'subject matches');
+    assert.equal(e.detail['message'], message, 'message matches');
+    cosmo.shutdown();
+    QUnit.start();
+  });
+
   cosmo.channelState_ = Cosmopolite.ChannelState_.OPENING;
   cosmo.sendMessage(subject, message);
   cosmo.subscribe(subject, -1);
@@ -149,17 +147,15 @@ QUnit.asyncTest('Bulk subscribe', function(assert) {
 
   var messages = 0;
 
-  var callbacks = {
-    'onMessage': function(e) {
-      assert.equal(e['message'], message, 'message matches');
-      if (++messages == 2) {
-        cosmo.shutdown();
-        QUnit.start();
-      }
-    }
-  };
+  var cosmo = new Cosmopolite(null, randstring());
 
-  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.addEventListener('message', function(e) {
+    assert.equal(e.detail['message'], message, 'message matches');
+    if (++messages == 2) {
+      cosmo.shutdown();
+      QUnit.start();
+    }
+  });
   cosmo.sendMessage(subject1, message);
   cosmo.sendMessage(subject2, message);
   cosmo.subscribe([subject1, subject2], -1);
@@ -180,16 +176,15 @@ QUnit.asyncTest('Complex object', function(assert) {
     'unicode': '☠☣☃𠜎'
   };
 
-  var callbacks = {
-    'onMessage': function(e) {
-      assert.equal(e['subject']['name'], subject, 'subject matches');
-      assert.deepEqual(e['message'], message, 'message matches');
-      cosmo.shutdown();
-      QUnit.start();
-    }
-  };
+  var cosmo = new Cosmopolite(null, randstring());
 
-  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.addEventListener('message', function(e) {
+    assert.equal(e.detail['subject']['name'], subject, 'subject matches');
+    assert.deepEqual(e.detail['message'], message, 'message matches');
+    cosmo.shutdown();
+    QUnit.start();
+  });
+
   cosmo.sendMessage(subject, message);
   cosmo.subscribe(subject, -1);
 });
@@ -200,7 +195,7 @@ QUnit.asyncTest('sendMessage Promise', function(assert) {
   var subject = randstring();
   var message = randstring();
 
-  var cosmo = new Cosmopolite({}, null, randstring());
+  var cosmo = new Cosmopolite(null, randstring());
   cosmo.sendMessage(subject, message).then(function(msg) {
     assert.ok(true, 'sendMessage Promise fulfilled');
     assert.equal(msg['subject']['name'], subject);
@@ -216,7 +211,7 @@ QUnit.asyncTest('subscribe/unsubscribe Promise', function(assert) {
   var subject = randstring();
   var message = randstring();
 
-  var cosmo = new Cosmopolite({}, null, randstring());
+  var cosmo = new Cosmopolite(null, randstring());
   cosmo.subscribe(subject).then(function() {
     assert.ok(true, 'subscribe Promise fulfilled');
     cosmo.unsubscribe(subject).then(function() {
@@ -234,22 +229,22 @@ QUnit.asyncTest('Duplicate message suppression', function(assert) {
   var message1 = randstring();
   var message2 = randstring();
 
-  var callbacks = {
-    'onMessage': function(msg) {
-      assert.equal(msg['subject']['name'], subject, 'subject matches');
-      assert.equal(msg['message'], message1, 'message matches');
-      cosmo.shutdown();
-      QUnit.start();
-    }
-  };
+  var cosmo = new Cosmopolite(null, randstring());
 
-  var cosmo = new Cosmopolite(callbacks, null, randstring());
   // Break cosmo's UUID generator so that it generates duplicate values.
   cosmo.uuid_ = function() {
     return '4';
     // chosen by fair dice roll.
     // guaranteed to be random.
   };
+
+  cosmo.addEventListener('message', function(e) {
+    assert.equal(e.detail['subject']['name'], subject, 'subject matches');
+    assert.equal(e.detail['message'], message1, 'message matches');
+    cosmo.shutdown();
+    QUnit.start();
+  });
+
   cosmo.sendMessage(subject, message1).then(function() {
     cosmo.sendMessage(subject, message2).then(function() {
       cosmo.subscribe(subject, -1);
@@ -265,20 +260,19 @@ QUnit.asyncTest('Message persistence', function(assert) {
   var namespace = randstring();
 
   // Send a message and shut down too fast for it to hit the wire.
-  var cosmo1 = new Cosmopolite({}, null, namespace);
+  var cosmo1 = new Cosmopolite(null, namespace);
   cosmo1.sendMessage(subject, message);
   cosmo1.shutdown();
 
-  var callbacks = {
-    'onMessage': function(msg) {
-      assert.equal(msg['subject']['name'], subject, 'subject matches');
-      assert.equal(msg['message'], message, 'message matches');
-      cosmo2.shutdown();
-      QUnit.start();
-    }
-  };
+  var cosmo2 = new Cosmopolite(null, namespace);
 
-  var cosmo2 = new Cosmopolite(callbacks, null, namespace);
+  cosmo2.addEventListener('message', function(e) {
+    assert.equal(e.detail['subject']['name'], subject, 'subject matches');
+    assert.equal(e.detail['message'], message, 'message matches');
+    cosmo2.shutdown();
+    QUnit.start();
+  });
+
   cosmo2.subscribe(subject, -1);
   // Should pick up the message from the persistent queue.
 });
@@ -288,7 +282,7 @@ QUnit.test('getMessages/subscribe', function(assert) {
 
   var subject = randstring();
 
-  var cosmo = new Cosmopolite({}, null, randstring());
+  var cosmo = new Cosmopolite(null, randstring());
   assert.throws(
       cosmo.getMessages.bind(undefined, subject),
       'getMessages before subscribe fails');
@@ -306,7 +300,7 @@ QUnit.asyncTest('subscribe barrier', function(assert) {
   var subject = randstring();
   var message = randstring();
 
-  var cosmo = new Cosmopolite({}, null, randstring());
+  var cosmo = new Cosmopolite(null, randstring());
 
   cosmo.sendMessage(subject, message).then(function() {
     cosmo.subscribe(subject, -1).then(function() {
@@ -331,7 +325,7 @@ QUnit.asyncTest('resubscribe', function(assert) {
   var subject = randstring();
   var message = randstring();
 
-  var cosmo = new Cosmopolite({}, null, randstring());
+  var cosmo = new Cosmopolite(null, randstring());
 
   cosmo.sendMessage(subject, message).then(function() {
     cosmo.subscribe(subject).then(function() {
@@ -355,7 +349,7 @@ QUnit.asyncTest('Message ordering', function(assert) {
   var subject = randstring();
   var messages = ['A', 'B', 'C', 'D'];
 
-  var cosmo = new Cosmopolite({}, null, randstring());
+  var cosmo = new Cosmopolite(null, randstring());
 
   var sendNextMessage = function() {
     if (messages.length) {
@@ -383,22 +377,23 @@ QUnit.asyncTest('Reconnect channel', function(assert) {
   var subject = randstring();
   var message = randstring();
 
-  var callbacks = {
-    'onConnect': function() {
-      assert.ok(true, 'onConnect fired');
-    },
-    'onDisconnect': function() {
-      assert.ok(true, 'onDisconnect fired');
-    },
-    'onMessage': function(msg) {
-      assert.equal(msg['subject']['name'], subject, 'subject matches');
-      assert.equal(msg['message'], message, 'message matches');
-      cosmo.shutdown();
-      QUnit.start();
-    }
-  };
+  var cosmo = new Cosmopolite(null, randstring());
 
-  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.addEventListener('connect', function(e) {
+    assert.ok(true, 'onConnect fired');
+  });
+
+  cosmo.addEventListener('disconnect', function(e) {
+    assert.ok(true, 'onDisconnect fired');
+  });
+
+  cosmo.addEventListener('message', function(e) {
+    assert.equal(e.detail['subject']['name'], subject, 'subject matches');
+    assert.equal(e.detail['message'], message, 'message matches');
+    cosmo.shutdown();
+    QUnit.start();
+  });
+
   cosmo.subscribe(subject, 0).then(function() {
     // Reach inside to forcefully close the socket
     cosmo.socket_.close();
@@ -412,11 +407,11 @@ QUnit.asyncTest('subscribe ACL', function(assert) {
   var subject = randstring();
 
   logout(function() {
-    var tempCosmo = new Cosmopolite({}, null, randstring());
+    var tempCosmo = new Cosmopolite(null, randstring());
     tempCosmo.getProfile().then(function(tempProfile) {
       tempCosmo.shutdown();
 
-      var cosmo = new Cosmopolite({}, null, randstring());
+      var cosmo = new Cosmopolite(null, randstring());
       cosmo.getProfile().then(function(profile) {
         cosmo.subscribe({
           'name': subject,
@@ -446,11 +441,11 @@ QUnit.asyncTest('sendMessage ACL', function(assert) {
   var message = randstring();
 
   logout(function() {
-    var tempCosmo = new Cosmopolite({}, null, randstring());
+    var tempCosmo = new Cosmopolite(null, randstring());
     tempCosmo.getProfile().then(function(tempProfile) {
       tempCosmo.shutdown();
 
-      var cosmo = new Cosmopolite({}, null, randstring());
+      var cosmo = new Cosmopolite(null, randstring());
       cosmo.getProfile().then(function(profile) {
         cosmo.sendMessage({
           'name': subject,
@@ -483,22 +478,23 @@ QUnit.asyncTest('"me" ACL', function(assert) {
   };
   var message = randstring();
 
-  var callbacks = {
-    'onMessage': function(e) {
-      assert.equal(e['subject']['name'], subject['name'], 'subject matches');
-      assert.equal(e['subject']['readable_only_by'], 'me',
-          'readable_only_by matches');
-      assert.equal(e['subject']['writable_only_by'], 'me',
-          'writable_only_by matches');
-      assert.equal(e['message'], message, 'message matches');
-      cosmo.shutdown();
-      QUnit.start();
-    }
-  };
+  var cosmo = new Cosmopolite(null, randstring());
 
-  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.addEventListener('message', function(e) {
+    assert.equal(e.detail['subject']['name'], subject['name'],
+        'subject matches');
+    assert.equal(e.detail['subject']['readable_only_by'], 'me',
+        'readable_only_by matches');
+    assert.equal(e.detail['subject']['writable_only_by'], 'me',
+        'writable_only_by matches');
+    assert.equal(e.detail['message'], message, 'message matches');
+    cosmo.shutdown();
+    QUnit.start();
+  });
+
   cosmo.sendMessage(subject, message).then(function(msg) {
-    assert.equal(msg['subject']['name'], subject['name'], 'subject matches');
+    assert.equal(msg['subject']['name'], subject['name'],
+        'subject matches');
     assert.equal(msg['subject']['readable_only_by'], 'me',
         'readable_only_by matches');
     assert.equal(msg['subject']['writable_only_by'], 'me',
@@ -513,24 +509,28 @@ QUnit.asyncTest('pin/unpin', function(assert) {
   var subject = randstring();
   var message = randstring();
 
-  var callbacks = {
-    'onPin': function(e) {
-      assert.equal(subject, e['subject']['name'], 'onPin: subject matches');
-      assert.equal(message, e['message'], 'onPin: message matches');
-      assert.equal(cosmo.getPins(subject).length, 1);
-      pin.then(function(id) {
-        cosmo.unpin(id);
-      });
-    },
-    'onUnpin': function(e) {
-      assert.equal(subject, e['subject']['name'], 'onUnpin: subject matches');
-      assert.equal(message, e['message'], 'onUnpin: message matches');
-      cosmo.shutdown();
-      QUnit.start();
-    }
-  };
+  var cosmo = new Cosmopolite(null, randstring());
 
-  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.addEventListener('pin', function(e) {
+    assert.equal(subject, e.detail['subject']['name'],
+        'onPin: subject matches');
+    assert.equal(message, e.detail['message'],
+        'onPin: message matches');
+    assert.equal(cosmo.getPins(subject).length, 1);
+    pin.then(function(id) {
+      cosmo.unpin(id);
+    });
+  });
+
+  cosmo.addEventListener('unpin', function(e) {
+    assert.equal(subject, e.detail['subject']['name'],
+        'onUnpin: subject matches');
+    assert.equal(message, e.detail['message'],
+        'onUnpin: message matches');
+    cosmo.shutdown();
+    QUnit.start();
+  });
+
   cosmo.subscribe(subject);
   var pin = cosmo.pin(subject, message);
 });
@@ -543,25 +543,29 @@ QUnit.asyncTest('Repin', function(assert) {
 
   var pins = 0;
 
-  var callbacks = {
-    'onPin': function(e) {
-      assert.equal(subject, e['subject']['name'], 'onPin: subject matches');
-      assert.equal(message, e['message'], 'onPin: message matches');
-      assert.equal(cosmo.getPins(subject).length, 1);
-      if (++pins == 1) {
-        cosmo.socket_.close();
-      } else {
-        cosmo.shutdown();
-        QUnit.start();
-      }
-    },
-    'onUnpin': function(e) {
-      assert.equal(subject, e['subject']['name'], 'onUnpin: subject matches');
-      assert.equal(message, e['message'], 'onUnpin: message matches');
-    }
-  };
+  var cosmo = new Cosmopolite(null, randstring());
 
-  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.addEventListener('pin', function(e) {
+    assert.equal(subject, e.detail['subject']['name'],
+        'onPin: subject matches');
+    assert.equal(message, e.detail['message'],
+        'onPin: message matches');
+    assert.equal(cosmo.getPins(subject).length, 1);
+    if (++pins == 1) {
+      cosmo.socket_.close();
+    } else {
+      cosmo.shutdown();
+      QUnit.start();
+    }
+  });
+
+  cosmo.addEventListener('unpin', function(e) {
+    assert.equal(subject, e.detail['subject']['name'],
+        'onUnpin: subject matches');
+    assert.equal(message, e.detail['message'],
+        'onUnpin: message matches');
+  });
+
   cosmo.subscribe(subject);
   var pin = cosmo.pin(subject, message);
 });
@@ -575,27 +579,26 @@ QUnit.asyncTest('Duplicate subject', function(assert) {
 
   var messages = 0;
 
-  var callbacks = {
-    'onConnect': function() {
-      cosmo.sendMessage(subject, message1);
-      cosmo.sendMessage(subject, message2);
-      cosmo.subscribe(subject, -1);
-    },
-    'onMessage': function(e) {
-      assert.equal(subject, e['subject']['name'], 'subject matches');
-      if (e['message'] == message1) {
-        assert.equal(message1, e['message'], 'message1 matches');
-      } else {
-        assert.equal(message2, e['message'], 'message2 matches');
-      }
-      if (++messages == 2) {
-        cosmo.shutdown();
-        QUnit.start();
-      }
-    }
-  };
+  var cosmo = new Cosmopolite(null, randstring());
 
-  var cosmo = new Cosmopolite(callbacks, null, randstring());
+  cosmo.addEventListener('connect', function(e) {
+    cosmo.sendMessage(subject, message1);
+    cosmo.sendMessage(subject, message2);
+    cosmo.subscribe(subject, -1);
+  });
+
+  cosmo.addEventListener('message', function(e) {
+    assert.equal(subject, e.detail['subject']['name'], 'subject matches');
+    if (e.detail['message'] == message1) {
+      assert.equal(message1, e.detail['message'], 'message1 matches');
+    } else {
+      assert.equal(message2, e.detail['message'], 'message2 matches');
+    }
+    if (++messages == 2) {
+      cosmo.shutdown();
+      QUnit.start();
+    }
+  });
 });
 
 
@@ -607,25 +610,25 @@ QUnit.asyncTest('Login', function(assert) {
   var anonymousProfile;
 
   logout(function() {
-    var callbacks = {
-      'onLogout': function(login_url) {
-        assert.ok(true, 'onLogout fired');
-        anonymousProfile = cosmo.currentProfile();
-        // Entirely magic URL that sets the login cookie and redirects.
-        window.open(
-            '/_ah/login?email=test%40example.com&action=Login' +
-            '&continue=/cosmopolite/static/login_complete.html');
-      },
-      'onLogin': function(login_url) {
-        assert.ok(true, 'onLogin fired');
-        assert.notEqual(anonymousProfile, cosmo.currentProfile(),
-            'profile changed');
-        cosmo.shutdown();
-        logout();
-        QUnit.start();
-      }
-    };
-    var cosmo = new Cosmopolite(callbacks, null, randstring());
+    var cosmo = new Cosmopolite(null, randstring());
+
+    cosmo.addEventListener('login', function(e) {
+      assert.ok(true, 'onLogin fired');
+      assert.notEqual(anonymousProfile, cosmo.currentProfile(),
+          'profile changed');
+      cosmo.shutdown();
+      logout();
+      QUnit.start();
+    });
+
+    cosmo.addEventListener('logout', function(e) {
+      assert.ok(true, 'onLogout fired');
+      anonymousProfile = cosmo.currentProfile();
+      // Entirely magic URL that sets the login cookie and redirects.
+      window.open(
+          '/_ah/login?email=test%40example.com&action=Login' +
+          '&continue=/cosmopolite/static/login_complete.html');
+    });
   });
 });
 
@@ -638,32 +641,33 @@ QUnit.asyncTest('Profile merge', function(assert) {
   var messages = 0;
 
   logout(function() {
-    var callbacks = {
-      'onMessage': function(msg) {
-        messages++;
-        assert.equal(msg['subject']['name'], subject,
-            'message #' + messages + ': subject matches');
-        assert.equal(msg['message'], message,
-            'message #' + messages + ': message matches');
-        assert.equal(msg['sender'], cosmo.currentProfile(),
-            'message #' + messages + ': profile matches');
-        if (messages == 1) {
-          cosmo.unsubscribe(subject);
-          // Entirely magic URL that sets the login cookie and redirects.
-          window.open(
-              '/_ah/login?email=test%40example.com&action=Login' +
-              '&continue=/cosmopolite/static/login_complete.html');
-        }
-        if (messages == 2) {
-          cosmo.shutdown();
-          QUnit.start();
-        }
-      },
-      'onLogin': function(logout_url) {
-        cosmo.subscribe(subject, -1);
+    var cosmo = new Cosmopolite(null, randstring());
+
+    cosmo.addEventListener('login', function(e) {
+      cosmo.subscribe(subject, -1);
+    });
+
+    cosmo.addEventListener('message', function(e) {
+      messages++;
+      assert.equal(e.detail['subject']['name'], subject,
+          'message #' + messages + ': subject matches');
+      assert.equal(e.detail['message'], message,
+          'message #' + messages + ': message matches');
+      assert.equal(e.detail['sender'], cosmo.currentProfile(),
+          'message #' + messages + ': profile matches');
+      if (messages == 1) {
+        cosmo.unsubscribe(subject);
+        // Entirely magic URL that sets the login cookie and redirects.
+        window.open(
+            '/_ah/login?email=test%40example.com&action=Login' +
+            '&continue=/cosmopolite/static/login_complete.html');
       }
-    };
-    var cosmo = new Cosmopolite(callbacks, null, randstring());
+      if (messages == 2) {
+        cosmo.shutdown();
+        QUnit.start();
+      }
+    });
+
     cosmo.sendMessage(subject, message);
     cosmo.subscribe(subject, -1);
   });
@@ -676,18 +680,17 @@ QUnit.asyncTest('Two channels, one client', function(assert) {
   var subject = randstring();
   var message = randstring();
 
-  var callbacks = {
-    'onMessage': function(msg) {
-      assert.equal(msg['subject']['name'], subject, 'subject matches');
-      assert.equal(msg['message'], message, 'message matches');
-      cosmo1.shutdown();
-      QUnit.start();
-    }
-  };
+  var cosmo1 = new Cosmopolite(null, namespace);
 
-  var cosmo1 = new Cosmopolite(callbacks, null, namespace);
+  cosmo1.addEventListener('message', function(e) {
+    assert.equal(e.detail['subject']['name'], subject, 'subject matches');
+    assert.equal(e.detail['message'], message, 'message matches');
+    cosmo1.shutdown();
+    QUnit.start();
+  });
+
   cosmo1.subscribe(subject).then(function() {
-    var cosmo2 = new Cosmopolite({}, null, namespace);
+    var cosmo2 = new Cosmopolite(null, namespace);
     cosmo2.sendMessage(subject, message).then(function() {
       cosmo2.shutdown();
     });
@@ -700,20 +703,20 @@ QUnit.asyncTest('subscribe admin ACL', function(assert) {
   var subject = randstring();
 
   logout(function() {
-    var callbacks = {
-      'onLogin': function() {
-        cosmo.subscribe({
-          'name': subject,
-          'readable_only_by': 'admin'
-        }).then(function() {
-          assert.ok(true, 'logged in succeeds');
+    var cosmo = new Cosmopolite(null, randstring());
 
-          cosmo.shutdown();
-          QUnit.start();
-        });
-      }
-    };
-    var cosmo = new Cosmopolite(callbacks, null, randstring());
+    cosmo.addEventListener('login', function(e) {
+      cosmo.subscribe({
+        'name': subject,
+        'readable_only_by': 'admin'
+      }).then(function() {
+        assert.ok(true, 'logged in succeeds');
+
+        cosmo.shutdown();
+        QUnit.start();
+      });
+    });
+
     cosmo.subscribe({
       'name': subject,
       'readable_only_by': 'admin'
@@ -734,20 +737,20 @@ QUnit.asyncTest('sendMessage admin ACL', function(assert) {
   var message = randstring();
 
   logout(function() {
-    var callbacks = {
-      'onLogin': function() {
-        cosmo.sendMessage({
-          'name': subject,
-          'writable_only_by': 'admin'
-        }, message).then(function() {
-          assert.ok(true, 'logged in succeeds');
+    var cosmo = new Cosmopolite(null, randstring());
 
-          cosmo.shutdown();
-          QUnit.start();
-        });
-      }
-    };
-    var cosmo = new Cosmopolite(callbacks, null, randstring());
+    cosmo.addEventListener('login', function(e) {
+      cosmo.sendMessage({
+        'name': subject,
+        'writable_only_by': 'admin'
+      }, message).then(function() {
+        assert.ok(true, 'logged in succeeds');
+
+        cosmo.shutdown();
+        QUnit.start();
+      });
+    });
+
     cosmo.sendMessage({
       'name': subject,
       'writable_only_by': 'admin'

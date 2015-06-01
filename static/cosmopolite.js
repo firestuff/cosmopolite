@@ -41,20 +41,11 @@ String.prototype.hashCode = function() {
 /**
  * @see https://www.cosmopolite.org/reference#constructor
  * @constructor
- * @param {?Cosmopolite.typeCallbacks=} opt_callbacks
  * @param {?string=} opt_urlPrefix
  * @param {?string=} opt_namespace
  * @param {?string=} opt_trackingID
  */
-var Cosmopolite = function(
-    opt_callbacks, opt_urlPrefix, opt_namespace, opt_trackingID) {
-  /**
-   * @type {Cosmopolite.typeCallbacks}
-   * @const
-   * @private
-   */
-  this.callbacks_ =
-      opt_callbacks || /** @type {Cosmopolite.typeCallbacks} */ ({});
+var Cosmopolite = function(opt_urlPrefix, opt_namespace, opt_trackingID) {
   /**
    * @type {string}
    * @const
@@ -120,6 +111,19 @@ var Cosmopolite = function(
   this.instanceID_ = this.uuid();
 
   /**
+   * @type {DocumentFragment}
+   * @private
+   * Weep for all our souls.
+   */
+  this.eventTarget_ = document.createDocumentFragment();
+  this.addEventListener =
+      this.eventTarget_.addEventListener.bind(this.eventTarget_);
+  this.removeEventListener =
+      this.eventTarget_.removeEventListener.bind(this.eventTarget_);
+  this.dispatchEvent =
+      this.eventTarget_.dispatchEvent.bind(this.eventTarget_);
+
+  /**
    * @type {string}
    * @const
    * @private
@@ -151,16 +155,6 @@ var Cosmopolite = function(
     document.addEventListener('readystatechange', this.init_.bind(this));
   }
 };
-
-
-/** @typedef {{onConnect: (function()|undefined),
-               onDisconnect: (function()|undefined),
-               onLogin: (function(string, string)|undefined),
-               onLogout: (function(string)|undefined),
-               onMessage: (function(Cosmopolite.typeMessage)|undefined),
-               onPin: (function(Cosmopolite.typeMessage)|undefined),
-               onUnpin: (function(Cosmopolite.typeMessage)|undefined)}} */
-Cosmopolite.typeCallbacks;
 
 
 /**
@@ -396,11 +390,11 @@ Cosmopolite.prototype.unsubscribe = function(subject) {
  */
 Cosmopolite.prototype.sendMessage = function(subject, message) {
   return this.newPromise_(function(resolve, reject) {
-    var args = {
+    var args = /** @type {Cosmopolite.typeMessage} */ ({
       'subject': this.canonicalSubject_(subject),
       'message': JSON.stringify(message),
       'sender_message_id': this.uuid()
-    };
+    });
 
     // No message left behind.
     var messageQueue = JSON.parse(localStorage[this.messageQueueKey_]);
@@ -868,7 +862,7 @@ Cosmopolite.prototype.onRPCResponse_ =
   }
 
   // Handle events that were immediately available as if they came over the
-  // channel. Fire them before the message callbacks, so clients can use
+  // channel. Fire them before the message events, so clients can use
   // events like the subscribe promise fulfillment as a barrier for initial
   // data.
   data['events'].forEach(this.onServerEvent_, this);
@@ -1068,9 +1062,7 @@ Cosmopolite.prototype.onSocketOpen_ = function() {
 
   if (this.channelState_ == Cosmopolite.ChannelState_.OPENING) {
     this.channelState_ = Cosmopolite.ChannelState_.OPEN;
-    if (this.callbacks_.onConnect) {
-      this.callbacks_.onConnect();
-    }
+    this.onConnect_();
   } else {
     return;
   }
@@ -1093,9 +1085,7 @@ Cosmopolite.prototype.onSocketClose_ = function() {
 
   if (this.channelState_ == Cosmopolite.ChannelState_.OPEN) {
     this.channelState_ = Cosmopolite.ChannelState_.CLOSED;
-    if (this.callbacks_.onDisconnect) {
-      this.callbacks_.onDisconnect();
-    }
+    this.onDisconnect_();
   } else {
     return;
   }
@@ -1156,17 +1146,47 @@ Cosmopolite.prototype.onClose_ = function() {
 
 
 /**
+ * Callback on connection to server
+ *
+ * @private
+ */
+Cosmopolite.prototype.onConnect_ = function() {
+  var e = new CustomEvent('connect', {
+    'detail': {
+    }
+  });
+  this.dispatchEvent(e);
+};
+
+
+/**
+ * Callback on disconnection from server
+ *
+ * @private
+ */
+Cosmopolite.prototype.onDisconnect_ = function() {
+  var e = new CustomEvent('disconnect', {
+    'detail': {
+    }
+  });
+  this.dispatchEvent(e);
+};
+
+
+/**
  * Callback on receiving a 'login' event from the server
  *
  * @param {Cosmopolite.typeLogin_} e
  * @private
  */
 Cosmopolite.prototype.onLogin_ = function(e) {
-  if (this.callbacks_.onLogin) {
-    this.callbacks_.onLogin(
-        e['google_user'],
-        this.urlPrefix_ + '/auth/logout');
-  }
+  var e2 = new CustomEvent('login', {
+    'detail': {
+      'username': e['google_user'],
+      'logout_url': this.urlPrefix_ + '/auth/logout'
+    }
+  });
+  this.dispatchEvent(e2);
 };
 
 
@@ -1177,10 +1197,12 @@ Cosmopolite.prototype.onLogin_ = function(e) {
  * @private
  */
 Cosmopolite.prototype.onLogout_ = function(e) {
-  if (this.callbacks_.onLogout) {
-    this.callbacks_.onLogout(
-        this.urlPrefix_ + '/auth/login');
-  }
+  var e2 = new CustomEvent('logout', {
+    'detail': {
+      'login_url': this.urlPrefix_ + '/auth/login'
+    }
+  });
+  this.dispatchEvent(e2);
 };
 
 
@@ -1226,9 +1248,10 @@ Cosmopolite.prototype.onMessage_ = function(e) {
   }
   subscription.messages.splice(insertAfter + 1, 0, e);
 
-  if (this.callbacks_.onMessage) {
-    this.callbacks_.onMessage(e);
-  }
+  var e2 = new CustomEvent('message', {
+    'detail': e
+  });
+  this.dispatchEvent(e2);
 };
 
 
@@ -1260,9 +1283,11 @@ Cosmopolite.prototype.onPin_ = function(e) {
   e['message'] = JSON.parse(e['message']);
 
   subscription.pins.push(e);
-  if (this.callbacks_.onPin) {
-    this.callbacks_.onPin(e);
-  }
+
+  var e2 = new CustomEvent('pin', {
+    'detail': e
+  });
+  this.dispatchEvent(e2);
 };
 
 
@@ -1298,9 +1323,11 @@ Cosmopolite.prototype.onUnpin_ = function(e) {
   e['message'] = JSON.parse(e['message']);
 
   subscription.pins.splice(index, 1);
-  if (this.callbacks_.onUnpin) {
-    this.callbacks_.onUnpin(e);
-  }
+
+  var e2 = new CustomEvent('unpin', {
+    'detail': e
+  });
+  this.dispatchEvent(e2);
 };
 
 
@@ -1342,7 +1369,6 @@ Cosmopolite.prototype.onServerEvent_ = function(e) {
 
 
 /** @type {function(new:Cosmopolite,
-                    ?Cosmopolite.typeCallbacks=,
                     ?string=,
                     ?string=)} */
 window.Cosmopolite = Cosmopolite;

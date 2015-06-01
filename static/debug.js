@@ -23,16 +23,16 @@ var onReady = function() {
     elements[elementIDs[i]] = document.getElementById(elementIDs[i]);
   }
 
-  var callbacks = {
-    'onConnect': onConnect,
-    'onDisconnect': onDisconnect,
-    'onLogin': onLogin,
-    'onLogout': onLogout,
-    'onMessage': onMessage,
-    'onPin': onPin,
-    'onUnpin': onUnpin,
-  }
-  cosmo = new Cosmopolite(callbacks, null, null, 'UA-37845853-3');
+  cosmo = new Cosmopolite(null, null, 'UA-37845853-3');
+
+  cosmo.addEventListener('connect', onConnect);
+  cosmo.addEventListener('disconnect', onDisconnect);
+  cosmo.addEventListener('login', onLogin);
+  cosmo.addEventListener('logout', onLogout);
+  cosmo.addEventListener('message', onMessage);
+  cosmo.addEventListener('pin', onPin);
+  cosmo.addEventListener('unpin', onUnpin);
+
   cosmo.trackEvent('send', 'pageview');
 
   elements['messageText'].addEventListener('keypress', messageKeyPress);
@@ -57,22 +57,22 @@ var onDisconnect = function() {
       document.createTextNode('Disconnected'));
 };
 
-var onLogin = function(username, logout_url) {
+var onLogin = function(e) {
   elements['loginStatus'].innerHTML = '';
   elements['loginStatus'].appendChild(document.createTextNode('Logged in'));
 
   elements['username'].innerHTML = '';
-  elements['username'].appendChild(document.createTextNode(username));
+  elements['username'].appendChild(document.createTextNode(e.detail.username));
 
   elements['loginAction'].innerHTML = '';
   var link = document.createElement('a');
-  link.href = logout_url;
+  link.href = e.detail.logout_url;
   link.target = '_blank';
   link.appendChild(document.createTextNode('Log out'));
   elements['loginAction'].appendChild(link);
 };
 
-var onLogout = function(login_url) {
+var onLogout = function(e) {
   elements['loginStatus'].innerHTML = '';
   elements['loginStatus'].appendChild(
       document.createTextNode('Not logged in'));
@@ -81,25 +81,25 @@ var onLogout = function(login_url) {
 
   elements['loginAction'].innerHTML = '';
   var link = document.createElement('a');
-  link.href = login_url;
+  link.href = e.detail.login_url;
   link.target = '_blank';
   link.appendChild(document.createTextNode('Log in'));
   elements['loginAction'].appendChild(link);
 };
 
-var onMessage = function(msg) {
-  addToList(msg, elements['messageList']);
+var onMessage = function(e) {
+  addToList(e.detail, elements['messageList']);
 };
 
-var onPin = function(msg) {
-  var item = addToList(msg, elements['pinList'], pins);
-  if (msg['sender'] == cosmo.currentProfile()) {
+var onPin = function(e) {
+  var item = addToList(e.detail, elements['pinList'], pins);
+  if (e.detail['sender'] == cosmo.currentProfile()) {
     item.addEventListener('contextmenu', deletePin);
   }
 };
 
-var onUnpin = function(msg) {
-  var item = pins[msg['id']];
+var onUnpin = function(e) {
+  var item = pins[e.detail['id']];
   item.parentNode.removeChild(item);
 };
 
@@ -114,10 +114,14 @@ var selectSubject = function() {
   selectedSubject = this;
 
   elements['messageList'].innerHTML = '';
-  cosmo.getMessages(this.subject).forEach(onMessage);
+  cosmo.getMessages(this.subject).forEach(function(msg) {
+    onMessage({'detail': msg});
+  });
 
   elements['pinList'].innerHTML = '';
-  cosmo.getPins(this.subject).forEach(onPin);
+  cosmo.getPins(this.subject).forEach(function(pin) {
+    onPin({'detail': pin});
+  });
 };
 
 var addToList = function(msg, list, trackobj) {
