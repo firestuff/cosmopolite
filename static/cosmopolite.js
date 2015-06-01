@@ -950,6 +950,7 @@ Cosmopolite.prototype.sendRPCs_ = function(commands, opt_delay) {
       'load', this.onRPCResponse_.bind(this, xhr, retryAfterDelay, commands));
   xhr.addEventListener('error', retryAfterDelay.bind(null, commands));
   xhr.open('POST', this.urlPrefix_ + '/api');
+  xhr.setRequestHeader('Content-Type', 'application/json');
   xhr.responseType = 'json';
   xhr.send(JSON.stringify(request));
 };

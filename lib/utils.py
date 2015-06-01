@@ -40,6 +40,7 @@ def returns_json(handler):
 
   @functools.wraps(handler)
   def SerializeResult(self):
+    self.response.headers['Content-Type'] = 'application/json'
     json.dump(handler(self), self.response.out, default=EncodeJSON)
 
   return SerializeResult
