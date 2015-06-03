@@ -26,6 +26,9 @@ typedef struct {
 
   char *send_buf;
   size_t send_buf_len;
+
+  char *recv_buf;
+  size_t recv_buf_len;
 } cosmo;
 
 static void cosmo_generate_uuid(char *uuid) {
@@ -43,15 +46,28 @@ static size_t cosmo_read_callback(void *ptr, size_t size, size_t nmemb, void *us
   return to_write;
 }
 
+static size_t cosmo_write_callback(void *ptr, size_t size, size_t nmemb, void *userp) {
+  cosmo *instance = userp;
+  size_t to_read = size * nmemb;
+  instance->recv_buf = realloc(instance->recv_buf, instance->recv_buf_len + to_read);
+  assert(instance->recv_buf);
+  memcpy(instance->recv_buf + instance->recv_buf_len, ptr, to_read);
+  instance->recv_buf_len += to_read;
+  return to_read;
+}
+
 static void cosmo_send_rpc(cosmo *instance) {
-  json_t *packed = json_pack("{sssss[]}", "client_id", instance->client_id, "instance_id", instance->instance_id, "commands");
-  assert(packed);
-  char *serialized = json_dumps(packed, 0);
+  json_t *to_send = json_pack("{sssss[]}", "client_id", instance->client_id, "instance_id", instance->instance_id, "commands");
+  assert(to_send);
+  char *serialized = json_dumps(to_send, 0);
   assert(serialized);
-  json_decref(packed);
+  json_decref(to_send);
 
   instance->send_buf = serialized;
   instance->send_buf_len = strlen(instance->send_buf);
+
+  instance->recv_buf = NULL;
+  instance->recv_buf_len = 0;
 
   CURL *curl;
   CURLcode res;
@@ -65,15 +81,36 @@ static void cosmo_send_rpc(cosmo *instance) {
   curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, instance->send_buf_len);
   curl_easy_setopt(curl, CURLOPT_READFUNCTION, cosmo_read_callback);
   curl_easy_setopt(curl, CURLOPT_READDATA, instance);
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cosmo_write_callback);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, instance);
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT, COSMO_CHECK_SECONDS);
   res = curl_easy_perform(curl);
-  if (res != CURLE_OK)
-    fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-
-  curl_easy_cleanup(curl);
-
-  printf("\n");
-
   free(serialized);
+
+  if (res != CURLE_OK) {
+    fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+    curl_easy_cleanup(curl);
+    return;
+  }
+
+  long return_code;
+  assert(curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &return_code) == CURLE_OK);
+  curl_easy_cleanup(curl);
+  if (return_code != 200) {
+    fprintf(stderr, "server returned error: %ld\n", return_code);
+    return;
+  }
+
+  json_error_t error;
+  json_t *received = json_loadb(instance->recv_buf, instance->recv_buf_len, 0, &error);
+  if (!received) {
+    fprintf(stderr, "json_loadb() failed: %s (json: \"%.*s\")\n", error.text, (int) instance->recv_buf_len, instance->recv_buf);
+    return;
+  }
+
+  printf("profile: %s\n", json_string_value(json_object_get(received, "profile")));
+
+  json_decref(received);
 }
 
 static void *cosmo_thread_main(void *arg) {
