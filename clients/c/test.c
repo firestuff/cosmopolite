@@ -23,13 +23,16 @@ typedef struct {
   int shutdown;
 
   pthread_t thread;
+} cosmo;
 
+typedef struct {
+  char *send_buf_orig;
   char *send_buf;
   size_t send_buf_len;
 
   char *recv_buf;
   size_t recv_buf_len;
-} cosmo;
+} cosmo_transfer;
 
 static void cosmo_generate_uuid(char *uuid) {
   uuid_t uu;
@@ -38,37 +41,43 @@ static void cosmo_generate_uuid(char *uuid) {
 }
 
 static size_t cosmo_read_callback(void *ptr, size_t size, size_t nmemb, void *userp) {
-  cosmo *instance = userp;
-  size_t to_write = min(instance->send_buf_len, size * nmemb);
-  memcpy(ptr, instance->send_buf, to_write);
-  ptr += to_write;
-  instance->send_buf_len -= to_write;
+  cosmo_transfer *transfer = userp;
+  size_t to_write = min(transfer->send_buf_len, size * nmemb);
+  memcpy(ptr, transfer->send_buf, to_write);
+  transfer->send_buf += to_write;
+  transfer->send_buf_len -= to_write;
   return to_write;
 }
 
 static size_t cosmo_write_callback(void *ptr, size_t size, size_t nmemb, void *userp) {
-  cosmo *instance = userp;
+  cosmo_transfer *transfer = userp;
   size_t to_read = size * nmemb;
-  instance->recv_buf = realloc(instance->recv_buf, instance->recv_buf_len + to_read);
-  assert(instance->recv_buf);
-  memcpy(instance->recv_buf + instance->recv_buf_len, ptr, to_read);
-  instance->recv_buf_len += to_read;
+  transfer->recv_buf = realloc(transfer->recv_buf, transfer->recv_buf_len + to_read);
+  assert(transfer->recv_buf);
+  memcpy(transfer->recv_buf + transfer->recv_buf_len, ptr, to_read);
+  transfer->recv_buf_len += to_read;
   return to_read;
 }
 
-static void cosmo_send_rpc(cosmo *instance) {
+static void cosmo_build_rpc(cosmo *instance, cosmo_transfer *transfer) {
   json_t *to_send = json_pack("{sssss[]}", "client_id", instance->client_id, "instance_id", instance->instance_id, "commands");
   assert(to_send);
-  char *serialized = json_dumps(to_send, 0);
-  assert(serialized);
+  transfer->send_buf_orig = transfer->send_buf = json_dumps(to_send, 0);
+  assert(transfer->send_buf_orig);
   json_decref(to_send);
 
-  instance->send_buf = serialized;
-  instance->send_buf_len = strlen(instance->send_buf);
+  transfer->send_buf_len = strlen(transfer->send_buf);
 
-  instance->recv_buf = NULL;
-  instance->recv_buf_len = 0;
+  transfer->recv_buf = NULL;
+  transfer->recv_buf_len = 0;
+}
 
+static void cosmo_destroy_rpc(cosmo_transfer *transfer) {
+  free(transfer->send_buf_orig);
+  free(transfer->recv_buf);
+}
+
+static int cosmo_send_http(cosmo *instance, cosmo_transfer *transfer) {
   CURL *curl;
   CURLcode res;
  
@@ -78,19 +87,18 @@ static void cosmo_send_rpc(cosmo *instance) {
   curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTPS);
   curl_easy_setopt(curl, CURLOPT_SSL_CIPHER_LIST, "ECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH");
   curl_easy_setopt(curl, CURLOPT_POST, 1L);
-  curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, instance->send_buf_len);
+  curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, transfer->send_buf_len);
   curl_easy_setopt(curl, CURLOPT_READFUNCTION, cosmo_read_callback);
-  curl_easy_setopt(curl, CURLOPT_READDATA, instance);
+  curl_easy_setopt(curl, CURLOPT_READDATA, transfer);
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cosmo_write_callback);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, instance);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, transfer);
   curl_easy_setopt(curl, CURLOPT_TIMEOUT, COSMO_CHECK_SECONDS);
   res = curl_easy_perform(curl);
-  free(serialized);
 
   if (res != CURLE_OK) {
-    fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
     curl_easy_cleanup(curl);
-    return;
+    fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+    return -1;
   }
 
   long return_code;
@@ -98,15 +106,30 @@ static void cosmo_send_rpc(cosmo *instance) {
   curl_easy_cleanup(curl);
   if (return_code != 200) {
     fprintf(stderr, "server returned error: %ld\n", return_code);
+    return -1;
+  }
+
+  return 0;
+}
+
+static void cosmo_send_rpc(cosmo *instance) {
+  cosmo_transfer transfer;
+
+  cosmo_build_rpc(instance, &transfer);
+
+  if (cosmo_send_http(instance, &transfer)) {
+    cosmo_destroy_rpc(&transfer);
     return;
   }
 
   json_error_t error;
-  json_t *received = json_loadb(instance->recv_buf, instance->recv_buf_len, 0, &error);
+  json_t *received = json_loadb(transfer.recv_buf, transfer.recv_buf_len, 0, &error);
   if (!received) {
-    fprintf(stderr, "json_loadb() failed: %s (json: \"%.*s\")\n", error.text, (int) instance->recv_buf_len, instance->recv_buf);
+    fprintf(stderr, "json_loadb() failed: %s (json: \"%.*s\")\n", error.text, (int) transfer.recv_buf_len, transfer.recv_buf);
+    cosmo_destroy_rpc(&transfer);
     return;
   }
+  cosmo_destroy_rpc(&transfer);
 
   printf("profile: %s\n", json_string_value(json_object_get(received, "profile")));
 
