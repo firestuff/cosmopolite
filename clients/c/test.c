@@ -26,7 +26,6 @@ typedef struct {
 } cosmo;
 
 typedef struct {
-  char *send_buf_orig;
   char *send_buf;
   size_t send_buf_len;
 
@@ -52,36 +51,26 @@ static size_t cosmo_read_callback(void *ptr, size_t size, size_t nmemb, void *us
 static size_t cosmo_write_callback(void *ptr, size_t size, size_t nmemb, void *userp) {
   cosmo_transfer *transfer = userp;
   size_t to_read = size * nmemb;
-  transfer->recv_buf = realloc(transfer->recv_buf, transfer->recv_buf_len + to_read);
+  transfer->recv_buf = realloc(transfer->recv_buf, transfer->recv_buf_len + to_read + 1);
   assert(transfer->recv_buf);
   memcpy(transfer->recv_buf + transfer->recv_buf_len, ptr, to_read);
   transfer->recv_buf_len += to_read;
+  transfer->recv_buf[transfer->recv_buf_len] = '\0';
   return to_read;
 }
 
-static void cosmo_build_rpc(cosmo *instance, cosmo_transfer *transfer) {
+static char *cosmo_build_rpc(cosmo *instance) {
   json_t *to_send = json_pack("{sssss[]}", "client_id", instance->client_id, "instance_id", instance->instance_id, "commands");
   assert(to_send);
-  transfer->send_buf_orig = transfer->send_buf = json_dumps(to_send, 0);
-  assert(transfer->send_buf_orig);
+  char *ret = json_dumps(to_send, 0);
+  assert(ret);
   json_decref(to_send);
-
-  transfer->send_buf_len = strlen(transfer->send_buf);
-
-  transfer->recv_buf = NULL;
-  transfer->recv_buf_len = 0;
+  return ret;
 }
 
-static void cosmo_destroy_rpc(cosmo_transfer *transfer) {
-  free(transfer->send_buf_orig);
-  free(transfer->recv_buf);
-}
-
-static int cosmo_send_http(cosmo *instance, cosmo_transfer *transfer) {
-  CURL *curl;
+static int cosmo_send_http_int(cosmo *instance, cosmo_transfer *transfer, CURL *curl) {
   CURLcode res;
  
-  curl = curl_easy_init();
   curl_easy_setopt(curl, CURLOPT_URL, "https://playground.cosmopolite.org/cosmopolite/api");
   curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
   curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTPS);
@@ -96,14 +85,12 @@ static int cosmo_send_http(cosmo *instance, cosmo_transfer *transfer) {
   res = curl_easy_perform(curl);
 
   if (res != CURLE_OK) {
-    curl_easy_cleanup(curl);
     fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
     return -1;
   }
 
   long return_code;
   assert(curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &return_code) == CURLE_OK);
-  curl_easy_cleanup(curl);
   if (return_code != 200) {
     fprintf(stderr, "server returned error: %ld\n", return_code);
     return -1;
@@ -112,24 +99,41 @@ static int cosmo_send_http(cosmo *instance, cosmo_transfer *transfer) {
   return 0;
 }
 
+// Takes ownership of request
+static char *cosmo_send_http(cosmo *instance, char *request) {
+  CURL *curl = curl_easy_init();
+  assert(curl);
+  cosmo_transfer transfer = {
+    .send_buf = request,
+    .send_buf_len = strlen(request),
+    .recv_buf = NULL,
+    .recv_buf_len = 0
+  };
+
+  int ret = cosmo_send_http_int(instance, &transfer, curl);
+
+  curl_easy_cleanup(curl);
+  free(request);
+
+  return ret ? NULL : transfer.recv_buf;
+}
+
 static void cosmo_send_rpc(cosmo *instance) {
-  cosmo_transfer transfer;
+  char *request = cosmo_build_rpc(instance);
 
-  cosmo_build_rpc(instance, &transfer);
-
-  if (cosmo_send_http(instance, &transfer)) {
-    cosmo_destroy_rpc(&transfer);
+  char *response = cosmo_send_http(instance, request);
+  if (!response) {
     return;
   }
 
   json_error_t error;
-  json_t *received = json_loadb(transfer.recv_buf, transfer.recv_buf_len, 0, &error);
+  json_t *received = json_loads(response, 0, &error);
   if (!received) {
-    fprintf(stderr, "json_loadb() failed: %s (json: \"%.*s\")\n", error.text, (int) transfer.recv_buf_len, transfer.recv_buf);
-    cosmo_destroy_rpc(&transfer);
+    fprintf(stderr, "json_loads() failed: %s (json: \"%s\")\n", error.text, response);
+    free(response);
     return;
   }
-  cosmo_destroy_rpc(&transfer);
+  free(response);
 
   printf("profile: %s\n", json_string_value(json_object_get(received, "profile")));
 
