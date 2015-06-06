@@ -8,7 +8,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#include <curl/curl.h>
 #include <uuid/uuid.h>
 
 #include "cosmopolite.h"
@@ -74,23 +73,18 @@ static char *cosmo_build_rpc(cosmo *instance, json_t *commands) {
   return ret;
 }
 
-static bool cosmo_send_http_int(cosmo *instance, cosmo_transfer *transfer, CURL *curl) {
+static bool cosmo_send_http_int(cosmo *instance, cosmo_transfer *transfer) {
   CURLcode res;
  
-  curl_easy_setopt(curl, CURLOPT_URL, instance->api_url);
-  curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
-  curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTPS);
-  curl_easy_setopt(curl, CURLOPT_SSL_CIPHER_LIST, "ECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH");
-  curl_easy_setopt(curl, CURLOPT_POST, 1L);
-  curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, transfer->send_buf_len);
-  curl_easy_setopt(curl, CURLOPT_READFUNCTION, cosmo_read_callback);
-  curl_easy_setopt(curl, CURLOPT_READDATA, transfer);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cosmo_write_callback);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, transfer);
-  curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, cosmo_header_callback);
-  curl_easy_setopt(curl, CURLOPT_HEADERDATA, transfer);
-  curl_easy_setopt(curl, CURLOPT_TIMEOUT, COSMO_CHECK_SECONDS);
-  res = curl_easy_perform(curl);
+  curl_easy_setopt(instance->curl, CURLOPT_POST, 1L);
+  curl_easy_setopt(instance->curl, CURLOPT_POSTFIELDSIZE, transfer->send_buf_len);
+  curl_easy_setopt(instance->curl, CURLOPT_READFUNCTION, cosmo_read_callback);
+  curl_easy_setopt(instance->curl, CURLOPT_READDATA, transfer);
+  curl_easy_setopt(instance->curl, CURLOPT_WRITEFUNCTION, cosmo_write_callback);
+  curl_easy_setopt(instance->curl, CURLOPT_WRITEDATA, transfer);
+  curl_easy_setopt(instance->curl, CURLOPT_HEADERFUNCTION, cosmo_header_callback);
+  curl_easy_setopt(instance->curl, CURLOPT_HEADERDATA, transfer);
+  res = curl_easy_perform(instance->curl);
 
   if (res != CURLE_OK) {
     fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
@@ -98,7 +92,7 @@ static bool cosmo_send_http_int(cosmo *instance, cosmo_transfer *transfer, CURL 
   }
 
   long return_code;
-  assert(curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &return_code) == CURLE_OK);
+  assert(curl_easy_getinfo(instance->curl, CURLINFO_RESPONSE_CODE, &return_code) == CURLE_OK);
   if (return_code != 200) {
     fprintf(stderr, "server returned error: %ld\n", return_code);
     return false;
@@ -109,8 +103,6 @@ static bool cosmo_send_http_int(cosmo *instance, cosmo_transfer *transfer, CURL 
 
 // Takes ownership of request.
 static char *cosmo_send_http(cosmo *instance, char *request) {
-  CURL *curl = curl_easy_init();
-  assert(curl);
   cosmo_transfer transfer = {
     .send_buf = request,
     .send_buf_len = strlen(request),
@@ -119,13 +111,12 @@ static char *cosmo_send_http(cosmo *instance, char *request) {
     .retry_after = -1
   };
 
-  int ret = cosmo_send_http_int(instance, &transfer, curl);
+  int ret = cosmo_send_http_int(instance, &transfer);
 
   if (transfer.retry_after >= 0) {
     instance->next_delay_ms = transfer.retry_after * 1000;
   }
 
-  curl_easy_cleanup(curl);
   free(request);
 
   return ret ? transfer.recv_buf : NULL;
@@ -276,14 +267,21 @@ cosmo *cosmo_create(const char *base_url, const char *client_id) {
   cosmo *instance = malloc(sizeof(cosmo));
   assert(instance);
 
-  instance->api_url = malloc(strlen(base_url) + 5);  // "/api\0"
-  sprintf(instance->api_url, "%s/api", base_url);
-
   strcpy(instance->client_id, client_id);
   cosmo_generate_uuid(instance->instance_id);
 
   assert(!pthread_mutex_init(&instance->lock, NULL));
   assert(!pthread_cond_init(&instance->cond, NULL));
+
+  instance->curl = curl_easy_init();
+  assert(instance->curl);
+  char api_url[strlen(base_url) + 5];
+  sprintf(api_url, "%s/api", base_url);
+  curl_easy_setopt(instance->curl, CURLOPT_URL, api_url);
+  curl_easy_setopt(instance->curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
+  curl_easy_setopt(instance->curl, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTPS);
+  curl_easy_setopt(instance->curl, CURLOPT_SSL_CIPHER_LIST, "ECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH");
+  curl_easy_setopt(instance->curl, CURLOPT_TIMEOUT, COSMO_CHECK_SECONDS);
 
   instance->shutdown = false;
   instance->command_queue = json_array();
@@ -299,9 +297,12 @@ void cosmo_destroy(cosmo *instance) {
   pthread_cond_signal(&instance->cond);
   pthread_mutex_unlock(&instance->lock);
   assert(!pthread_join(instance->thread, NULL));
+
   assert(!pthread_mutex_destroy(&instance->lock));
   assert(!pthread_cond_destroy(&instance->cond));
   json_decref(instance->command_queue);
+  curl_easy_cleanup(instance->curl);
+
   free(instance);
 
   curl_global_cleanup();

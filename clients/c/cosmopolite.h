@@ -1,13 +1,13 @@
 #ifndef _COSMOPOLITE_H
 #define _COSMOPOLITE_H
 
+#include <curl/curl.h>
 #include <pthread.h>
 #include <jansson.h>
 
 #define COSMO_UUID_SIZE 37
 
 typedef struct {
-  char *api_url;
   char client_id[COSMO_UUID_SIZE];
   char instance_id[COSMO_UUID_SIZE];
 
@@ -18,6 +18,7 @@ typedef struct {
   uint64_t next_delay_ms;
 
   pthread_t thread;
+  CURL *curl;
 } cosmo;
 
 void cosmo_generate_uuid(char *uuid);
