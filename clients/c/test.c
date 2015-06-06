@@ -76,13 +76,9 @@ static char *cosmo_build_rpc(cosmo *instance, json_t *commands) {
 static bool cosmo_send_http_int(cosmo *instance, cosmo_transfer *transfer) {
   CURLcode res;
  
-  curl_easy_setopt(instance->curl, CURLOPT_POST, 1L);
   curl_easy_setopt(instance->curl, CURLOPT_POSTFIELDSIZE, transfer->send_buf_len);
-  curl_easy_setopt(instance->curl, CURLOPT_READFUNCTION, cosmo_read_callback);
   curl_easy_setopt(instance->curl, CURLOPT_READDATA, transfer);
-  curl_easy_setopt(instance->curl, CURLOPT_WRITEFUNCTION, cosmo_write_callback);
   curl_easy_setopt(instance->curl, CURLOPT_WRITEDATA, transfer);
-  curl_easy_setopt(instance->curl, CURLOPT_HEADERFUNCTION, cosmo_header_callback);
   curl_easy_setopt(instance->curl, CURLOPT_HEADERDATA, transfer);
   res = curl_easy_perform(instance->curl);
 
@@ -282,6 +278,10 @@ cosmo *cosmo_create(const char *base_url, const char *client_id) {
   curl_easy_setopt(instance->curl, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTPS);
   curl_easy_setopt(instance->curl, CURLOPT_SSL_CIPHER_LIST, "ECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH");
   curl_easy_setopt(instance->curl, CURLOPT_TIMEOUT, COSMO_CHECK_SECONDS);
+  curl_easy_setopt(instance->curl, CURLOPT_POST, 1L);
+  curl_easy_setopt(instance->curl, CURLOPT_READFUNCTION, cosmo_read_callback);
+  curl_easy_setopt(instance->curl, CURLOPT_WRITEFUNCTION, cosmo_write_callback);
+  curl_easy_setopt(instance->curl, CURLOPT_HEADERFUNCTION, cosmo_header_callback);
 
   instance->shutdown = false;
   instance->command_queue = json_array();
