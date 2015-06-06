@@ -25,6 +25,7 @@
 #define DELAY_STAGGER_FACTOR 10
 
 typedef struct {
+  char *api_url;
   char client_id[COSMO_UUID_SIZE];
   char instance_id[COSMO_UUID_SIZE];
 
@@ -91,7 +92,7 @@ static char *cosmo_build_rpc(cosmo *instance, json_t *commands) {
 static bool cosmo_send_http_int(cosmo *instance, cosmo_transfer *transfer, CURL *curl) {
   CURLcode res;
  
-  curl_easy_setopt(curl, CURLOPT_URL, "https://playground.cosmopolite.org/cosmopolite/api");
+  curl_easy_setopt(curl, CURLOPT_URL, instance->api_url);
   curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
   curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTPS);
   curl_easy_setopt(curl, CURLOPT_SSL_CIPHER_LIST, "ECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH");
@@ -283,16 +284,22 @@ void cosmo_subscribe(cosmo *instance, json_t *subject, json_int_t messages, json
   cosmo_send_command(instance, cosmo_command("subscribe", arguments));
 }
 
-cosmo *cosmo_create(char *client_id) {
+cosmo *cosmo_create(char *base_url, char *client_id) {
   curl_global_init(CURL_GLOBAL_DEFAULT);
   srandomdev();
 
   cosmo *instance = malloc(sizeof(cosmo));
   assert(instance);
+
+  instance->api_url = malloc(strlen(base_url) + 5);  // "/api\0"
+  sprintf(instance->api_url, "%s/api", base_url);
+
   strcpy(instance->client_id, client_id);
   cosmo_generate_uuid(instance->instance_id);
+
   assert(!pthread_mutex_init(&instance->lock, NULL));
   assert(!pthread_cond_init(&instance->cond, NULL));
+
   instance->shutdown = false;
   instance->command_queue = json_array();
 
@@ -319,7 +326,7 @@ void cosmo_destroy(cosmo *instance) {
 int main(int argc, char *argv[]) {
   char client_id[COSMO_UUID_SIZE];
   cosmo_generate_uuid(client_id);
-  cosmo *instance = cosmo_create(client_id);
+  cosmo *instance = cosmo_create("https://playground.cosmopolite.org/cosmopolite", client_id);
   json_t *subject = cosmo_subject("foobar", NULL, NULL);
   cosmo_subscribe(instance, subject, -1, 0);
   json_decref(subject);
