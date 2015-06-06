@@ -7,7 +7,7 @@ test: test.o libcosmopolite.so
 	$(CC) $(LDFLAGS) -o test test.o -lcosmopolite $(LIBS)
 
 libcosmopolite.so: cosmopolite.o
-	$(CC) -shared $(LDFLAGS) -o libcosmopolite.so cosmopolite.o
+	$(CC) -shared $(LDFLAGS) -o libcosmopolite.so cosmopolite.o $(LIBS)
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) $< -o $@

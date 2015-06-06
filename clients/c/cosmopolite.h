@@ -2,8 +2,9 @@
 #define _COSMOPOLITE_H
 
 #include <curl/curl.h>
-#include <pthread.h>
 #include <jansson.h>
+#include <pthread.h>
+#include <stdbool.h>
 
 #define COSMO_UUID_SIZE 37
 
