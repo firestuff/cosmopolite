@@ -254,6 +254,18 @@ void cosmo_subscribe(cosmo *instance, const json_t *subject, const json_int_t me
   cosmo_send_command(instance, cosmo_command("subscribe", arguments));
 }
 
+void cosmo_send_message(cosmo *instance, const json_t *subject, json_t *message) {
+  char sender_message_id[COSMO_UUID_SIZE];
+  cosmo_generate_uuid(sender_message_id);
+  char *encoded = json_dumps(message, JSON_ENCODE_ANY);
+  json_t *arguments = json_pack("{sOssss}",
+      "subject", subject,
+      "message", encoded,
+      "sender_message_id", sender_message_id);
+  cosmo_send_command(instance, cosmo_command("sendMessage", arguments));
+  free(encoded);
+}
+
 cosmo *cosmo_create(const char *base_url, const char *client_id) {
   curl_global_init(CURL_GLOBAL_DEFAULT);
   srandomdev();

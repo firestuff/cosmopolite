@@ -29,5 +29,6 @@ void cosmo_destroy(cosmo *instance);
 
 json_t *cosmo_subject(const char *name, const char *readable_only_by, const char *writeable_only_by);
 void cosmo_subscribe(cosmo *instance, const json_t *subject, const json_int_t messages, const json_int_t last_id);
+void cosmo_send_message(cosmo *instance, const json_t *subject, json_t *message);
 
 #endif
