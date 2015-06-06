@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <math.h>
-#include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -9,11 +8,11 @@
 #include <time.h>
 #include <unistd.h>
 
-#include <jansson.h>
 #include <curl/curl.h>
 #include <uuid/uuid.h>
 
-#define COSMO_UUID_SIZE 37
+#include "cosmopolite.h"
+
 #define COSMO_CHECK_SECONDS 10
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -23,20 +22,6 @@
 #define DELAY_MAX_MS 32000
 #define DELAY_EXPONENT 1.1
 #define DELAY_STAGGER_FACTOR 10
-
-typedef struct {
-  char *api_url;
-  char client_id[COSMO_UUID_SIZE];
-  char instance_id[COSMO_UUID_SIZE];
-
-  pthread_mutex_t lock;
-  pthread_cond_t cond;
-  bool shutdown;
-  json_t *command_queue;
-  uint64_t next_delay_ms;
-
-  pthread_t thread;
-} cosmo;
 
 typedef struct {
   char *send_buf;
@@ -262,7 +247,7 @@ void cosmo_generate_uuid(char *uuid) {
   uuid_unparse_lower(uu, uuid);
 }
 
-json_t *cosmo_subject(char *name, char *readable_only_by, char *writeable_only_by) {
+json_t *cosmo_subject(const char *name, const char *readable_only_by, const char *writeable_only_by) {
   json_t *ret = json_pack("{ss}", "name", name);
   if (readable_only_by) {
     json_object_set_new(ret, "readable_only_by", json_string(readable_only_by));
@@ -273,7 +258,7 @@ json_t *cosmo_subject(char *name, char *readable_only_by, char *writeable_only_b
   return ret;
 }
 
-void cosmo_subscribe(cosmo *instance, json_t *subject, json_int_t messages, json_int_t last_id) {
+void cosmo_subscribe(cosmo *instance, const json_t *subject, const json_int_t messages, const json_int_t last_id) {
   json_t *arguments = json_pack("{sO}", "subject", subject);
   if (messages) {
     json_object_set_new(arguments, "messages", json_integer(messages));
@@ -284,7 +269,7 @@ void cosmo_subscribe(cosmo *instance, json_t *subject, json_int_t messages, json
   cosmo_send_command(instance, cosmo_command("subscribe", arguments));
 }
 
-cosmo *cosmo_create(char *base_url, char *client_id) {
+cosmo *cosmo_create(const char *base_url, const char *client_id) {
   curl_global_init(CURL_GLOBAL_DEFAULT);
   srandomdev();
 
