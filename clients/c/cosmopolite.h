@@ -35,4 +35,14 @@ json_t *cosmo_subject(const char *name, const char *readable_only_by, const char
 void cosmo_subscribe(cosmo *instance, const json_t *subject, const json_int_t messages, const json_int_t last_id);
 void cosmo_send_message(cosmo *instance, const json_t *subject, json_t *message);
 
+// TODO
+void cosmo_unsubscribe(cosmo *instance, const json_t *subject);
+json_t *cosmo_get_messages(cosmo *instance, const json_t *subject);
+json_t *cosmo_get_last_message(cosmo *instance, const json_t *subject);
+json_t *cosmo_get_pins(cosmo *instance, const json_t *subject);
+
+// Hard TODO
+void cosmo_pin(cosmo *instance, const json_t *subject, json_t *message);
+void cosmo_unpin(cosmo *instance, const json_t *subject, json_t *message);
+
 #endif
