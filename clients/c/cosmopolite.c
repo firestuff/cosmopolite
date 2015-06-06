@@ -226,7 +226,7 @@ static json_t *cosmo_command(const char *name, const json_t *arguments) {
 
 // Public interface below
 
-void cosmo_generate_uuid(char *uuid) {
+void cosmo_uuid(char *uuid) {
   uuid_t uu;
   uuid_generate(uu);
   uuid_unparse_lower(uu, uuid);
@@ -256,7 +256,7 @@ void cosmo_subscribe(cosmo *instance, const json_t *subject, const json_int_t me
 
 void cosmo_send_message(cosmo *instance, const json_t *subject, json_t *message) {
   char sender_message_id[COSMO_UUID_SIZE];
-  cosmo_generate_uuid(sender_message_id);
+  cosmo_uuid(sender_message_id);
   char *encoded = json_dumps(message, JSON_ENCODE_ANY);
   json_t *arguments = json_pack("{sOssss}",
       "subject", subject,
@@ -274,7 +274,7 @@ cosmo *cosmo_create(const char *base_url, const char *client_id) {
   assert(instance);
 
   strcpy(instance->client_id, client_id);
-  cosmo_generate_uuid(instance->instance_id);
+  cosmo_uuid(instance->instance_id);
 
   assert(!pthread_mutex_init(&instance->lock, NULL));
   assert(!pthread_cond_init(&instance->cond, NULL));
@@ -300,7 +300,7 @@ cosmo *cosmo_create(const char *base_url, const char *client_id) {
   return instance;
 }
 
-void cosmo_destroy(cosmo *instance) {
+void cosmo_shutdown(cosmo *instance) {
   pthread_mutex_lock(&instance->lock);
   instance->shutdown = 1;
   instance->next_delay_ms = 0;

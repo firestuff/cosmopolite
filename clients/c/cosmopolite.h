@@ -22,10 +22,10 @@ typedef struct {
   CURL *curl;
 } cosmo;
 
-void cosmo_generate_uuid(char *uuid);
+void cosmo_uuid(char *uuid);
 
 cosmo *cosmo_create(const char *base_url, const char *client_id);
-void cosmo_destroy(cosmo *instance);
+void cosmo_shutdown(cosmo *instance);
 
 json_t *cosmo_subject(const char *name, const char *readable_only_by, const char *writeable_only_by);
 void cosmo_subscribe(cosmo *instance, const json_t *subject, const json_int_t messages, const json_int_t last_id);
