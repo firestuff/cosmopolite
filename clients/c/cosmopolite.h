@@ -18,6 +18,8 @@ typedef struct {
   json_t *command_queue;
   uint64_t next_delay_ms;
 
+  char *profile;
+
   pthread_t thread;
   CURL *curl;
 } cosmo;
@@ -26,6 +28,8 @@ void cosmo_uuid(char *uuid);
 
 cosmo *cosmo_create(const char *base_url, const char *client_id);
 void cosmo_shutdown(cosmo *instance);
+
+const char *cosmo_current_profile(cosmo *instance);
 
 json_t *cosmo_subject(const char *name, const char *readable_only_by, const char *writeable_only_by);
 void cosmo_subscribe(cosmo *instance, const json_t *subject, const json_int_t messages, const json_int_t last_id);

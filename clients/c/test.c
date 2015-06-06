@@ -12,6 +12,8 @@ int main(int argc, char *argv[]) {
   cosmo_send_message(instance, subject, message);
   json_decref(message);
   json_decref(subject);
+  sleep(5);
+  printf("profile: %s\n", cosmo_current_profile(instance));
   sleep(120);
   cosmo_shutdown(instance);
 

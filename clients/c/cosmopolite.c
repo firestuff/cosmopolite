@@ -135,6 +135,16 @@ static json_t *cosmo_send_rpc(cosmo *instance, json_t *commands) {
   printf("response: %s\n", response);
   free(response);
 
+  json_t *profile = json_object_get(received, "profile");
+  if (profile) {
+    if (!instance->profile || strcmp(instance->profile, json_string_value(profile))) {
+      free(instance->profile);
+      instance->profile = strdup(json_string_value(profile));
+    }
+  } else {
+    fprintf(stderr, "response lacks \"profile\" key\n");
+  }
+
   json_t *command_responses = json_object_get(received, "responses");
   if (!command_responses) {
     fprintf(stderr, "response lacks \"responses\" key\n");
@@ -156,7 +166,6 @@ static json_t *cosmo_send_rpc(cosmo *instance, json_t *commands) {
       json_array_append(to_retry, command);
       continue;
     }
-    // Other result code.
   }
 
   json_decref(commands);
@@ -232,6 +241,10 @@ void cosmo_uuid(char *uuid) {
   uuid_unparse_lower(uu, uuid);
 }
 
+const char *cosmo_current_profile(cosmo *instance) {
+  return instance->profile;
+}
+
 json_t *cosmo_subject(const char *name, const char *readable_only_by, const char *writeable_only_by) {
   json_t *ret = json_pack("{ss}", "name", name);
   if (readable_only_by) {
@@ -302,7 +315,7 @@ cosmo *cosmo_create(const char *base_url, const char *client_id) {
 
 void cosmo_shutdown(cosmo *instance) {
   pthread_mutex_lock(&instance->lock);
-  instance->shutdown = 1;
+  instance->shutdown = true;
   instance->next_delay_ms = 0;
   pthread_cond_signal(&instance->cond);
   pthread_mutex_unlock(&instance->lock);
@@ -311,6 +324,7 @@ void cosmo_shutdown(cosmo *instance) {
   assert(!pthread_mutex_destroy(&instance->lock));
   assert(!pthread_cond_destroy(&instance->cond));
   json_decref(instance->command_queue);
+  free(instance->profile);
   curl_easy_cleanup(instance->curl);
 
   free(instance);
