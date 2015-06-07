@@ -191,7 +191,6 @@ static json_t *cosmo_send_rpc(cosmo *instance, json_t *commands) {
     free(response);
     return commands;
   }
-  printf("response: %s\n", response);
   free(response);
 
   json_t *profile = json_object_get(received, "profile");
@@ -210,8 +209,17 @@ static json_t *cosmo_send_rpc(cosmo *instance, json_t *commands) {
     return commands;
   }
 
-  json_t *to_retry = json_array();
   size_t index;
+
+  json_t *events = json_object_get(received, "events");
+  if (events) {
+    json_t *event;
+    json_array_foreach(events, index, event) {
+      cosmo_handle_event(instance, event);
+    }
+  }
+
+  json_t *to_retry = json_array();
   json_t *command;
   json_array_foreach(commands, index, command) {
     json_t *command_response = json_array_get(command_responses, index);
@@ -222,19 +230,29 @@ static json_t *cosmo_send_rpc(cosmo *instance, json_t *commands) {
       continue;
     }
     if (!strcmp(json_string_value(result), "retry")) {
+      // One giant hack to change queued subscribe messages to ask for less data.
+      // Remove this once we get channels working; it's not worth the yuck.
+      const char *name = json_string_value(json_object_get(command, "command"));
+      if (!strcmp(name, "subscribe")) {
+        json_t *arguments = json_object_get(command, "arguments");
+        json_t *subject = json_object_get(arguments, "subject");
+        json_t *last_message = cosmo_get_last_message(instance, subject);
+        if (last_message) {
+          json_t *last_id = json_object_get(arguments, "last_id");
+          json_int_t last_id_val = last_id ? json_integer_value(last_id) : 0;
+          json_int_t local_last_id = json_integer_value(json_object_get(last_message, "id"));
+          if (local_last_id > last_id_val) {
+            json_object_del(arguments, "messages");
+            json_object_set_new(arguments, "last_id", json_integer(local_last_id));
+          }
+          json_decref(last_message);
+        }
+      }
       json_array_append(to_retry, command);
       continue;
     }
   }
   json_decref(commands);
-
-  json_t *events = json_object_get(received, "events");
-  if (events) {
-    json_t *event;
-    json_array_foreach(events, index, event) {
-      cosmo_handle_event(instance, event);
-    }
-  }
 
   json_decref(received);
 
