@@ -38,9 +38,9 @@ void cosmo_send_message(cosmo *instance, json_t *subject, json_t *message);
 
 json_t *cosmo_get_messages(cosmo *instance, json_t *subject);
 json_t *cosmo_get_last_message(cosmo *instance, json_t *subject);
-json_t *cosmo_get_pins(cosmo *instance, json_t *subject);
 
-// Hard TODO
+// TODO
+json_t *cosmo_get_pins(cosmo *instance, json_t *subject);
 void cosmo_pin(cosmo *instance, json_t *subject, json_t *message);
 void cosmo_unpin(cosmo *instance, json_t *subject, json_t *message);
 

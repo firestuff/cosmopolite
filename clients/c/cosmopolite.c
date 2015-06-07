@@ -144,7 +144,7 @@ static void cosmo_handle_message(cosmo *instance, json_t *event) {
   assert(!pthread_mutex_lock(&instance->lock));
   json_t *subscription = cosmo_find_subscription(instance, subject);
   if (!subscription) {
-    // Normal to sometimes get events after unsubscribe.
+    fprintf(stderr, "message from unknown subject\n");
     assert(!pthread_mutex_unlock(&instance->lock));
     return;
   }
@@ -166,10 +166,85 @@ static void cosmo_handle_message(cosmo *instance, json_t *event) {
   assert(!pthread_mutex_unlock(&instance->lock));
 }
 
+static void cosmo_handle_pin(cosmo *instance, json_t *event) {
+  json_t *subject = json_object_get(event, "subject");
+  if (!subject) {
+    fprintf(stderr, "pin event without subject\n");
+    return;
+  }
+
+  json_t *id = json_object_get(event, "id");
+  if (!id) {
+    fprintf(stderr, "pin event without id\n");
+    return;
+  }
+  assert(!pthread_mutex_lock(&instance->lock));
+  json_t *subscription = cosmo_find_subscription(instance, subject);
+  if (!subscription) {
+    fprintf(stderr, "pin from unknown subject\n");
+    assert(!pthread_mutex_unlock(&instance->lock));
+    return;
+  }
+  json_t *pins = json_object_get(subscription, "pins");
+  size_t index;
+  json_t *pin;
+  json_array_foreach(pins, index, pin) {
+    if (json_equal(id, json_object_get(pin, "id"))) {
+      assert(!pthread_mutex_unlock(&instance->lock));
+      return;
+    }
+  }
+  printf("new pin: %s\n", json_string_value(id));
+  json_array_append(pins, event);
+  assert(!pthread_mutex_unlock(&instance->lock));
+}
+
+static void cosmo_handle_unpin(cosmo *instance, json_t *event) {
+  fprintf(stderr, "unpin event\n");
+  json_t *subject = json_object_get(event, "subject");
+  if (!subject) {
+    fprintf(stderr, "unpin event without subject\n");
+    return;
+  }
+
+  json_t *id = json_object_get(event, "id");
+  if (!id) {
+    fprintf(stderr, "unpin event without id\n");
+    return;
+  }
+
+  assert(!pthread_mutex_lock(&instance->lock));
+  json_t *subscription = cosmo_find_subscription(instance, subject);
+  if (!subscription) {
+    fprintf(stderr, "unpin from unknown subject\n");
+    assert(!pthread_mutex_unlock(&instance->lock));
+    return;
+  }
+  json_t *pins = json_object_get(subscription, "pins");
+  size_t index;
+  json_t *pin;
+  json_array_foreach(pins, index, pin) {
+    if (json_equal(id, json_object_get(pin, "id"))) {
+      printf("deleted pin: %s\n", json_string_value(id));
+      json_array_remove(pins, index);
+      break;
+    }
+  }
+  assert(!pthread_mutex_unlock(&instance->lock));
+}
+
 static void cosmo_handle_event(cosmo *instance, json_t *event) {
   const char *event_type = json_string_value(json_object_get(event, "event_type"));
   if (strcmp(event_type, "message") == 0) {
     cosmo_handle_message(instance, event);
+  /*
+  // This can all come back once we have channel support.
+  } else if (strcmp(event_type, "pin") == 0) {
+    cosmo_handle_pin(instance, event);
+  // unpin never fires when we're just polling
+  } else if (strcmp(event_type, "unpin") == 0) {
+    cosmo_handle_unpin(instance, event);
+  */
   } else {
     fprintf(stderr, "unknown event type: %s\n", event_type);
   }
