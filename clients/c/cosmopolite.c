@@ -237,14 +237,10 @@ static void cosmo_handle_event(cosmo *instance, json_t *event) {
   const char *event_type = json_string_value(json_object_get(event, "event_type"));
   if (strcmp(event_type, "message") == 0) {
     cosmo_handle_message(instance, event);
-  /*
-  // This can all come back once we have channel support.
   } else if (strcmp(event_type, "pin") == 0) {
     cosmo_handle_pin(instance, event);
-  // unpin never fires when we're just polling
   } else if (strcmp(event_type, "unpin") == 0) {
     cosmo_handle_unpin(instance, event);
-  */
   } else {
     fprintf(stderr, "unknown event type: %s\n", event_type);
   }

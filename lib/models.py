@@ -365,8 +365,10 @@ class Subject(db.Model):
             for event in events]
 
   @db.transactional()
-  def GetEvents(self, messages, last_id, request):
-    events = [m.ToEvent() for m in self.GetPins()]
+  def GetEvents(self, messages, last_id, request, pins=True):
+    events = []
+    if pins:
+      events.extend(m.ToEvent() for m in self.GetPins())
     if messages:
       events.extend(m.ToEvent() for m in self.GetRecentMessages(messages))
     if last_id is not None:

@@ -137,7 +137,7 @@ def Subscribe(google_user, client, client_address, instance_id, args):
     # Probably a race with the channel opening
     return {
       'result': 'retry',
-      'events': subject.GetEvents(messages, last_id, args['subject']),
+      'events': subject.GetEvents(messages, last_id, args['subject'], pins=False),
     }
 
   return {
