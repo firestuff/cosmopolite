@@ -34,15 +34,14 @@ const char *cosmo_current_profile(cosmo *instance);
 json_t *cosmo_subject(const char *name, const char *readable_only_by, const char *writeable_only_by);
 void cosmo_subscribe(cosmo *instance, json_t *subject, const json_int_t messages, const json_int_t last_id);
 void cosmo_unsubscribe(cosmo *instance, json_t *subject);
-void cosmo_send_message(cosmo *instance, const json_t *subject, json_t *message);
+void cosmo_send_message(cosmo *instance, json_t *subject, json_t *message);
 
-// TODO
-json_t *cosmo_get_messages(cosmo *instance, const json_t *subject);
-json_t *cosmo_get_last_message(cosmo *instance, const json_t *subject);
-json_t *cosmo_get_pins(cosmo *instance, const json_t *subject);
+json_t *cosmo_get_messages(cosmo *instance, json_t *subject);
+json_t *cosmo_get_last_message(cosmo *instance, json_t *subject);
+json_t *cosmo_get_pins(cosmo *instance, json_t *subject);
 
 // Hard TODO
-void cosmo_pin(cosmo *instance, const json_t *subject, json_t *message);
-void cosmo_unpin(cosmo *instance, const json_t *subject, json_t *message);
+void cosmo_pin(cosmo *instance, json_t *subject, json_t *message);
+void cosmo_unpin(cosmo *instance, json_t *subject, json_t *message);
 
 #endif

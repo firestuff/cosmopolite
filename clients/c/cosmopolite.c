@@ -299,7 +299,7 @@ void cosmo_unsubscribe(cosmo *instance, json_t *subject) {
   assert(!pthread_mutex_unlock(&instance->lock));
 }
 
-void cosmo_send_message(cosmo *instance, const json_t *subject, json_t *message) {
+void cosmo_send_message(cosmo *instance, json_t *subject, json_t *message) {
   char sender_message_id[COSMO_UUID_SIZE];
   cosmo_uuid(sender_message_id);
   char *encoded = json_dumps(message, JSON_ENCODE_ANY);
@@ -309,6 +309,49 @@ void cosmo_send_message(cosmo *instance, const json_t *subject, json_t *message)
       "sender_message_id", sender_message_id);
   cosmo_send_command(instance, cosmo_command("sendMessage", arguments));
   free(encoded);
+}
+
+json_t *cosmo_get_messages(cosmo *instance, json_t *subject) {
+  assert(!pthread_mutex_lock(&instance->lock));
+  json_t *subscription = cosmo_find_subscription(instance, subject);
+  if (!subscription) {
+    assert(!pthread_mutex_unlock(&instance->lock));
+    return NULL;
+  }
+  json_t *messages = json_object_get(subscription, "messages");
+  json_t *ret = json_deep_copy(messages);
+  assert(!pthread_mutex_unlock(&instance->lock));
+
+  return ret;
+}
+
+json_t *cosmo_get_last_message(cosmo *instance, json_t *subject) {
+  assert(!pthread_mutex_lock(&instance->lock));
+  json_t *subscription = cosmo_find_subscription(instance, subject);
+  if (!subscription) {
+    assert(!pthread_mutex_unlock(&instance->lock));
+    return NULL;
+  }
+  json_t *messages = json_object_get(subscription, "messages");
+  json_t *last_message = json_array_get(messages, json_array_size(messages) - 1);
+  json_t *ret = json_deep_copy(last_message);
+  assert(!pthread_mutex_unlock(&instance->lock));
+
+  return ret;
+}
+
+json_t *cosmo_get_pins(cosmo *instance, json_t *subject) {
+  assert(!pthread_mutex_lock(&instance->lock));
+  json_t *subscription = cosmo_find_subscription(instance, subject);
+  if (!subscription) {
+    assert(!pthread_mutex_unlock(&instance->lock));
+    return NULL;
+  }
+  json_t *pins = json_object_get(subscription, "pins");
+  json_t *ret = json_deep_copy(pins);
+  assert(!pthread_mutex_unlock(&instance->lock));
+
+  return ret;
 }
 
 cosmo *cosmo_create(const char *base_url, const char *client_id) {
