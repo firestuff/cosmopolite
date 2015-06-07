@@ -161,9 +161,12 @@ static void cosmo_handle_message(cosmo *instance, json_t *event) {
       break;
     }
   }
-  printf("new message: %lld\n", id);
   json_array_insert(messages, insert_after + 1, event);
   assert(!pthread_mutex_unlock(&instance->lock));
+
+  if (instance->callbacks.message) {
+    instance->callbacks.message(event);
+  }
 }
 
 static void cosmo_handle_event(cosmo *instance, json_t *event) {
@@ -417,7 +420,7 @@ json_t *cosmo_get_last_message(cosmo *instance, json_t *subject) {
   return ret;
 }
 
-cosmo *cosmo_create(const char *base_url, const char *client_id) {
+cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_callbacks *callbacks) {
   curl_global_init(CURL_GLOBAL_DEFAULT);
   srandomdev();
 
@@ -426,6 +429,8 @@ cosmo *cosmo_create(const char *base_url, const char *client_id) {
 
   strcpy(instance->client_id, client_id);
   cosmo_uuid(instance->instance_id);
+
+  memcpy(&instance->callbacks, callbacks, sizeof(instance->callbacks));
 
   assert(!pthread_mutex_init(&instance->lock, NULL));
   assert(!pthread_cond_init(&instance->cond, NULL));
