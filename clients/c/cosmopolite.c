@@ -180,7 +180,7 @@ static void cosmo_handle_message(cosmo *instance, json_t *event) {
   assert(!pthread_mutex_unlock(&instance->lock));
 
   if (instance->callbacks.message) {
-    instance->callbacks.message(event);
+    instance->callbacks.message(event, instance->passthrough);
   }
 }
 
@@ -435,7 +435,7 @@ json_t *cosmo_get_last_message(cosmo *instance, json_t *subject) {
   return ret;
 }
 
-cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_callbacks *callbacks) {
+cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_callbacks *callbacks, void *passthrough) {
   curl_global_init(CURL_GLOBAL_DEFAULT);
   srandomdev();
 
@@ -446,6 +446,7 @@ cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_cal
   cosmo_uuid(instance->instance_id);
 
   memcpy(&instance->callbacks, callbacks, sizeof(instance->callbacks));
+  instance->passthrough = passthrough;
 
   assert(!pthread_mutex_init(&instance->lock, NULL));
   assert(!pthread_cond_init(&instance->cond, NULL));

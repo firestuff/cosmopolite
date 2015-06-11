@@ -9,13 +9,14 @@
 #define COSMO_UUID_SIZE 37
 
 typedef struct {
-  void (*message)(const json_t *);
+  void (*message)(const json_t *, void *);
 } cosmo_callbacks;
 
 typedef struct {
   char client_id[COSMO_UUID_SIZE];
   char instance_id[COSMO_UUID_SIZE];
   cosmo_callbacks callbacks;
+  void *passthrough;
 
   pthread_mutex_t lock;
   pthread_cond_t cond;
@@ -31,7 +32,7 @@ typedef struct {
 
 void cosmo_uuid(char *uuid);
 
-cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_callbacks *callbacks);
+cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_callbacks *callbacks, void *passthrough);
 void cosmo_shutdown(cosmo *instance);
 
 const char *cosmo_current_profile(cosmo *instance);
