@@ -287,7 +287,7 @@ static void *cosmo_thread_main(void *arg) {
       instance->command_queue = json_array();
       instance->next_delay_ms = pow(instance->next_delay_ms, DELAY_EXPONENT);
       instance->next_delay_ms = min(DELAY_MAX_MS, max(DELAY_MIN_MS, instance->next_delay_ms));
-      instance->next_delay_ms += random() % (instance->next_delay_ms / DELAY_STAGGER_FACTOR);
+      instance->next_delay_ms += rand_r(&instance->seedp) % (instance->next_delay_ms / DELAY_STAGGER_FACTOR);
 
       assert(!pthread_mutex_unlock(&instance->lock));
       json_t *to_retry = cosmo_send_rpc(instance, commands);
@@ -437,10 +437,11 @@ json_t *cosmo_get_last_message(cosmo *instance, json_t *subject) {
 
 cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_callbacks *callbacks, void *passthrough) {
   curl_global_init(CURL_GLOBAL_DEFAULT);
-  srandomdev();
 
   cosmo *instance = malloc(sizeof(cosmo));
   assert(instance);
+
+  instance->seedp = (unsigned int) time(NULL);
 
   strcpy(instance->client_id, client_id);
   cosmo_uuid(instance->instance_id);

@@ -25,6 +25,7 @@ typedef struct {
   json_t *command_queue;
   json_t *subscriptions;
   uint64_t next_delay_ms;
+  unsigned int seedp;
 
   pthread_t thread;
   CURL *curl;
