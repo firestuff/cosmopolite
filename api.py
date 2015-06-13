@@ -28,7 +28,11 @@ import config
 
 
 def CreateChannel(google_user, client, client_address, instance_id, args):
-  models.Instance.FindOrCreate(instance_id)
+  instance = models.Instance.FindOrCreate(instance_id)
+
+  if instance.polling:
+    instance.polling = False
+    instance.save()
 
   token = channel.create_channel(
       client_id=instance_id,
@@ -46,6 +50,32 @@ def CreateChannel(google_user, client, client_address, instance_id, args):
 
   return {
     'token': token,
+    'events': events,
+  }
+
+
+def Poll(google_user, client, client_address, instance_id, args):
+  instance = models.Instance.FindOrCreate(instance_id)
+
+  if not instance.polling:
+    instance.polling = True
+    instance.save()
+
+  events = []
+  if google_user:
+    events.append({
+      'event_type':  'login',
+      'google_user': google_user.email(),
+    })
+  else:
+    events.append({
+      'event_type': 'logout',
+    })
+
+  for subscription in instance.GetSubscriptions():
+    events.extend(subscription.GetMessages())
+
+  return {
     'events': events,
   }
 
@@ -143,7 +173,7 @@ def Subscribe(google_user, client, client_address, instance_id, args):
   return {
     'result': 'ok',
     'events': models.Subscription.FindOrCreate(
-        subject, client, instance, args['subject'], messages, last_id),
+        subject, client, instance, args['subject'], messages, last_id, instance.polling),
   }
 
 
@@ -181,6 +211,7 @@ class APIWrapper(webapp2.RequestHandler):
   _COMMANDS = {
       'createChannel': CreateChannel,
       'pin': Pin,
+      'poll': Poll,
       'sendMessage': SendMessage,
       'subscribe': Subscribe,
       'unpin': Unpin,

@@ -36,6 +36,7 @@ import utils
 # ↳ Message
 # ↳ Pin (⤴︎ Instance)
 # ↳ Subscription (⤴︎ Instance)
+#   ↳ Event
 
 
 class DuplicateMessage(Exception):
@@ -92,6 +93,7 @@ class Client(db.Model):
 class Instance(db.Model):
   # key_name=instance_id
   active = db.BooleanProperty(required=True, default=False)
+  polling = db.BooleanProperty(required=True, default=False)
 
   @classmethod
   def FromID(cls, instance_id):
@@ -99,9 +101,14 @@ class Instance(db.Model):
     return cls.get_by_key_name(instance_id)
 
   @classmethod
-  def FindOrCreate(cls, instance_id):
+  def FindOrCreate(cls, instance_id, polling=False):
     logging.info('Instance: %s', instance_id)
-    return cls.get_or_insert(instance_id)
+    return cls.get_or_insert(instance_id, polling=polling)
+
+  def GetSubscriptions(self):
+    return (
+        Subscription.all()
+        .filter('instance=', self))
 
 
 class Subject(db.Model):
@@ -386,11 +393,12 @@ class Subscription(db.Model):
   instance = db.ReferenceProperty(reference_class=Instance, required=True)
   readable_only_by_me = db.BooleanProperty(required=True, default=False)
   writable_only_by_me = db.BooleanProperty(required=True, default=False)
+  polling = db.BooleanProperty(required=True, default=False)
 
   @classmethod
   @db.transactional()
   def FindOrCreate(cls, subject, client, instance, request,
-                   messages=0, last_id=None):
+                   messages=0, last_id=None, polling=False):
     readable_only_by_me = (request.get('readable_only_by') == 'me')
     writable_only_by_me = (request.get('writable_only_by') == 'me')
     subscriptions = (
@@ -422,10 +430,30 @@ class Subscription(db.Model):
       subscription.delete()
 
   def SendMessage(self, msg):
-    instance_key = Subscription.instance.get_value_for_datastore(self)
-    channel.send_message(
-        str(instance_key.name()),
-        json.dumps(msg, default=utils.EncodeJSON))
+    encoded = json.dumps(msg, default=utils.EncodeJSON)
+    if self.polling:
+      Event(parent=this,
+            json=encoded).save()
+    else:
+      instance_key = Subscription.instance.get_value_for_datastore(self)
+      channel.send_message(str(instance_key.name()), encoded)
+
+  def GetMessages(self):
+    events = (
+        Event.all()
+        .ancestor(self))
+    return [e.ToEvent() for e in events]
+
+
+class Event(db.Model):
+  # parent=Subscription
+
+  json = db.StringProperty(required=True)
+
+  def ToEvent(self):
+    ret = json.loads(self.json)
+    ret['event_id'] = str(self.key())
+    return ret
 
 
 class Message(db.Model):
