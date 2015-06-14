@@ -196,7 +196,7 @@ static json_t *cosmo_command(const char *name, const json_t *arguments) {
 // Takes ownership of commands.
 static json_t *cosmo_send_rpc(cosmo *instance, json_t *commands) {
   // Always poll.
-  json_array_append(commands, cosmo_command("poll", json_array()));
+  json_array_append_new(commands, cosmo_command("poll", json_array()));
 
   char *request = cosmo_build_rpc(instance, commands);
 

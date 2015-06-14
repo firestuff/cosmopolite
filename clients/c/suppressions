@@ -9,41 +9,14 @@
 }
 
 {
-   curl_easy_perform_1
+   curl_easy_perform
    Memcheck:Leak
    fun:malloc
    fun:CRYPTO_malloc
+   ...
    fun:ERR_get_state
    fun:ERR_clear_error
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   fun:cosmo_thread_main
-   fun:start_thread
-   fun:clone
-}
-{
-   curl_easy_perform_2
-   Memcheck:Leak
-   fun:malloc
-   fun:CRYPTO_malloc
-   fun:lh_insert
-   obj:/usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0
-   fun:ERR_get_state
-   fun:ERR_clear_error
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
+   ...
    fun:cosmo_thread_main
    fun:start_thread
    fun:clone
