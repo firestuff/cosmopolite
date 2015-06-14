@@ -22,3 +22,6 @@ install: libcosmopolite.so cosmopolite.h
 
 clean:
 	rm -f test libcosmopolite.so *.o
+
+valgrind:
+	valgrind --leak-check=full --show-reachable=yes --num-callers=20 --suppressions=suppressions ./test
