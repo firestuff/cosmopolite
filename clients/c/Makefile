@@ -1,7 +1,7 @@
 CC ?= gcc
 CFLAGS ?= -Wall -Werror -I/usr/local/include -fpic -O -g
 LDFLAGS ?= -Wall -L/usr/local/lib -L. -O
-LIBS ?= -lcurl -ljansson -luuid -lm -lpthread
+LIBS ?= -lcurl -ljansson -luuid -lpthread
 
 all: libcosmopolite.so
 
