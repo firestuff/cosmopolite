@@ -5,6 +5,7 @@
 #include <jansson.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #define COSMO_UUID_SIZE 37
 
