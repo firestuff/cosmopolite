@@ -438,11 +438,18 @@ class Subscription(db.Model):
       instance_key = Subscription.instance.get_value_for_datastore(self)
       channel.send_message(str(instance_key.name()), encoded)
 
-  def GetMessages(self):
+  def GetEvents(self, acks):
+    acks = set(acks)
     events = (
         Event.all()
         .ancestor(self))
-    return [e.ToEvent() for e in events]
+    ret = []
+    for e in events:
+      if e in acks:
+        e.delete()
+      else:
+        ret.append(e.ToEvent())
+    return ret
 
 
 class Event(db.Model):

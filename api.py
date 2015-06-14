@@ -74,7 +74,7 @@ def Poll(google_user, client, client_address, instance_id, args):
     })
 
   for subscription in instance.GetSubscriptions():
-    events.extend(subscription.GetMessages())
+    events.extend(subscription.GetEvents(args['ack']))
 
   return {
     'result': 'ok',
