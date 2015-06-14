@@ -49,6 +49,7 @@ def CreateChannel(google_user, client, client_address, instance_id, args):
     })
 
   return {
+    'result': 'ok',
     'token': token,
     'events': events,
   }
@@ -76,6 +77,7 @@ def Poll(google_user, client, client_address, instance_id, args):
     events.extend(subscription.GetMessages())
 
   return {
+    'result': 'ok',
     'events': events,
   }
 
@@ -203,7 +205,9 @@ def Unsubscribe(google_user, client, client_address, instance_id, args):
   subject = models.Subject.FindOrCreate(args['subject'], client)
   models.Subscription.Remove(subject, instance, args['subject'])
 
-  return {}
+  return {
+    'result': 'ok',
+  }
 
 
 class APIWrapper(webapp2.RequestHandler):
