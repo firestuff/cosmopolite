@@ -1,5 +1,5 @@
 CC ?= gcc
-CFLAGS ?= -Wall -Werror -I/usr/local/include -fpic -O
+CFLAGS ?= -Wall -Werror -I/usr/local/include -fpic -O -g
 LDFLAGS ?= -Wall -L/usr/local/lib -L. -O
 LIBS ?= -lcurl -ljansson -luuid -lm -lpthread
 
@@ -7,7 +7,6 @@ all: libcosmopolite.so
 
 test: test.o cosmopolite.o
 	$(CC) $(LDFLAGS) -o test test.o cosmopolite.o $(LIBS)
-	./test
 
 libcosmopolite.so: cosmopolite.o
 	$(CC) -shared $(LDFLAGS) -o libcosmopolite.so cosmopolite.o $(LIBS)
