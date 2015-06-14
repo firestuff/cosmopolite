@@ -148,7 +148,7 @@ static void cosmo_handle_message(cosmo *instance, json_t *event) {
   }
 
   json_error_t err;
-  json_t *message_object = json_loads(json_string_value(message_content), 0, &err);
+  json_t *message_object = json_loads(json_string_value(message_content), JSON_DECODE_ANY, &err);
   if (!message_object) {
     fprintf(stderr, "error parsing message content: %s\n", err.text);
     return;
@@ -310,8 +310,7 @@ static void *cosmo_thread_main(void *arg) {
         ts.tv_sec = tv.tv_sec + (instance->next_delay_ms / 1000);
       }
 
-      int wait = pthread_cond_timedwait(&instance->cond, &instance->lock, &ts);
-      assert(wait == 0 || wait == ETIMEDOUT);
+      pthread_cond_timedwait(&instance->cond, &instance->lock, &ts);
     } else {
       assert(!pthread_cond_wait(&instance->cond, &instance->lock));
     }
