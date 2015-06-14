@@ -1,45 +1,11 @@
 {
-   curl_global_init_get_compression_methods_1
+   curl_global_init_libcrypto
    Memcheck:Leak
-   fun:malloc
+   ...
    fun:CRYPTO_malloc
-   obj:/usr/lib/x86_64-linux-gnu/libssl.so.1.0.0
-   fun:SSL_COMP_get_compression_methods
-   fun:SSL_library_init
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
+   ...
    fun:curl_global_init
-   fun:cosmo_create
-   fun:main
-}
-{
-   curl_global_init_get_compression_methods_2
-   Memcheck:Leak
-   fun:malloc
-   fun:CRYPTO_malloc
-   fun:sk_new
-   obj:/usr/lib/x86_64-linux-gnu/libssl.so.1.0.0
-   fun:SSL_COMP_get_compression_methods
-   fun:SSL_library_init
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   fun:curl_global_init
-   fun:cosmo_create
-   fun:main
-}
-{
-   curl_global_init_load_builtin_engines_1
-   Memcheck:Leak
-   fun:malloc
-   fun:CRYPTO_malloc
-   fun:lh_new
-   obj:/usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0
-   obj:/usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0
-   fun:ERR_get_state
-   fun:ERR_clear_error
-   fun:ENGINE_load_builtin_engines
-   obj:/usr/lib/x86_64-linux-gnu/libcurl.so.4.2.0
-   fun:curl_global_init
-   fun:cosmo_create
-   fun:main
+   ...
 }
 
 {
