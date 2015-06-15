@@ -87,6 +87,7 @@ bool test_message_round_trip() {
 
   json_decref(subject);
   json_decref(message_out);
+
   cosmo_shutdown(client);
   return true;
 }

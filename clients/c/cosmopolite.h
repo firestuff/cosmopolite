@@ -24,6 +24,7 @@ typedef struct {
   bool shutdown;
   char *profile;
   json_t *command_queue;
+  json_t *ack;
   json_t *subscriptions;
   uint64_t next_delay_ms;
   unsigned int seedp;

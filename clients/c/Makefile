@@ -5,9 +5,6 @@ LIBS ?= -lcurl -ljansson -luuid -lpthread
 
 all: libcosmopolite.so
 
-test: test.o cosmopolite.o
-	$(CC) $(LDFLAGS) -o test test.o cosmopolite.o $(LIBS)
-
 libcosmopolite.so: cosmopolite.o
 	$(CC) -shared $(LDFLAGS) -o libcosmopolite.so cosmopolite.o $(LIBS)
 
@@ -23,5 +20,8 @@ install: libcosmopolite.so cosmopolite.h
 clean:
 	rm -f test libcosmopolite.so *.o
 
-valgrind:
+test: test.o cosmopolite.o
+	$(CC) $(LDFLAGS) -o test test.o cosmopolite.o $(LIBS)
+
+runtest: test
 	valgrind --leak-check=full --show-reachable=yes --num-callers=20 --suppressions=suppressions ./test
