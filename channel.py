@@ -29,7 +29,6 @@ class OnChannelConnect(webapp2.RequestHandler):
   @db.transactional()
   def post(self):
     instance_id = self.request.get('from')
-    logging.info('Instance: %s', instance_id)
     instance = models.Instance.FromID(instance_id)
     if not instance:
       logging.warning('Channel opened with invalid instance_id: %s', instance_id)
@@ -47,18 +46,8 @@ class OnChannelDisconnect(webapp2.RequestHandler):
   @utils.local_namespace
   def post(self):
     instance_id = self.request.get('from')
-    logging.info('Instance: %s', instance_id)
-    instance_key = db.Key.from_path('Instance', instance_id)
-
-    subscriptions = list(models.Subscription.all().filter('instance =', instance_key))
-    if subscriptions:
-      db.delete(subscriptions)
-
-    pins = models.Pin.all().filter('instance =', instance_key)
-    for pin in pins:
-      pin.Delete()
-
-    db.delete(instance_key)
+    instance = models.Instance.FromID(instance_id)
+    instance.Delete()
 
 
 app = webapp2.WSGIApplication([

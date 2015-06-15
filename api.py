@@ -56,6 +56,9 @@ def Poll(google_user, client, client_address, instance_id, args):
   instance = models.Instance.FindOrCreate(instance_id, polling=True, active=True)
   assert instance.polling
 
+  # Update last_poll
+  instance.save()
+
   events = []
   if google_user:
     events.append({

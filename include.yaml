@@ -7,6 +7,10 @@ handlers:
   script: cosmopolite.auth.app
   secure: always
 
+- url: /cosmopolite/cron/.*
+  script: cosmopolite.cron.app
+  login: admin
+
 - url: /_ah/channel/.*
   script: cosmopolite.channel.app
 

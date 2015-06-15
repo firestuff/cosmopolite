@@ -94,6 +94,7 @@ class Instance(db.Model):
   # key_name=instance_id
   active = db.BooleanProperty(required=True, default=False)
   polling = db.BooleanProperty(required=True, default=False)
+  last_poll = db.DateTimeProperty(required=True, auto_now=True)
 
   @classmethod
   def FromID(cls, instance_id):
@@ -104,6 +105,19 @@ class Instance(db.Model):
   def FindOrCreate(cls, instance_id, **kwargs):
     logging.info('Instance: %s', instance_id)
     return cls.get_or_insert(instance_id, **kwargs)
+
+  def Delete(self):
+    logging.info('Deleting instance %s', self.key().name())
+
+    subscriptions = Subscription.all().filter('instance =', self)
+    for subscription in subscriptions:
+      subscription.Delete()
+
+    pins = Pin.all().filter('instance =', self)
+    for pin in pins:
+      pin.Delete()
+
+    self.delete()
 
   def GetSubscriptions(self):
     return (
@@ -327,6 +341,7 @@ class Subject(db.Model):
         .filter('instance =', instance_key))
 
     events = []
+    # TODO: bulk delete
     for pin in pins:
       events.append(pin.ToEvent(event_type='unpin'))
       pin.delete()
@@ -428,7 +443,7 @@ class Subscription(db.Model):
         .filter('readable_only_by_me =', readable_only_by_me)
         .filter('writable_only_by_me =', writable_only_by_me))
     for subscription in subscriptions:
-      subscription.delete()
+      subscription.Delete()
 
   def SendMessage(self, msg):
     encoded = json.dumps(msg, default=utils.EncodeJSON)
@@ -445,12 +460,22 @@ class Subscription(db.Model):
         Event.all()
         .ancestor(self))
     ret = []
+    to_delete = []
     for e in events:
       if str(e.key().id()) in acks:
-        e.delete()
+        to_delete.append(e)
       else:
         ret.append(e.ToEvent())
+    db.delete(events)
     return ret
+
+  def Delete(self):
+    events = (
+        Event.all()
+        .ancestor(self))
+    db.delete(events)
+
+    self.delete()
 
 
 class Event(db.Model):
