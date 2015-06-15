@@ -446,7 +446,7 @@ class Subscription(db.Model):
         .ancestor(self))
     ret = []
     for e in events:
-      if str(e.key()) in acks:
+      if str(e.key().id()) in acks:
         e.delete()
       else:
         ret.append(e.ToEvent())
@@ -460,7 +460,7 @@ class Event(db.Model):
 
   def ToEvent(self):
     ret = json.loads(self.json)
-    ret['event_id'] = str(self.key())
+    ret['event_id'] = str(self.key().id())
     return ret
 
 
