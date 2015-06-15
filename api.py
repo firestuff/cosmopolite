@@ -28,11 +28,8 @@ import config
 
 
 def CreateChannel(google_user, client, client_address, instance_id, args):
-  instance = models.Instance.FindOrCreate(instance_id)
-
-  if instance.polling:
-    instance.polling = False
-    instance.save()
+  instance = models.Instance.FindOrCreate(instance_id, polling=False)
+  assert not instance.polling
 
   token = channel.create_channel(
       client_id=instance_id,
@@ -56,11 +53,8 @@ def CreateChannel(google_user, client, client_address, instance_id, args):
 
 
 def Poll(google_user, client, client_address, instance_id, args):
-  instance = models.Instance.FindOrCreate(instance_id)
-
-  if not instance.polling:
-    instance.polling = True
-    instance.save()
+  instance = models.Instance.FindOrCreate(instance_id, polling=True, active=True)
+  assert instance.polling
 
   events = []
   if google_user:

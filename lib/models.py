@@ -101,14 +101,14 @@ class Instance(db.Model):
     return cls.get_by_key_name(instance_id)
 
   @classmethod
-  def FindOrCreate(cls, instance_id, polling=False):
+  def FindOrCreate(cls, instance_id, **kwargs):
     logging.info('Instance: %s', instance_id)
-    return cls.get_or_insert(instance_id, polling=polling)
+    return cls.get_or_insert(instance_id, **kwargs)
 
   def GetSubscriptions(self):
     return (
         Subscription.all()
-        .filter('instance=', self))
+        .filter('instance =', self))
 
 
 class Subject(db.Model):
@@ -412,7 +412,8 @@ class Subscription(db.Model):
       cls(parent=subject,
           instance=instance,
           readable_only_by_me=readable_only_by_me,
-          writable_only_by_me=writable_only_by_me).put()
+          writable_only_by_me=writable_only_by_me,
+          polling=polling).put()
     return subject.GetEvents(messages, last_id, request)
 
   @classmethod
@@ -432,7 +433,7 @@ class Subscription(db.Model):
   def SendMessage(self, msg):
     encoded = json.dumps(msg, default=utils.EncodeJSON)
     if self.polling:
-      Event(parent=this,
+      Event(parent=self,
             json=encoded).save()
     else:
       instance_key = Subscription.instance.get_value_for_datastore(self)
@@ -445,7 +446,7 @@ class Subscription(db.Model):
         .ancestor(self))
     ret = []
     for e in events:
-      if e in acks:
+      if str(e.key()) in acks:
         e.delete()
       else:
         ret.append(e.ToEvent())
