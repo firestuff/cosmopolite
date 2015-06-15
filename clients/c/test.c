@@ -10,39 +10,80 @@
 #define ANSI_COLOR_YELLOW  "\x1b[33m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
-pthread_mutex_t message_lock;
-pthread_cond_t message_cond;
-const json_t *last_message;
+typedef struct {
+  pthread_mutex_t lock;
+  pthread_cond_t cond;
 
-void on_message(const json_t *message, void *passthrough) {
-  assert(!pthread_mutex_lock(&message_lock));
-  assert(!last_message);
-  last_message = message;
-  assert(!pthread_cond_signal(&message_cond));
-  assert(!pthread_mutex_unlock(&message_lock));
+  const json_t *last_message;
+  bool logout_fired;
+} test_state;
+
+
+void on_logout(void *passthrough) {
+  test_state *state = passthrough;
+  assert(!pthread_mutex_lock(&state->lock));
+  state->logout_fired = true;
+  assert(!pthread_cond_signal(&state->cond));
+  assert(!pthread_mutex_unlock(&state->lock));
 }
 
-const json_t *wait_for_message() {
-  assert(!pthread_mutex_lock(&message_lock));
-  if (!last_message) {
-    assert(!pthread_cond_wait(&message_cond, &message_lock));
+void on_message(const json_t *message, void *passthrough) {
+  test_state *state = passthrough;
+  assert(!pthread_mutex_lock(&state->lock));
+  state->last_message = message;
+  assert(!pthread_cond_signal(&state->cond));
+  assert(!pthread_mutex_unlock(&state->lock));
+}
+
+const json_t *wait_for_message(test_state *state) {
+  assert(!pthread_mutex_lock(&state->lock));
+  while (!state->last_message) {
+    assert(!pthread_cond_wait(&state->cond, &state->lock));
   }
 
-  const json_t *ret = last_message;
-  last_message = NULL;
-  assert(!pthread_mutex_unlock(&message_lock));
+  const json_t *ret = state->last_message;
+  state->last_message = NULL;
+  assert(!pthread_mutex_unlock(&state->lock));
   return ret;
 }
 
-cosmo *create_client() {
+void wait_for_logout(test_state *state) {
+  assert(!pthread_mutex_lock(&state->lock));
+  while (!state->logout_fired) {
+    assert(!pthread_cond_wait(&state->cond, &state->lock));
+  }
+
+  state->logout_fired = false;
+  assert(!pthread_mutex_unlock(&state->lock));
+}
+
+test_state *create_test_state() {
+  test_state *ret = malloc(sizeof(test_state));
+  assert(ret);
+
+  assert(!pthread_mutex_init(&ret->lock, NULL));
+  assert(!pthread_cond_init(&ret->cond, NULL));
+  ret->last_message = NULL;
+  ret->logout_fired = false;
+  return ret;
+}
+
+void destroy_test_state(test_state *state) {
+  assert(!pthread_mutex_destroy(&state->lock));
+  assert(!pthread_cond_destroy(&state->cond));
+  free(state);
+}
+
+cosmo *create_client(test_state *state) {
   char client_id[COSMO_UUID_SIZE];
   cosmo_uuid(client_id);
 
   cosmo_callbacks callbacks = {
-    .message = on_message
+    .logout = on_logout,
+    .message = on_message,
   };
 
-  return cosmo_create("https://playground.cosmopolite.org/cosmopolite", client_id, &callbacks, NULL);
+  return cosmo_create("https://playground.cosmopolite.org/cosmopolite", client_id, &callbacks, state);
 }
 
 json_t *random_subject(const char *readable_only_by, const char *writeable_only_by) {
@@ -59,30 +100,32 @@ json_t *random_message() {
   return json_string(uuid);
 }
 
-void run_test(const char *func_name, bool (*test)(void)) {
+void run_test(const char *func_name, bool (*test)(test_state *)) {
+  test_state *state = create_test_state();
   fprintf(stderr, ANSI_COLOR_YELLOW "%50s" ANSI_COLOR_RESET ": ", func_name);
-  if (test()) {
+  if (test(state)) {
     fprintf(stderr, ANSI_COLOR_GREEN "PASS" ANSI_COLOR_RESET "\n");
   } else {
     fprintf(stderr, ANSI_COLOR_RED "FAIL" ANSI_COLOR_RESET "\n");
   }
+  destroy_test_state(state);
 }
 
-bool test_create_destroy() {
-  cosmo *client = create_client();
+bool test_create_destroy(test_state *state) {
+  cosmo *client = create_client(state);
   cosmo_shutdown(client);
   return true;
 }
 
-bool test_message_round_trip() {
-  cosmo *client = create_client();
+bool test_message_round_trip(test_state *state) {
+  cosmo *client = create_client(state);
 
   json_t *subject = random_subject(NULL, NULL);
   cosmo_subscribe(client, subject, -1, 0);
 
   json_t *message_out = random_message();
   cosmo_send_message(client, subject, message_out);
-  const json_t *message_in = wait_for_message();
+  const json_t *message_in = wait_for_message(state);
   assert(json_equal(message_out, json_object_get(message_in, "message")));
 
   json_decref(subject);
@@ -92,15 +135,17 @@ bool test_message_round_trip() {
   return true;
 }
 
-int main(int argc, char *argv[]) {
-  assert(!pthread_mutex_init(&message_lock, NULL));
-  assert(!pthread_cond_init(&message_cond, NULL));
+bool test_logout_fires(test_state *state) {
+  cosmo *client = create_client(state);
+  wait_for_logout(state);
+  cosmo_shutdown(client);
+  return true;
+}
 
+int main(int argc, char *argv[]) {
   RUN_TEST(test_create_destroy);
   RUN_TEST(test_message_round_trip);
-
-  assert(!pthread_cond_destroy(&message_cond));
-  assert(!pthread_mutex_destroy(&message_lock));
+  RUN_TEST(test_logout_fires);
 
   return 0;
 }

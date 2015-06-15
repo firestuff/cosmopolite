@@ -10,6 +10,7 @@
 #define COSMO_UUID_SIZE 37
 
 typedef struct {
+  void (*logout)(void *);
   void (*message)(const json_t *, void *);
 } cosmo_callbacks;
 

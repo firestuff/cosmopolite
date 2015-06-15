@@ -179,6 +179,12 @@ static void cosmo_handle_message(cosmo *instance, json_t *event) {
   }
 }
 
+static void cosmo_handle_logout(cosmo *instance, json_t *event) {
+  if (instance->callbacks.logout) {
+    instance->callbacks.logout(instance->passthrough);
+  }
+}
+
 static void cosmo_handle_event(cosmo *instance, json_t *event) {
   json_t *event_id = json_object_get(event, "event_id");
   if (event_id) {
@@ -186,8 +192,10 @@ static void cosmo_handle_event(cosmo *instance, json_t *event) {
   }
 
   const char *event_type = json_string_value(json_object_get(event, "event_type"));
-  if (strcmp(event_type, "message") == 0) {
+  if (!strcmp(event_type, "message")) {
     cosmo_handle_message(instance, event);
+  } else if (!strcmp(event_type, "logout")) {
+    cosmo_handle_logout(instance, event);
   } else {
     fprintf(stderr, "unknown event type: %s\n", event_type);
   }
