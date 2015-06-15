@@ -225,7 +225,7 @@ class APIWrapper(webapp2.RequestHandler):
   @session.session_required
   def post(self):
     profile_str = str(
-        models.Client.profile.get_value_for_datastore(self.client))
+        models.Client.profile.get_value_for_datastore(self.client).id())
     ret = {
         'status': 'ok',
         'profile': profile_str,

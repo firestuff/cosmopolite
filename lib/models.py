@@ -145,7 +145,7 @@ class Subject(db.Model):
       elif subject['readable_only_by'] == 'me':
         readable_only_by = Client.profile.get_value_for_datastore(client)
       else:
-        readable_only_by = db.Key(subject['readable_only_by'])
+        readable_only_by = db.Key.from_path('Profile', int(subject['readable_only_by']))
     else:
       readable_only_by = None
 
@@ -155,7 +155,7 @@ class Subject(db.Model):
       elif subject['writable_only_by'] == 'me':
         writable_only_by = Client.profile.get_value_for_datastore(client)
       else:
-        writable_only_by = db.Key(subject['writable_only_by'])
+        writable_only_by = db.Key.from_path('Profile', int(subject['writable_only_by']))
     else:
       writable_only_by = None
 
@@ -349,13 +349,13 @@ class Subject(db.Model):
       if readable_only_by == Profile.ADMIN_KEY:
         ret['readable_only_by'] = 'admin'
       else:
-        ret['readable_only_by'] = str(readable_only_by)
+        ret['readable_only_by'] = str(readable_only_by.id())
     writable_only_by = Subject.writable_only_by.get_value_for_datastore(self)
     if writable_only_by:
       if writable_only_by == Profile.ADMIN_KEY:
         ret['writable_only_by'] = 'admin'
       else:
-        ret['writable_only_by'] = str(writable_only_by)
+        ret['writable_only_by'] = str(writable_only_by.id())
     return ret
 
   @classmethod
@@ -480,7 +480,7 @@ class Message(db.Model):
     return {
       'event_type':        'message',
       'id':                self.id_,
-      'sender':            str(Message.sender.get_value_for_datastore(self)),
+      'sender':            str(Message.sender.get_value_for_datastore(self).id()),
       'subject':           self.parent().ToDict(),
       'created':           self.created,
       'sender_message_id': self.sender_message_id,
@@ -502,8 +502,8 @@ class Pin(db.Model):
   def ToEvent(self, event_type='pin'):
     return {
       'event_type':        event_type,
-      'id':                str(self.key()),
-      'sender':            str(Pin.sender.get_value_for_datastore(self)),
+      'id':                str(self.key().id()),
+      'sender':            str(Pin.sender.get_value_for_datastore(self).id()),
       'subject':           self.parent().ToDict(),
       'created':           self.created,
       'sender_message_id': self.sender_message_id,

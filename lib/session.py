@@ -71,7 +71,7 @@ def session_required(handler):
         self.request_json['client_id'], self.verified_google_user)
     logging.info('Client: %s', self.client.key().name())
     logging.info('Profile: %s',
-        models.Client.profile.get_value_for_datastore(self.client))
+        models.Client.profile.get_value_for_datastore(self.client).id())
     if old_profile:
       self.client.profile.MergeFrom(old_profile)
 
