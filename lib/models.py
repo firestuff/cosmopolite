@@ -475,7 +475,7 @@ class Subscription(db.Model):
         to_delete.append(e)
       else:
         ret.append(e.ToEvent())
-    db.delete(events)
+    db.delete(to_delete)
     return ret
 
   def Delete(self):
