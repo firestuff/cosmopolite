@@ -75,6 +75,7 @@ def Poll(google_user, client, client_address, instance_id, args):
 
   return {
     'result': 'ok',
+    'new': instance.newly_created,
     'events': events,
   }
 
@@ -160,7 +161,6 @@ def Subscribe(google_user, client, client_address, instance_id, args):
     return {
       'result': 'access_denied',
     }
-
 
   if not instance or not instance.active:
     # Probably a race with the channel opening

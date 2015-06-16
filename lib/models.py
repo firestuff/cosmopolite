@@ -104,7 +104,16 @@ class Instance(db.Model):
   @classmethod
   def FindOrCreate(cls, instance_id, **kwargs):
     logging.info('Instance: %s', instance_id)
-    return cls.get_or_insert(instance_id, **kwargs)
+    def _FindOrCreate():
+      entity = cls.get_by_key_name(instance_id)
+      if entity:
+        entity.newly_created = False
+        return entity
+      entity = cls(key_name=instance_id, **kwargs)
+      entity.put()
+      entity.newly_created = True
+      return entity
+    return db.run_in_transaction(_FindOrCreate)
 
   def Delete(self):
     logging.info('Deleting instance %s', self.key().name())
