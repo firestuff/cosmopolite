@@ -17,6 +17,7 @@ typedef struct {
   const json_t *last_message;
   bool logout_fired;
   bool connect_fired;
+  bool disconnect_fired;
 } test_state;
 
 
@@ -24,6 +25,14 @@ void on_connect(void *passthrough) {
   test_state *state = passthrough;
   assert(!pthread_mutex_lock(&state->lock));
   state->connect_fired = true;
+  assert(!pthread_cond_signal(&state->cond));
+  assert(!pthread_mutex_unlock(&state->lock));
+}
+
+void on_disconnect(void *passthrough) {
+  test_state *state = passthrough;
+  assert(!pthread_mutex_lock(&state->lock));
+  state->disconnect_fired = true;
   assert(!pthread_cond_signal(&state->cond));
   assert(!pthread_mutex_unlock(&state->lock));
 }
@@ -76,6 +85,16 @@ void wait_for_connect(test_state *state) {
   assert(!pthread_mutex_unlock(&state->lock));
 }
 
+void wait_for_disconnect(test_state *state) {
+  assert(!pthread_mutex_lock(&state->lock));
+  while (!state->disconnect_fired) {
+    assert(!pthread_cond_wait(&state->cond, &state->lock));
+  }
+
+  state->disconnect_fired = false;
+  assert(!pthread_mutex_unlock(&state->lock));
+}
+
 test_state *create_test_state() {
   test_state *ret = malloc(sizeof(test_state));
   assert(ret);
@@ -85,6 +104,7 @@ test_state *create_test_state() {
   ret->last_message = NULL;
   ret->logout_fired = false;
   ret->connect_fired = false;
+  ret->disconnect_fired = false;
   return ret;
 }
 
@@ -100,6 +120,7 @@ cosmo *create_client(test_state *state) {
 
   cosmo_callbacks callbacks = {
     .connect = on_connect,
+    .disconnect = on_disconnect,
     .logout = on_logout,
     .message = on_message,
   };
@@ -163,6 +184,17 @@ bool test_connect_fires(test_state *state) {
   return true;
 }
 
+bool test_disconnect_fires(test_state *state) {
+  cosmo *client = create_client(state);
+  wait_for_connect(state);
+  assert(!curl_easy_setopt(client->curl, CURLOPT_TIMEOUT_MS, 1));
+  wait_for_disconnect(state);
+  assert(!curl_easy_setopt(client->curl, CURLOPT_TIMEOUT_MS, 10000));
+  wait_for_connect(state);
+  cosmo_shutdown(client);
+  return true;
+}
+
 bool test_logout_fires(test_state *state) {
   cosmo *client = create_client(state);
   wait_for_logout(state);
@@ -200,6 +232,7 @@ bool test_resubscribe(test_state *state) {
 int main(int argc, char *argv[]) {
   RUN_TEST(test_create_destroy);
   RUN_TEST(test_connect_fires);
+  RUN_TEST(test_disconnect_fires);
   RUN_TEST(test_logout_fires);
   RUN_TEST(test_message_round_trip);
   RUN_TEST(test_resubscribe);

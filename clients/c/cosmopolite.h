@@ -6,11 +6,13 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <time.h>
 
 #define COSMO_UUID_SIZE 37
 
 typedef struct {
   void (*connect)(void *);
+  void (*disconnect)(void *);
   void (*logout)(void *);
   void (*message)(const json_t *, void *);
 } cosmo_callbacks;
@@ -36,6 +38,7 @@ typedef struct {
     CONNECTED,
     DISCONNECTED,
   } connect_state;
+  struct timespec last_success;
 
   enum {
     LOGIN_UNKNOWN,

@@ -14,9 +14,12 @@
 
 #define CYCLE_MS 10000
 #define CYCLE_STAGGER_FACTOR 10
+#define CONNECT_TIMEOUT_S 60
 
-#define SUBSCRIPTION_PENDING 1
-#define SUBSCRIPTION_ACTIVE 2
+enum {
+  SUBSCRIPTION_PENDING,
+  SUBSCRIPTION_ACTIVE,
+};
 
 typedef struct {
   char *send_buf;
@@ -90,7 +93,6 @@ static bool cosmo_send_http_int(cosmo *instance, cosmo_transfer *transfer) {
   res = curl_easy_perform(instance->curl);
 
   if (res) {
-    fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
     return false;
   }
 
@@ -180,6 +182,16 @@ static void cosmo_handle_connect(cosmo *instance) {
   }
 }
 
+static void cosmo_handle_disconnect(cosmo *instance) {
+  if (instance->connect_state == DISCONNECTED) {
+    return;
+  }
+  instance->connect_state = DISCONNECTED;
+  if (instance->callbacks.disconnect) {
+    instance->callbacks.disconnect(instance->passthrough);
+  }
+}
+
 static void cosmo_handle_logout(cosmo *instance, json_t *event) {
   if (instance->login_state == LOGGED_OUT) {
     return;
@@ -251,6 +263,7 @@ static json_t *cosmo_send_rpc(cosmo *instance, json_t *commands, json_t *ack) {
     instance->profile = strdup(profile);
   }
 
+  assert(!clock_gettime(CLOCK_MONOTONIC, &instance->last_success));
   cosmo_handle_connect(instance);
 
   size_t index;
@@ -352,6 +365,13 @@ static void *cosmo_thread_main(void *arg) {
 
     assert(!pthread_mutex_unlock(&instance->lock));
     json_t *to_retry = cosmo_send_rpc(instance, commands, ack);
+    {
+      struct timespec now;
+      assert(!clock_gettime(CLOCK_MONOTONIC, &now));
+      if (now.tv_sec - instance->last_success.tv_sec > CONNECT_TIMEOUT_S) {
+        cosmo_handle_disconnect(instance);
+      }
+    }
     assert(!pthread_mutex_lock(&instance->lock));
 
     json_array_extend(instance->command_queue, to_retry);
@@ -526,6 +546,7 @@ cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_cal
 
   instance->connect_state = INITIAL_CONNECT;
   instance->login_state = LOGIN_UNKNOWN;
+  instance->last_success.tv_sec = 0;
 
   assert(!pthread_create(&instance->thread, NULL, cosmo_thread_main, instance));
   return instance;
