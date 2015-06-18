@@ -170,7 +170,21 @@ static void cosmo_handle_message(cosmo *instance, json_t *event) {
   }
 }
 
+static void cosmo_handle_connect(cosmo *instance) {
+  if (instance->connect_state == CONNECTED) {
+    return;
+  }
+  instance->connect_state = CONNECTED;
+  if (instance->callbacks.connect) {
+    instance->callbacks.connect(instance->passthrough);
+  }
+}
+
 static void cosmo_handle_logout(cosmo *instance, json_t *event) {
+  if (instance->login_state == LOGGED_OUT) {
+    return;
+  }
+  instance->login_state = LOGGED_OUT;
   if (instance->callbacks.logout) {
     instance->callbacks.logout(instance->passthrough);
   }
@@ -236,6 +250,8 @@ static json_t *cosmo_send_rpc(cosmo *instance, json_t *commands, json_t *ack) {
     free(instance->profile);
     instance->profile = strdup(profile);
   }
+
+  cosmo_handle_connect(instance);
 
   size_t index;
   json_t *event;
@@ -507,6 +523,9 @@ cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_cal
   instance->subscriptions = json_array();
   assert(instance->subscriptions);
   instance->next_delay_ms = 0;
+
+  instance->connect_state = INITIAL_CONNECT;
+  instance->login_state = LOGIN_UNKNOWN;
 
   assert(!pthread_create(&instance->thread, NULL, cosmo_thread_main, instance));
   return instance;

@@ -10,6 +10,7 @@
 #define COSMO_UUID_SIZE 37
 
 typedef struct {
+  void (*connect)(void *);
   void (*logout)(void *);
   void (*message)(const json_t *, void *);
 } cosmo_callbacks;
@@ -29,6 +30,18 @@ typedef struct {
   json_t *subscriptions;
   uint64_t next_delay_ms;
   unsigned int seedp;
+
+  enum {
+    INITIAL_CONNECT,
+    CONNECTED,
+    DISCONNECTED,
+  } connect_state;
+
+  enum {
+    LOGIN_UNKNOWN,
+    LOGGED_OUT,
+    LOGGED_IN,
+  } login_state;
 
   pthread_t thread;
   CURL *curl;
