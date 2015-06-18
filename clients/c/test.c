@@ -142,10 +142,38 @@ bool test_logout_fires(test_state *state) {
   return true;
 }
 
+bool test_resubscribe(test_state *state) {
+  cosmo *client = create_client(state);
+
+  json_t *subject = random_subject(NULL, NULL);
+  cosmo_subscribe(client, subject, -1, 0);
+
+  json_t *message_out = random_message();
+  cosmo_send_message(client, subject, message_out);
+  const json_t *message_in = wait_for_message(state);
+  assert(json_equal(message_out, json_object_get(message_in, "message")));
+  json_decref(message_out);
+
+  // Reach in and reset the instance ID so we look new.
+  cosmo_uuid(client->instance_id);
+
+  message_out = random_message();
+  cosmo_send_message(client, subject, message_out);
+  message_in = wait_for_message(state);
+  assert(json_equal(message_out, json_object_get(message_in, "message")));
+  json_decref(message_out);
+
+  json_decref(subject);
+
+  cosmo_shutdown(client);
+  return true;
+}
+
 int main(int argc, char *argv[]) {
   RUN_TEST(test_create_destroy);
   RUN_TEST(test_message_round_trip);
   RUN_TEST(test_logout_fires);
+  RUN_TEST(test_resubscribe);
 
   return 0;
 }
