@@ -13,6 +13,7 @@
 typedef struct {
   void (*connect)(void *);
   void (*disconnect)(void *);
+  void (*login)(void *);
   void (*logout)(void *);
   void (*message)(const json_t *, void *);
 } cosmo_callbacks;

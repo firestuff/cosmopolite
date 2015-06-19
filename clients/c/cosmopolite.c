@@ -193,6 +193,16 @@ static void cosmo_handle_disconnect(cosmo *instance) {
   }
 }
 
+static void cosmo_handle_login(cosmo *instance, json_t *event) {
+  if (instance->login_state == LOGGED_IN) {
+    return;
+  }
+  instance->login_state = LOGGED_IN;
+  if (instance->callbacks.login) {
+    instance->callbacks.login(instance->passthrough);
+  }
+}
+
 static void cosmo_handle_logout(cosmo *instance, json_t *event) {
   if (instance->login_state == LOGGED_OUT) {
     return;
@@ -212,6 +222,8 @@ static void cosmo_handle_event(cosmo *instance, json_t *event) {
   const char *event_type = json_string_value(json_object_get(event, "event_type"));
   if (!strcmp(event_type, "message")) {
     cosmo_handle_message(instance, event);
+  } else if (!strcmp(event_type, "login")) {
+    cosmo_handle_login(instance, event);
   } else if (!strcmp(event_type, "logout")) {
     cosmo_handle_logout(instance, event);
   } else {
