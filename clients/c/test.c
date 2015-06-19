@@ -154,7 +154,7 @@ void run_test(const char *func_name, bool (*test)(test_state *)) {
   destroy_test_state(state);
 }
 
-bool test_create_destroy(test_state *state) {
+bool test_create_shutdown(test_state *state) {
   cosmo *client = create_client(state);
   cosmo_shutdown(client);
   return true;
@@ -178,27 +178,21 @@ bool test_message_round_trip(test_state *state) {
   return true;
 }
 
-bool test_connect_fires(test_state *state) {
+bool test_connect_logout_fires(test_state *state) {
   cosmo *client = create_client(state);
   wait_for_connect(state);
+  wait_for_logout(state);
   cosmo_shutdown(client);
   return true;
 }
 
-bool test_disconnect_fires(test_state *state) {
+bool test_reconnect(test_state *state) {
   cosmo *client = create_client(state);
   wait_for_connect(state);
   assert(!curl_easy_setopt(client->curl, CURLOPT_TIMEOUT_MS, 1));
   wait_for_disconnect(state);
   assert(!curl_easy_setopt(client->curl, CURLOPT_TIMEOUT_MS, 10000));
   wait_for_connect(state);
-  cosmo_shutdown(client);
-  return true;
-}
-
-bool test_logout_fires(test_state *state) {
-  cosmo *client = create_client(state);
-  wait_for_logout(state);
   cosmo_shutdown(client);
   return true;
 }
@@ -231,12 +225,11 @@ bool test_resubscribe(test_state *state) {
 }
 
 int main(int argc, char *argv[]) {
-  RUN_TEST(test_create_destroy);
-  RUN_TEST(test_connect_fires);
-  RUN_TEST(test_disconnect_fires);
-  RUN_TEST(test_logout_fires);
+  RUN_TEST(test_create_shutdown);
+  RUN_TEST(test_connect_logout_fires);
   RUN_TEST(test_message_round_trip);
   RUN_TEST(test_resubscribe);
+  RUN_TEST(test_reconnect);
 
   return 0;
 }
