@@ -8,6 +8,7 @@
 #include <uuid/uuid.h>
 
 #include "cosmopolite.h"
+#include "cosmopolite-int.h"
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))

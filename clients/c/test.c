@@ -2,6 +2,7 @@
 #include <unistd.h>
 
 #include "cosmopolite.h"
+#include "cosmopolite-int.h"
 
 #define RUN_TEST(func) run_test(#func, func)
 
