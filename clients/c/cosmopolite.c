@@ -247,11 +247,18 @@ static json_t *cosmo_send_rpc(cosmo *instance, json_t *commands, json_t *ack) {
   json_array_extend(int_commands, commands);
 
   char *request = cosmo_build_rpc(instance, int_commands);
+  if (instance->debug) {
+    fprintf(stderr, "--> %s\n", request);
+  }
 
   char *response = cosmo_send_http(instance, request);
   json_decref(int_commands);
   if (!response) {
     return commands;
+  }
+
+  if (instance->debug) {
+    fprintf(stderr, "<-- %s\n", response);
   }
 
   json_error_t error;
@@ -524,6 +531,8 @@ cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_cal
 
   instance->seedp = (unsigned int) time(NULL);
 
+  instance->debug = false;
+
   strcpy(instance->client_id, client_id);
   cosmo_uuid(instance->instance_id);
 
@@ -541,7 +550,7 @@ cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_cal
   assert(!curl_easy_setopt(instance->curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS));
   assert(!curl_easy_setopt(instance->curl, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTPS));
   assert(!curl_easy_setopt(instance->curl, CURLOPT_SSL_CIPHER_LIST, "ECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH"));
-  assert(!curl_easy_setopt(instance->curl, CURLOPT_TIMEOUT, CYCLE_MS / MS_PER_S));
+  assert(!curl_easy_setopt(instance->curl, CURLOPT_TIMEOUT_MS, CYCLE_MS));
   assert(!curl_easy_setopt(instance->curl, CURLOPT_POST, 1L));
   assert(!curl_easy_setopt(instance->curl, CURLOPT_READFUNCTION, cosmo_read_callback));
   assert(!curl_easy_setopt(instance->curl, CURLOPT_WRITEFUNCTION, cosmo_write_callback));

@@ -126,7 +126,9 @@ cosmo *create_client(test_state *state) {
     .message = on_message,
   };
 
-  return cosmo_create("https://playground.cosmopolite.org/cosmopolite", client_id, &callbacks, state);
+  cosmo *ret = cosmo_create("https://playground.cosmopolite.org/cosmopolite", client_id, &callbacks, state);
+  // ret->debug = true;
+  return ret;
 }
 
 json_t *random_subject(const char *readable_only_by, const char *writeable_only_by) {
