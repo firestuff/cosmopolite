@@ -18,6 +18,7 @@ import hashlib
 import logging
 import random
 import struct
+import uuid
 
 from google.appengine.api import channel
 from google.appengine.api import users
@@ -95,6 +96,7 @@ class Instance(db.Model):
   active = db.BooleanProperty(required=True, default=False)
   polling = db.BooleanProperty(required=True, default=False)
   last_poll = db.DateTimeProperty(required=True, auto_now=True)
+  generation = db.StringProperty(required=True)
 
   @classmethod
   def FromID(cls, instance_id):
@@ -107,11 +109,12 @@ class Instance(db.Model):
     def _FindOrCreate():
       entity = cls.get_by_key_name(instance_id)
       if entity:
-        entity.newly_created = False
         return entity
-      entity = cls(key_name=instance_id, **kwargs)
+      entity = cls(
+          key_name=instance_id,
+          generation=str(uuid.uuid4()),
+          **kwargs)
       entity.put()
-      entity.newly_created = True
       return entity
     return db.run_in_transaction(_FindOrCreate)
 
