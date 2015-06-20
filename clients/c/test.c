@@ -25,6 +25,7 @@ typedef struct {
 void on_connect(void *passthrough) {
   test_state *state = passthrough;
   assert(!pthread_mutex_lock(&state->lock));
+  state->disconnect_fired = false;
   state->connect_fired = true;
   assert(!pthread_cond_signal(&state->cond));
   assert(!pthread_mutex_unlock(&state->lock));
@@ -33,6 +34,7 @@ void on_connect(void *passthrough) {
 void on_disconnect(void *passthrough) {
   test_state *state = passthrough;
   assert(!pthread_mutex_lock(&state->lock));
+  state->connect_fired = false;
   state->disconnect_fired = true;
   assert(!pthread_cond_signal(&state->cond));
   assert(!pthread_mutex_unlock(&state->lock));
