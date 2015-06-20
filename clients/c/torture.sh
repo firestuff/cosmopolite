@@ -1,8 +1,9 @@
 #!/bin/bash
 
+set -e
+
+make test
+
 while :; do
-	valgrind --leak-check=full --show-reachable=yes --num-callers=20 --suppressions=suppressions ./test 2>&1 | tee torture.log
-  if test $? != 0; then
-    exit 1
-  fi
+	valgrind --leak-check=full --show-reachable=yes --num-callers=20 --suppressions=suppressions ./test > torture.log 2>&1
 done

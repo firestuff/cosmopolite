@@ -191,9 +191,9 @@ bool test_connect_logout_fires(test_state *state) {
 bool test_reconnect(test_state *state) {
   cosmo *client = create_client(state);
   wait_for_connect(state);
-  assert(!curl_easy_setopt(client->curl, CURLOPT_TIMEOUT_MS, 1));
+  assert(!curl_easy_setopt(client->curl, CURLOPT_PORT, 444));
   wait_for_disconnect(state);
-  assert(!curl_easy_setopt(client->curl, CURLOPT_TIMEOUT_MS, 10000));
+  assert(!curl_easy_setopt(client->curl, CURLOPT_PORT, 443));
   wait_for_connect(state);
   cosmo_shutdown(client);
   return true;
