@@ -13,6 +13,7 @@ struct cosmo {
   pthread_cond_t cond;
   bool shutdown;
   char *profile;
+  char *generation;
   json_t *command_queue;
   json_t *ack;
   json_t *subscriptions;
