@@ -147,11 +147,11 @@ json_t *random_message() {
 
 void run_test(const char *func_name, bool (*test)(test_state *)) {
   test_state *state = create_test_state();
-  fprintf(stderr, ANSI_COLOR_YELLOW "%50s" ANSI_COLOR_RESET ": ", func_name);
+  fprintf(stderr, ANSI_COLOR_YELLOW "%s" ANSI_COLOR_RESET ":\n", func_name);
   if (test(state)) {
-    fprintf(stderr, ANSI_COLOR_GREEN "PASS" ANSI_COLOR_RESET "\n");
+    fprintf(stderr, ANSI_COLOR_GREEN "PASS" ANSI_COLOR_RESET "\n\n");
   } else {
-    fprintf(stderr, ANSI_COLOR_RED "FAIL" ANSI_COLOR_RESET "\n");
+    fprintf(stderr, ANSI_COLOR_RED "FAIL" ANSI_COLOR_RESET "\n\n");
   }
   destroy_test_state(state);
 }

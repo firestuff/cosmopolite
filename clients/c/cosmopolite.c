@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -31,6 +32,21 @@ typedef struct {
 
   int64_t retry_after;
 } cosmo_transfer;
+
+static void cosmo_log(cosmo *instance, const char *fmt, ...) {
+  if (!instance->debug) {
+    return;
+  }
+
+  va_list ap;
+  va_start(ap, fmt);
+
+  fprintf(stderr, "%s: ", instance->instance_id);
+  vfprintf(stderr, fmt, ap);
+  fprintf(stderr, "\n");
+
+  va_end(ap);
+}
 
 static json_t *cosmo_find_subscription(cosmo *instance, json_t *subject) {
   size_t i;
@@ -146,14 +162,14 @@ static void cosmo_handle_message(cosmo *instance, json_t *event) {
   int id;
   char *message_content;
   if (json_unpack(event, "{sosiss}", "subject", &subject, "id", &id, "message", &message_content)) {
-    fprintf(stderr, "invalid message event\n");
+    cosmo_log(instance, "invalid message event");
     return;
   }
 
   json_error_t err;
   json_t *message_object = json_loads(message_content, JSON_DECODE_ANY, &err);
   if (!message_object) {
-    fprintf(stderr, "error parsing message content: %s\n", err.text);
+    cosmo_log(instance, "error parsing message content: %s", err.text);
     return;
   }
   json_object_set_new(event, "message", message_object);
@@ -161,7 +177,7 @@ static void cosmo_handle_message(cosmo *instance, json_t *event) {
   assert(!pthread_mutex_lock(&instance->lock));
   json_t *subscription = cosmo_find_subscription(instance, subject);
   if (!subscription) {
-    fprintf(stderr, "message from unknown subject\n");
+    cosmo_log(instance, "message from unknown subject");
     assert(!pthread_mutex_unlock(&instance->lock));
     return;
   }
@@ -241,7 +257,7 @@ static void cosmo_handle_event(cosmo *instance, json_t *event) {
   } else if (!strcmp(event_type, "logout")) {
     cosmo_handle_logout(instance, event);
   } else {
-    fprintf(stderr, "unknown event type: %s\n", event_type);
+    cosmo_log(instance, "unknown event type: %s", event_type);
   }
 }
 
@@ -261,24 +277,19 @@ static json_t *cosmo_send_rpc(cosmo *instance, json_t *commands, json_t *ack) {
   json_array_extend(int_commands, commands);
 
   char *request = cosmo_build_rpc(instance, int_commands);
-  if (instance->debug) {
-    fprintf(stderr, "--> %s\n", request);
-  }
+  cosmo_log(instance, "--> %s", request);
 
   char *response = cosmo_send_http(instance, request);
   json_decref(int_commands);
   if (!response) {
     return commands;
   }
-
-  if (instance->debug) {
-    fprintf(stderr, "<-- %s\n", response);
-  }
+  cosmo_log(instance, "<-- %s", response);
 
   json_error_t error;
   json_t *received = json_loads(response, 0, &error);
   if (!received) {
-    fprintf(stderr, "json_loads() failed: %s (json: \"%s\")\n", error.text, response);
+    cosmo_log(instance, "json_loads() failed: %s (json: \"%s\")", error.text, response);
     free(response);
     return commands;
   }
@@ -287,7 +298,7 @@ static json_t *cosmo_send_rpc(cosmo *instance, json_t *commands, json_t *ack) {
   json_t *command_responses, *events;
   char *profile;
   if (json_unpack(received, "{sssoso}", "profile", &profile, "responses", &command_responses, "events", &events)) {
-    fprintf(stderr, "invalid server response\n");
+    cosmo_log(instance, "invalid server response");
     json_decref(received);
     return commands;
   }
@@ -309,7 +320,7 @@ static json_t *cosmo_send_rpc(cosmo *instance, json_t *commands, json_t *ack) {
   json_t *poll_response = json_array_get(command_responses, 0);
   const char *instance_generation;
   if (json_unpack(poll_response, "{ss}", "instance_generation", &instance_generation)) {
-    fprintf(stderr, "invalid poll response\n");
+    cosmo_log(instance, "invalid poll response");
   } else {
     assert(!pthread_mutex_lock(&instance->lock));
     if (!instance->generation || strcmp(instance_generation, instance->generation)) {
@@ -356,7 +367,7 @@ static json_t *cosmo_send_rpc(cosmo *instance, json_t *commands, json_t *ack) {
     json_t *command_response = json_array_get(command_responses, index + 1);
     char *result;
     if (json_unpack(command_response, "{ss}", "result", &result)) {
-      fprintf(stderr, "invalid command response\n");
+      cosmo_log(instance, "invalid command response");
       json_array_append(to_retry, command);
       continue;
     }
@@ -551,7 +562,7 @@ cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_cal
 
   instance->seedp = (unsigned int) time(NULL);
 
-  instance->debug = false;
+  instance->debug = getenv("COSMO_DEBUG");
 
   strcpy(instance->client_id, client_id);
   cosmo_uuid(instance->instance_id);

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+export COSMO_DEBUG=
 
 make test
 
