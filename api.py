@@ -75,7 +75,7 @@ def Poll(google_user, client, client_address, instance_id, args):
 
   return {
     'result': 'ok',
-    'new': instance.newly_created,
+    'instance_generation': instance.generation,
     'events': events,
   }
 
