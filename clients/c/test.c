@@ -252,6 +252,28 @@ bool test_bulk_subscribe(test_state *state) {
   return true;
 }
 
+bool test_complex_object(test_state *state) {
+  cosmo *client = create_client(state);
+
+  json_t *subject = random_subject(NULL, NULL);
+  cosmo_subscribe(client, subject, -1, 0);
+
+  json_t *message_out = json_pack("{sssis[iiii]s{sssi}}",
+      "foo", "bar",
+      "zig", 5,
+      "zag", 16, 22, 59, 76,
+      "boo", "nested", "object", "eek", 100);
+  cosmo_send_message(client, subject, message_out);
+  const json_t *message_in = wait_for_message(state);
+  assert(json_equal(message_out, json_object_get(message_in, "message")));
+
+  json_decref(subject);
+  json_decref(message_out);
+
+  cosmo_shutdown(client);
+  return true;
+}
+
 int main(int argc, char *argv[]) {
   RUN_TEST(test_create_shutdown);
   RUN_TEST(test_connect_logout_fires);
@@ -259,6 +281,7 @@ int main(int argc, char *argv[]) {
   RUN_TEST(test_resubscribe);
   RUN_TEST(test_reconnect);
   RUN_TEST(test_bulk_subscribe);
+  RUN_TEST(test_complex_object);
 
   return 0;
 }
