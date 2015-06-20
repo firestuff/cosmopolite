@@ -199,6 +199,7 @@ static void cosmo_handle_message(cosmo *instance, json_t *event) {
   assert(!pthread_mutex_unlock(&instance->lock));
 
   if (instance->callbacks.message) {
+    cosmo_log(instance, "callbacks.message()");
     instance->callbacks.message(event, instance->passthrough);
   }
 }
@@ -209,6 +210,7 @@ static void cosmo_handle_connect(cosmo *instance) {
   }
   instance->connect_state = CONNECTED;
   if (instance->callbacks.connect) {
+    cosmo_log(instance, "callbacks.connect()");
     instance->callbacks.connect(instance->passthrough);
   }
 }
@@ -219,6 +221,7 @@ static void cosmo_handle_disconnect(cosmo *instance) {
   }
   instance->connect_state = DISCONNECTED;
   if (instance->callbacks.disconnect) {
+    cosmo_log(instance, "callbacks.disconnect()");
     instance->callbacks.disconnect(instance->passthrough);
   }
 }
@@ -229,6 +232,7 @@ static void cosmo_handle_login(cosmo *instance, json_t *event) {
   }
   instance->login_state = LOGGED_IN;
   if (instance->callbacks.login) {
+    cosmo_log(instance, "callbacks.login()");
     instance->callbacks.login(instance->passthrough);
   }
 }
@@ -239,6 +243,7 @@ static void cosmo_handle_logout(cosmo *instance, json_t *event) {
   }
   instance->login_state = LOGGED_OUT;
   if (instance->callbacks.logout) {
+    cosmo_log(instance, "callbacks.logout()");
     instance->callbacks.logout(instance->passthrough);
   }
 }
