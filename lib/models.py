@@ -461,6 +461,7 @@ class Subscription(db.Model):
     encoded = json.dumps(msg, default=utils.EncodeJSON)
     if self.polling:
       Event(parent=self,
+            key_name=str(uuid.uuid4()),
             json=encoded).save()
     else:
       instance_key = Subscription.instance.get_value_for_datastore(self)
@@ -474,7 +475,7 @@ class Subscription(db.Model):
     ret = []
     to_delete = []
     for e in events:
-      if str(e.key().id()) in acks:
+      if str(e.key().name()) in acks:
         to_delete.append(e)
       else:
         ret.append(e.ToEvent())
@@ -497,7 +498,7 @@ class Event(db.Model):
 
   def ToEvent(self):
     ret = json.loads(self.json)
-    ret['event_id'] = str(self.key().id())
+    ret['event_id'] = str(self.key().name())
     return ret
 
 
