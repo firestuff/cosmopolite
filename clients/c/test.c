@@ -231,7 +231,7 @@ bool test_reconnect(test_state *state) {
   return true;
 }
 
-bool test_resubscribe(test_state *state) {
+bool test_resubscribe_after_reconnect(test_state *state) {
   cosmo *client = create_client(state);
 
   json_t *subject = random_subject(NULL, NULL);
@@ -321,16 +321,37 @@ bool test_getmessages_subscribe(test_state *state) {
   return true;
 }
 
+bool test_resubscribe(test_state *state) {
+  cosmo *client = create_client(state);
+
+  json_t *subject = random_subject(NULL, NULL);
+
+  json_t *message_out = random_message();
+  cosmo_send_message(client, subject, message_out);
+
+  cosmo_subscribe(client, subject, 0, 0);
+  cosmo_subscribe(client, subject, -1, 0);
+
+  const json_t *message_in = wait_for_message(state);
+  assert(json_equal(message_out, json_object_get(message_in, "message")));
+  json_decref(message_out);
+
+  json_decref(subject);
+  cosmo_shutdown(client);
+  return true;
+}
+
 int main(int argc, char *argv[]) {
   RUN_TEST(test_create_shutdown);
   RUN_TEST(test_client_id_change_fires);
   RUN_TEST(test_connect_logout_fires);
   RUN_TEST(test_message_round_trip);
-  RUN_TEST(test_resubscribe);
+  RUN_TEST(test_resubscribe_after_reconnect);
   RUN_TEST(test_reconnect);
   RUN_TEST(test_bulk_subscribe);
   RUN_TEST(test_complex_object);
   RUN_TEST(test_getmessages_subscribe);
+  RUN_TEST(test_resubscribe);
 
   return 0;
 }
