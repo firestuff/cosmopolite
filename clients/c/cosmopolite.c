@@ -204,6 +204,13 @@ static void cosmo_handle_message(cosmo *instance, json_t *event) {
   }
 }
 
+static void cosmo_handle_client_id_change(cosmo *instance) {
+  if (instance->callbacks.client_id_change) {
+    cosmo_log(instance, "callbacks.client_id_change()");
+    instance->callbacks.client_id_change(instance->passthrough, instance->client_id);
+  }
+}
+
 static void cosmo_handle_connect(cosmo *instance) {
   if (instance->connect_state == CONNECTED) {
     return;
@@ -569,11 +576,16 @@ cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_cal
 
   instance->debug = getenv("COSMO_DEBUG");
 
-  strcpy(instance->client_id, client_id);
-  cosmo_uuid(instance->instance_id);
-
   memcpy(&instance->callbacks, callbacks, sizeof(instance->callbacks));
   instance->passthrough = passthrough;
+
+  if (client_id) {
+    strcpy(instance->client_id, client_id);
+  } else {
+    cosmo_uuid(instance->client_id);
+    cosmo_handle_client_id_change(instance);
+  }
+  cosmo_uuid(instance->instance_id);
 
   assert(!pthread_mutex_init(&instance->lock, NULL));
   assert(!pthread_cond_init(&instance->cond, NULL));

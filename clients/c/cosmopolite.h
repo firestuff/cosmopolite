@@ -11,6 +11,7 @@
 #define COSMO_UUID_SIZE 37
 
 typedef struct {
+  void (*client_id_change)(void *, const char *);
   void (*connect)(void *);
   void (*disconnect)(void *);
   void (*login)(void *);

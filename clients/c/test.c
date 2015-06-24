@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "cosmopolite.h"
@@ -16,11 +17,22 @@ typedef struct {
   pthread_cond_t cond;
 
   const json_t *last_message;
+  const char *client_id;
+  bool client_id_change_fired;
   bool logout_fired;
   bool connect_fired;
   bool disconnect_fired;
 } test_state;
 
+
+void on_client_id_change(void *passthrough, const char *client_id) {
+  test_state *state = passthrough;
+  assert(!pthread_mutex_lock(&state->lock));
+  state->client_id_change_fired = true;
+  state->client_id = client_id;
+  assert(!pthread_cond_signal(&state->cond));
+  assert(!pthread_mutex_unlock(&state->lock));
+}
 
 void on_connect(void *passthrough) {
   test_state *state = passthrough;
@@ -54,6 +66,18 @@ void on_message(const json_t *message, void *passthrough) {
   state->last_message = message;
   assert(!pthread_cond_signal(&state->cond));
   assert(!pthread_mutex_unlock(&state->lock));
+}
+
+void wait_for_client_id_change(test_state *state) {
+  assert(!pthread_mutex_lock(&state->lock));
+  while (!state->client_id_change_fired) {
+    assert(!pthread_cond_wait(&state->cond, &state->lock));
+  }
+
+  state->client_id_change_fired = false;
+  assert(!pthread_mutex_unlock(&state->lock));
+
+  assert(strlen(state->client_id));
 }
 
 const json_t *wait_for_message(test_state *state) {
@@ -105,6 +129,8 @@ test_state *create_test_state() {
   assert(!pthread_mutex_init(&ret->lock, NULL));
   assert(!pthread_cond_init(&ret->cond, NULL));
   ret->last_message = NULL;
+  ret->client_id = NULL;
+  ret->client_id_change_fired = false;
   ret->logout_fired = false;
   ret->connect_fired = false;
   ret->disconnect_fired = false;
@@ -118,18 +144,15 @@ void destroy_test_state(test_state *state) {
 }
 
 cosmo *create_client(test_state *state) {
-  char client_id[COSMO_UUID_SIZE];
-  cosmo_uuid(client_id);
-
   cosmo_callbacks callbacks = {
+    .client_id_change = on_client_id_change,
     .connect = on_connect,
     .disconnect = on_disconnect,
     .logout = on_logout,
     .message = on_message,
   };
 
-  cosmo *ret = cosmo_create("https://playground.cosmopolite.org/cosmopolite", client_id, &callbacks, state);
-  // ret->debug = true;
+  cosmo *ret = cosmo_create("https://playground.cosmopolite.org/cosmopolite", NULL, &callbacks, state);
   return ret;
 }
 
@@ -178,6 +201,13 @@ bool test_message_round_trip(test_state *state) {
   json_decref(subject);
   json_decref(message_out);
 
+  cosmo_shutdown(client);
+  return true;
+}
+
+bool test_client_id_change_fires(test_state *state) {
+  cosmo *client = create_client(state);
+  wait_for_client_id_change(state);
   cosmo_shutdown(client);
   return true;
 }
@@ -278,6 +308,7 @@ bool test_complex_object(test_state *state) {
 
 int main(int argc, char *argv[]) {
   RUN_TEST(test_create_shutdown);
+  RUN_TEST(test_client_id_change_fires);
   RUN_TEST(test_connect_logout_fires);
   RUN_TEST(test_message_round_trip);
   RUN_TEST(test_resubscribe);
