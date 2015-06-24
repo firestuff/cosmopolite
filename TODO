@@ -1,0 +1,10 @@
+Public key pinning
+When libcurl4-openssl-dev >= 7.39.0, add support to the C client via the
+options struct for public key pinning.
+http://curl.haxx.se/libcurl/c/CURLOPT_PINNEDPUBLICKEY.html
+
+Client ID rotation
+Add an API endpoint to invalidate an old client_id and switch to a new one
+with the same profile.
+Add support in both the JS and C clients to periodically issue this and
+rotate client_id, then to rotate instance_id (which already just works).
