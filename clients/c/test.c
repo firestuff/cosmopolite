@@ -306,6 +306,21 @@ bool test_complex_object(test_state *state) {
   return true;
 }
 
+bool test_getmessages_subscribe(test_state *state) {
+  cosmo *client = create_client(state);
+
+  json_t *subject = random_subject(NULL, NULL);
+  assert(!cosmo_get_messages(client, subject));
+  cosmo_subscribe(client, subject, -1, 0);
+  json_t *messages = cosmo_get_messages(client, subject);
+  assert(messages);
+  json_decref(messages);
+
+  json_decref(subject);
+  cosmo_shutdown(client);
+  return true;
+}
+
 int main(int argc, char *argv[]) {
   RUN_TEST(test_create_shutdown);
   RUN_TEST(test_client_id_change_fires);
@@ -315,6 +330,7 @@ int main(int argc, char *argv[]) {
   RUN_TEST(test_reconnect);
   RUN_TEST(test_bulk_subscribe);
   RUN_TEST(test_complex_object);
+  RUN_TEST(test_getmessages_subscribe);
 
   return 0;
 }
