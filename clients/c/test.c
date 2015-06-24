@@ -152,7 +152,7 @@ cosmo *create_client(test_state *state) {
     .message = on_message,
   };
 
-  cosmo *ret = cosmo_create("https://playground.cosmopolite.org/cosmopolite", NULL, &callbacks, state);
+  cosmo *ret = cosmo_create("https://playground.cosmopolite.org/cosmopolite", NULL, &callbacks, NULL, state);
   return ret;
 }
 

@@ -566,7 +566,7 @@ json_t *cosmo_get_last_message(cosmo *instance, json_t *subject) {
   return ret;
 }
 
-cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_callbacks *callbacks, void *passthrough) {
+cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_callbacks *callbacks, const cosmo_options *options, void *passthrough) {
   curl_global_init(CURL_GLOBAL_DEFAULT);
 
   cosmo *instance = malloc(sizeof(cosmo));
@@ -577,6 +577,11 @@ cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_cal
   instance->debug = getenv("COSMO_DEBUG");
 
   memcpy(&instance->callbacks, callbacks, sizeof(instance->callbacks));
+  if (options) {
+    memcpy(&instance->options, options, sizeof(instance->options));
+  } else {
+    memset(&instance->options, 0, sizeof(instance->options));
+  }
   instance->passthrough = passthrough;
 
   if (client_id) {
@@ -597,7 +602,8 @@ cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_cal
   assert(!curl_easy_setopt(instance->curl, CURLOPT_URL, api_url));
   assert(!curl_easy_setopt(instance->curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS));
   assert(!curl_easy_setopt(instance->curl, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTPS));
-  assert(!curl_easy_setopt(instance->curl, CURLOPT_SSL_CIPHER_LIST, "ECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH"));
+  assert(!curl_easy_setopt(instance->curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2));
+  assert(!curl_easy_setopt(instance->curl, CURLOPT_SSL_CIPHER_LIST, "EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH"));
   assert(!curl_easy_setopt(instance->curl, CURLOPT_TIMEOUT_MS, CYCLE_MS));
   assert(!curl_easy_setopt(instance->curl, CURLOPT_POST, 1L));
   assert(!curl_easy_setopt(instance->curl, CURLOPT_READFUNCTION, cosmo_read_callback));

@@ -19,11 +19,14 @@ typedef struct {
   void (*message)(const json_t *, void *);
 } cosmo_callbacks;
 
+typedef struct {
+} cosmo_options;
+
 typedef struct cosmo cosmo;
 
 void cosmo_uuid(char *uuid);
 
-cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_callbacks *callbacks, void *passthrough);
+cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_callbacks *callbacks, const cosmo_options *options, void *passthrough);
 void cosmo_shutdown(cosmo *instance);
 
 const char *cosmo_current_profile(cosmo *instance);

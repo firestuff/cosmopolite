@@ -7,6 +7,7 @@ struct cosmo {
   char client_id[COSMO_UUID_SIZE];
   char instance_id[COSMO_UUID_SIZE];
   cosmo_callbacks callbacks;
+  cosmo_options options;
   void *passthrough;
 
   pthread_mutex_t lock;
