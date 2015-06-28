@@ -7,6 +7,7 @@ struct cosmo_command {
   struct cosmo_command *prev;
   struct cosmo_command *next;
   json_t *command;
+  promise *promise;
 };
 
 struct cosmo {
