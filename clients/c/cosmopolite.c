@@ -381,6 +381,7 @@ static struct cosmo_command *cosmo_send_rpc(cosmo *instance, struct cosmo_comman
     return commands;
   }
 
+  // TODO: major locking problems through here
   if (!json_equal(instance->profile, profile)) {
     json_decref(instance->profile);
     json_incref(profile);
