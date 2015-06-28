@@ -20,8 +20,8 @@ struct cosmo {
   pthread_mutex_t lock;
   pthread_cond_t cond;
   bool shutdown;
-  char *profile;
-  char *generation;
+  json_t *profile;
+  json_t *generation;
   struct cosmo_command *command_queue_head;
   struct cosmo_command *command_queue_tail;
   json_t *ack;
