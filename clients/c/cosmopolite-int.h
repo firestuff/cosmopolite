@@ -3,6 +3,12 @@
 
 // Declarations that aren't in the public API but are available to the test suite.
 
+struct cosmo_command {
+  struct cosmo_command *prev;
+  struct cosmo_command *next;
+  json_t *command;
+};
+
 struct cosmo {
   char client_id[COSMO_UUID_SIZE];
   char instance_id[COSMO_UUID_SIZE];
@@ -15,7 +21,8 @@ struct cosmo {
   bool shutdown;
   char *profile;
   char *generation;
-  json_t *command_queue;
+  struct cosmo_command *command_queue_head;
+  struct cosmo_command *command_queue_tail;
   json_t *ack;
   json_t *subscriptions;
   uint64_t next_delay_ms;
