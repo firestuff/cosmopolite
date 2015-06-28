@@ -530,7 +530,7 @@ json_t *cosmo_subject(const char *name, const char *readable_only_by, const char
   return ret;
 }
 
-void cosmo_subscribe(cosmo *instance, json_t *subjects, const json_int_t messages, const json_int_t last_id) {
+void cosmo_subscribe(cosmo *instance, json_t *subjects, const json_int_t messages, const json_int_t last_id, promise *promise_obj) {
   if (json_is_array(subjects)) {
     json_incref(subjects);
   } else {
@@ -566,7 +566,7 @@ void cosmo_subscribe(cosmo *instance, json_t *subjects, const json_int_t message
   json_decref(subjects);
 }
 
-void cosmo_unsubscribe(cosmo *instance, json_t *subject) {
+void cosmo_unsubscribe(cosmo *instance, json_t *subject, promise *promise_obj) {
   assert(!pthread_mutex_lock(&instance->lock));
   size_t i;
   json_t *subscription;
@@ -582,7 +582,7 @@ void cosmo_unsubscribe(cosmo *instance, json_t *subject) {
   cosmo_send_command(instance, cosmo_command("unsubscribe", arguments));
 }
 
-void cosmo_send_message(cosmo *instance, json_t *subject, json_t *message) {
+void cosmo_send_message(cosmo *instance, json_t *subject, json_t *message, promise *promise_obj) {
   char sender_message_id[COSMO_UUID_SIZE];
   cosmo_uuid(sender_message_id);
   char *encoded = json_dumps(message, JSON_ENCODE_ANY);

@@ -191,10 +191,10 @@ bool test_message_round_trip(test_state *state) {
   cosmo *client = create_client(state);
 
   json_t *subject = random_subject(NULL, NULL);
-  cosmo_subscribe(client, subject, -1, 0);
+  cosmo_subscribe(client, subject, -1, 0, NULL);
 
   json_t *message_out = random_message();
-  cosmo_send_message(client, subject, message_out);
+  cosmo_send_message(client, subject, message_out, NULL);
   const json_t *message_in = wait_for_message(state);
   assert(json_equal(message_out, json_object_get(message_in, "message")));
 
@@ -235,10 +235,10 @@ bool test_resubscribe_after_reconnect(test_state *state) {
   cosmo *client = create_client(state);
 
   json_t *subject = random_subject(NULL, NULL);
-  cosmo_subscribe(client, subject, -1, 0);
+  cosmo_subscribe(client, subject, -1, 0, NULL);
 
   json_t *message_out = random_message();
-  cosmo_send_message(client, subject, message_out);
+  cosmo_send_message(client, subject, message_out, NULL);
   const json_t *message_in = wait_for_message(state);
   assert(json_equal(message_out, json_object_get(message_in, "message")));
   json_decref(message_out);
@@ -247,7 +247,7 @@ bool test_resubscribe_after_reconnect(test_state *state) {
   cosmo_uuid(client->instance_id);
 
   message_out = random_message();
-  cosmo_send_message(client, subject, message_out);
+  cosmo_send_message(client, subject, message_out, NULL);
   message_in = wait_for_message(state);
   assert(json_equal(message_out, json_object_get(message_in, "message")));
   json_decref(message_out);
@@ -264,16 +264,16 @@ bool test_bulk_subscribe(test_state *state) {
   json_t *subject1 = random_subject(NULL, NULL);
   json_t *subject2 = random_subject(NULL, NULL);
   json_t *subjects = json_pack("[oo]", subject1, subject2);
-  cosmo_subscribe(client, subjects, -1, 0);
+  cosmo_subscribe(client, subjects, -1, 0, NULL);
 
   json_t *message_out = random_message();
-  cosmo_send_message(client, subject1, message_out);
+  cosmo_send_message(client, subject1, message_out, NULL);
   const json_t *message_in = wait_for_message(state);
   assert(json_equal(message_out, json_object_get(message_in, "message")));
   json_decref(message_out);
 
   message_out = random_message();
-  cosmo_send_message(client, subject2, message_out);
+  cosmo_send_message(client, subject2, message_out, NULL);
   message_in = wait_for_message(state);
   assert(json_equal(message_out, json_object_get(message_in, "message")));
   json_decref(message_out);
@@ -288,14 +288,14 @@ bool test_complex_object(test_state *state) {
   cosmo *client = create_client(state);
 
   json_t *subject = random_subject(NULL, NULL);
-  cosmo_subscribe(client, subject, -1, 0);
+  cosmo_subscribe(client, subject, -1, 0, NULL);
 
   json_t *message_out = json_pack("{sssis[iiii]s{sssi}}",
       "foo", "bar",
       "zig", 5,
       "zag", 16, 22, 59, 76,
       "boo", "nested", "object", "eek", 100);
-  cosmo_send_message(client, subject, message_out);
+  cosmo_send_message(client, subject, message_out, NULL);
   const json_t *message_in = wait_for_message(state);
   assert(json_equal(message_out, json_object_get(message_in, "message")));
 
@@ -311,7 +311,7 @@ bool test_getmessages_subscribe(test_state *state) {
 
   json_t *subject = random_subject(NULL, NULL);
   assert(!cosmo_get_messages(client, subject));
-  cosmo_subscribe(client, subject, -1, 0);
+  cosmo_subscribe(client, subject, -1, 0, NULL);
   json_t *messages = cosmo_get_messages(client, subject);
   assert(messages);
   json_decref(messages);
@@ -327,10 +327,10 @@ bool test_resubscribe(test_state *state) {
   json_t *subject = random_subject(NULL, NULL);
 
   json_t *message_out = random_message();
-  cosmo_send_message(client, subject, message_out);
+  cosmo_send_message(client, subject, message_out, NULL);
 
-  cosmo_subscribe(client, subject, 0, 0);
-  cosmo_subscribe(client, subject, -1, 0);
+  cosmo_subscribe(client, subject, 0, 0, NULL);
+  cosmo_subscribe(client, subject, -1, 0, NULL);
 
   const json_t *message_in = wait_for_message(state);
   assert(json_equal(message_out, json_object_get(message_in, "message")));
