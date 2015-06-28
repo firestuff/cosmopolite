@@ -38,6 +38,7 @@ static void promise_destroy(promise *promise_obj) {
 }
 
 bool promise_wait(promise *promise_obj, void **result) {
+  assert(promise_obj);
   assert(!pthread_mutex_lock(&promise_obj->lock));
   assert(promise_obj->will_wait);
   while (!promise_obj->fulfilled) {
@@ -55,6 +56,10 @@ bool promise_wait(promise *promise_obj, void **result) {
 }
 
 void promise_complete(promise *promise_obj, void *result, bool success) {
+  if (!promise_obj) {
+    return;
+  }
+
   assert(!pthread_mutex_lock(&promise_obj->lock));
 
   if (success && promise_obj->on_success) {
