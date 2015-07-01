@@ -306,6 +306,27 @@ bool test_complex_object(test_state *state) {
   return true;
 }
 
+bool test_send_message_promise(test_state *state) {
+  cosmo *client = create_client(state);
+
+  json_t *subject = random_subject(NULL, NULL);
+  json_t *message_out = random_message();
+
+  promise *promise_obj = promise_create(NULL, NULL, NULL);
+  cosmo_send_message(client, subject, message_out, promise_obj);
+  json_t *result;
+  assert(promise_wait(promise_obj, (void **) &result));
+  assert(json_equal(subject, json_object_get(result, "subject")));
+  assert(json_equal(message_out, json_object_get(result, "message")));
+  promise_destroy(promise_obj);
+
+  json_decref(subject);
+  json_decref(message_out);
+
+  cosmo_shutdown(client);
+  return true;
+}
+
 bool test_getmessages_subscribe(test_state *state) {
   cosmo *client = create_client(state);
 
@@ -350,6 +371,7 @@ int main(int argc, char *argv[]) {
   RUN_TEST(test_reconnect);
   RUN_TEST(test_bulk_subscribe);
   RUN_TEST(test_complex_object);
+  RUN_TEST(test_send_message_promise);
   RUN_TEST(test_getmessages_subscribe);
   RUN_TEST(test_resubscribe);
 

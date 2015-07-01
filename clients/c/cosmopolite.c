@@ -321,7 +321,7 @@ static void cosmo_complete_subscribe(cosmo *instance, struct cosmo_command *comm
 
   if (strcmp(result, "ok")) {
     cosmo_remove_subscription(instance, subject);
-    promise_fail(command->promise, NULL);
+    promise_fail(command->promise, NULL, NULL);
     return;
   }
 
@@ -333,20 +333,27 @@ static void cosmo_complete_subscribe(cosmo *instance, struct cosmo_command *comm
   }
   assert(!pthread_mutex_unlock(&instance->lock));
 
-  promise_succeed(command->promise, NULL);
+  promise_succeed(command->promise, NULL, NULL);
 }
 
 static void cosmo_complete_unsubscribe(cosmo *instance, struct cosmo_command *command, json_t *response, char *result) {
-  promise_complete(command->promise, NULL, (strcmp(result, "ok") == 0));
+  promise_complete(command->promise, NULL, NULL, (strcmp(result, "ok") == 0));
 }
 
 static void cosmo_complete_send_message(cosmo *instance, struct cosmo_command *command, json_t *response, char *result) {
   json_t *message;
   int err = json_unpack(response, "{so}", "message", &message);
   if (err || strcmp(result, "ok")) {
-    promise_fail(command->promise, NULL);
+    promise_fail(command->promise, NULL, NULL);
   } else {
-    promise_succeed(command->promise, message);
+    char *message_content;
+    assert(!json_unpack(message, "{ss}", "message", &message_content));
+    json_t *message_object = json_loads(message_content, JSON_DECODE_ANY, NULL);
+    assert(message_object);
+    json_object_set_new(message, "message", message_object);
+
+    json_incref(message);
+    promise_succeed(command->promise, message, (promise_cleanup) json_decref);
   }
 }
 

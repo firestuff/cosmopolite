@@ -5,7 +5,6 @@
 #include "promise.h"
 
 struct promise {
-  bool will_wait;
   promise_callback on_success;
   promise_callback on_failure;
   void *passthrough;
@@ -16,11 +15,11 @@ struct promise {
 
   bool success;
   void *result;
+  promise_cleanup cleanup;
 };
 
-promise *promise_create(bool will_wait, promise_callback on_success, promise_callback on_failure, void *passthrough) {
+promise *promise_create(promise_callback on_success, promise_callback on_failure, void *passthrough) {
   promise *promise_obj = malloc(sizeof(*promise_obj));
-  promise_obj->will_wait = will_wait;
   promise_obj->on_success = on_success;
   promise_obj->on_failure = on_failure;
   promise_obj->passthrough = passthrough;
@@ -31,32 +30,35 @@ promise *promise_create(bool will_wait, promise_callback on_success, promise_cal
   return promise_obj;
 }
 
-static void promise_destroy(promise *promise_obj) {
+void promise_destroy(promise *promise_obj) {
   assert(!pthread_mutex_destroy(&promise_obj->lock));
   assert(!pthread_cond_destroy(&promise_obj->cond));
+  if (promise_obj->result && promise_obj->cleanup) {
+    promise_obj->cleanup(promise_obj->result);
+  }
   free(promise_obj);
 }
 
 bool promise_wait(promise *promise_obj, void **result) {
   assert(promise_obj);
   assert(!pthread_mutex_lock(&promise_obj->lock));
-  assert(promise_obj->will_wait);
   while (!promise_obj->fulfilled) {
     pthread_cond_wait(&promise_obj->cond, &promise_obj->lock);
   }
   assert(!pthread_mutex_unlock(&promise_obj->lock));
 
-  // promise_obj is now filled in, and owned solely by us.
   bool success = promise_obj->success;
   if (result) {
     *result = promise_obj->result;
   }
-  promise_destroy(promise_obj);
   return success;
 }
 
-void promise_complete(promise *promise_obj, void *result, bool success) {
+void promise_complete(promise *promise_obj, void *result, promise_cleanup cleanup, bool success) {
   if (!promise_obj) {
+    if (result && cleanup) {
+      cleanup(result);
+    }
     return;
   }
 
@@ -68,24 +70,18 @@ void promise_complete(promise *promise_obj, void *result, bool success) {
     promise_obj->on_failure(promise_obj->passthrough, result);
   }
 
-  if (promise_obj->will_wait) {
-    // We don't own promise_obj; pass to promise_wait()
-    promise_obj->result = result;
-    promise_obj->success = success;
-    promise_obj->fulfilled = true;
-    assert(!pthread_cond_signal(&promise_obj->cond));
-    assert(!pthread_mutex_unlock(&promise_obj->lock));
-  } else {
-    // We own promise_obj
-    assert(!pthread_mutex_unlock(&promise_obj->lock));
-    promise_destroy(promise_obj);
-  }
+  promise_obj->result = result;
+  promise_obj->cleanup = cleanup;
+  promise_obj->success = success;
+  promise_obj->fulfilled = true;
+  assert(!pthread_cond_signal(&promise_obj->cond));
+  assert(!pthread_mutex_unlock(&promise_obj->lock));
 }
 
-void promise_succeed(promise *promise_obj, void *result) {
-  promise_complete(promise_obj, result, true);
+void promise_succeed(promise *promise_obj, void *result, promise_cleanup cleanup) {
+  promise_complete(promise_obj, result, cleanup, true);
 }
 
-void promise_fail(promise *promise_obj, void *result) {
-  promise_complete(promise_obj, result, false);
+void promise_fail(promise *promise_obj, void *result, promise_cleanup cleanup) {
+  promise_complete(promise_obj, result, cleanup, false);
 }
