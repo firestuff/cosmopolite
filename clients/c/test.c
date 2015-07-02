@@ -327,6 +327,27 @@ bool test_send_message_promise(test_state *state) {
   return true;
 }
 
+bool test_subscribe_unsubscribe_promise(test_state *state) {
+  cosmo *client = create_client(state);
+
+  json_t *subject = random_subject(NULL, NULL);
+
+  promise *promise_obj = promise_create(NULL, NULL, NULL);
+  cosmo_subscribe(client, subject, -1, 0, promise_obj);
+  assert(promise_wait(promise_obj, NULL));
+  promise_destroy(promise_obj);
+
+  promise_obj = promise_create(NULL, NULL, NULL);
+  cosmo_unsubscribe(client, subject, promise_obj);
+  assert(promise_wait(promise_obj, NULL));
+  promise_destroy(promise_obj);
+
+  json_decref(subject);
+
+  cosmo_shutdown(client);
+  return true;
+}
+
 bool test_getmessages_subscribe(test_state *state) {
   cosmo *client = create_client(state);
 
@@ -372,6 +393,7 @@ int main(int argc, char *argv[]) {
   RUN_TEST(test_bulk_subscribe);
   RUN_TEST(test_complex_object);
   RUN_TEST(test_send_message_promise);
+  RUN_TEST(test_subscribe_unsubscribe_promise);
   RUN_TEST(test_getmessages_subscribe);
   RUN_TEST(test_resubscribe);
 
