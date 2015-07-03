@@ -343,7 +343,7 @@ static void cosmo_complete_unsubscribe(cosmo *instance, struct cosmo_command *co
 static void cosmo_complete_send_message(cosmo *instance, struct cosmo_command *command, json_t *response, char *result) {
   json_t *message;
   int err = json_unpack(response, "{so}", "message", &message);
-  if (err || strcmp(result, "ok")) {
+  if (err || (strcmp(result, "ok") && strcmp(result, "duplicate_message"))) {
     promise_fail(command->promise, NULL, NULL);
   } else {
     char *message_content;
