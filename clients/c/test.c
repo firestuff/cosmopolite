@@ -415,15 +415,13 @@ static bool test_message_ordering(test_state *state) {
   cosmo *client = create_client(state);
 
   json_t *subject = random_subject(NULL, NULL);
-  char *messages[] = {"A", "B", "C", "D"};
+  json_t *messages = json_pack("[ssss]", "A", "B", "C", "D");
 
-  int i;
-  for (i = 0; i < (sizeof(messages) / sizeof(*messages)); i++) {
-    char *message = messages[i];
-    json_t *message_out = json_string(message);
+  json_t *message;
+  size_t i;
+  json_array_foreach(messages, i, message) {
     promise *promise_obj = promise_create(NULL, NULL, NULL);
-    cosmo_send_message(client, subject, message_out, promise_obj);
-    json_decref(message_out);
+    cosmo_send_message(client, subject, message, promise_obj);
     assert(promise_wait(promise_obj, NULL));
     promise_destroy(promise_obj);
   }
@@ -441,8 +439,11 @@ static bool test_message_ordering(test_state *state) {
   json_t *messages_in = cosmo_get_messages(client, subject);
   assert(messages_in);
   assert(json_array_size(messages_in) == 2);
+  assert(json_equal(json_object_get(json_array_get(messages_in, 0), "message"), json_array_get(messages, 2)));
+  assert(json_equal(json_object_get(json_array_get(messages_in, 1), "message"), json_array_get(messages, 3)));
   json_decref(messages_in);
 
+  json_decref(messages);
   json_decref(subject);
 
   cosmo_shutdown(client);
