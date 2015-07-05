@@ -450,6 +450,47 @@ static bool test_message_ordering(test_state *state) {
   return true;
 }
 
+static bool test_subscribe_acl(test_state *state) {
+  cosmo *client = create_client(state);
+  promise *promise_obj = promise_create(NULL, NULL, NULL);
+  cosmo_get_profile(client, promise_obj);
+  json_t *bad_profile;
+  assert(promise_wait(promise_obj, (void **) &bad_profile));
+  json_incref(bad_profile);
+  promise_destroy(promise_obj);
+  cosmo_shutdown(client);
+
+  client = create_client(state);
+
+  promise_obj = promise_create(NULL, NULL, NULL);
+  cosmo_get_profile(client, promise_obj);
+  json_t *good_profile;
+  assert(promise_wait(promise_obj, (void **) &good_profile));
+  json_incref(good_profile);
+  promise_destroy(promise_obj);
+
+  json_t *good_subject = random_subject(json_string_value(good_profile), NULL);
+  promise_obj = promise_create(NULL, NULL, NULL);
+  cosmo_subscribe(client, good_subject, -1, 0, promise_obj);
+  assert(promise_wait(promise_obj, NULL));
+  promise_destroy(promise_obj);
+
+  json_t *bad_subject = random_subject(json_string_value(bad_profile), NULL);
+  promise_obj = promise_create(NULL, NULL, NULL);
+  cosmo_subscribe(client, bad_subject, -1, 0, promise_obj);
+  assert(!promise_wait(promise_obj, NULL));
+  promise_destroy(promise_obj);
+
+  json_decref(good_subject);
+  json_decref(bad_subject);
+  json_decref(good_profile);
+  json_decref(bad_profile);
+
+  cosmo_shutdown(client);
+
+  return true;
+}
+
 int main(int argc, char *argv[]) {
   RUN_TEST(test_create_shutdown);
   RUN_TEST(test_client_id_change_fires);
@@ -465,6 +506,7 @@ int main(int argc, char *argv[]) {
   RUN_TEST(test_subscribe_barrier);
   RUN_TEST(test_resubscribe);
   RUN_TEST(test_message_ordering);
+  RUN_TEST(test_subscribe_acl);
 
   return 0;
 }

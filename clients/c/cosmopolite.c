@@ -452,6 +452,15 @@ static struct cosmo_command *cosmo_send_rpc(cosmo *instance, struct cosmo_comman
     json_decref(instance->profile);
     json_incref(profile);
     instance->profile = profile;
+    struct cosmo_get_profile *get_profile_iter = instance->get_profile_head;
+    while (get_profile_iter) {
+      struct cosmo_get_profile *next = get_profile_iter->next;
+      json_incref(instance->profile);
+      promise_succeed(get_profile_iter->promise, instance->profile, (promise_cleanup)json_decref);
+      free(get_profile_iter);
+      get_profile_iter = next;
+    }
+    instance->get_profile_head = NULL;
   }
 
   assert(!clock_gettime(CLOCK_MONOTONIC, &instance->last_success));
@@ -575,8 +584,29 @@ void cosmo_uuid(char *uuid) {
   uuid_unparse_lower(uu, uuid);
 }
 
-const char *cosmo_current_profile(cosmo *instance) {
-  return json_string_value(instance->profile);
+void cosmo_get_profile(cosmo *instance, promise *promise_obj) {
+  assert(!pthread_mutex_lock(&instance->lock));
+  if (json_is_string(instance->profile)) {
+    json_t *profile = instance->profile;
+    json_incref(profile);
+    assert(!pthread_mutex_unlock(&instance->lock));
+    promise_succeed(promise_obj, instance->profile, (promise_cleanup)json_decref);
+    return;
+  }
+  struct cosmo_get_profile *entry = malloc(sizeof(*entry));
+  assert(entry);
+  entry->next = instance->get_profile_head;
+  entry->promise = promise_obj;
+  instance->get_profile_head = entry;
+  assert(!pthread_mutex_unlock(&instance->lock));
+}
+
+json_t *cosmo_current_profile(cosmo *instance) {
+  assert(!pthread_mutex_lock(&instance->lock));
+  json_t *profile = instance->profile;
+  json_incref(profile);
+  assert(!pthread_mutex_unlock(&instance->lock));
+  return profile;
 }
 
 json_t *cosmo_subject(const char *name, const char *readable_only_by, const char *writeable_only_by) {
@@ -722,6 +752,7 @@ cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_cal
 
   instance->shutdown = false;
   instance->profile = json_null();
+  instance->get_profile_head = NULL;
   instance->generation = json_null();
   instance->command_queue_head = instance->command_queue_tail = NULL;
   instance->ack = json_array();
@@ -758,6 +789,13 @@ void cosmo_shutdown(cosmo *instance) {
   json_decref(instance->ack);
   json_decref(instance->subscriptions);
   json_decref(instance->profile);
+  struct cosmo_get_profile *get_profile_iter = instance->get_profile_head;
+  while (get_profile_iter) {
+    struct cosmo_get_profile *next = get_profile_iter->next;
+    promise_fail(get_profile_iter->promise, NULL, NULL);
+    free(get_profile_iter);
+    get_profile_iter = next;
+  }
   json_decref(instance->generation);
   curl_easy_cleanup(instance->curl);
 

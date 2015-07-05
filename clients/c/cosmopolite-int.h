@@ -10,6 +10,11 @@ struct cosmo_command {
   promise *promise;
 };
 
+struct cosmo_get_profile {
+  struct cosmo_get_profile *next;
+  promise *promise;
+};
+
 struct cosmo {
   char client_id[COSMO_UUID_SIZE];
   char instance_id[COSMO_UUID_SIZE];
@@ -21,6 +26,7 @@ struct cosmo {
   pthread_cond_t cond;
   bool shutdown;
   json_t *profile;
+  struct cosmo_get_profile *get_profile_head;
   json_t *generation;
   struct cosmo_command *command_queue_head;
   struct cosmo_command *command_queue_tail;
