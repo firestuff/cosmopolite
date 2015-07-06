@@ -31,6 +31,7 @@ promise *promise_create(promise_callback on_success, promise_callback on_failure
 }
 
 void promise_destroy(promise *promise_obj) {
+  assert(promise_obj->fulfilled);
   assert(!pthread_mutex_destroy(&promise_obj->lock));
   assert(!pthread_cond_destroy(&promise_obj->cond));
   if (promise_obj->result && promise_obj->cleanup) {
