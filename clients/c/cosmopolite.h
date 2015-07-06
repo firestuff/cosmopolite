@@ -39,7 +39,6 @@ json_t *cosmo_get_messages(cosmo *instance, json_t *subject);
 json_t *cosmo_get_last_message(cosmo *instance, json_t *subject);
 
 // TODO
-void cosmo_get_profile(cosmo *instance, promise *promise_obj);
 json_t *cosmo_get_pins(cosmo *instance, json_t *subject, promise *promise_obj);
 void cosmo_pin(cosmo *instance, json_t *subject, json_t *message, promise *promise_obj);
 void cosmo_unpin(cosmo *instance, json_t *subject, json_t *message, promise *promise_obj);
