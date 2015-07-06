@@ -1,5 +1,5 @@
 CC ?= gcc
-CFLAGS ?= -Wall -Werror -I/usr/local/include -fpic -O -g
+CFLAGS ?= -Wall -Werror -I/usr/local/include -fpic -O -g --std=c11 --pedantic-errors
 LDFLAGS ?= -Wall -L/usr/local/lib -L. -O
 LIBS ?= -lcurl -ljansson -luuid -lpthread
 
@@ -24,5 +24,10 @@ clean:
 test: test.o cosmopolite.o promise.o
 	$(CC) $(LDFLAGS) -o test test.o cosmopolite.o promise.o $(LIBS)
 
-runtest: test
+runtest: memcheck helgrind
+
+memcheck: test
 	valgrind --leak-check=full --show-reachable=yes --num-callers=20 --suppressions=suppressions ./test
+
+helgrind: test
+	valgrind --tool=helgrind ./test

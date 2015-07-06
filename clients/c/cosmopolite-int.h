@@ -33,7 +33,6 @@ struct cosmo {
   json_t *ack;
   json_t *subscriptions;
   uint64_t next_delay_ms;
-  unsigned int seedp;
   bool debug;
 
   enum {

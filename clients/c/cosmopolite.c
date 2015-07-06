@@ -1,10 +1,14 @@
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <uuid/uuid.h>
 
@@ -17,22 +21,6 @@
 #define CYCLE_MS 10000
 #define CYCLE_STAGGER_FACTOR 10
 #define CONNECT_TIMEOUT_S 60
-
-#ifdef __MACH__
-// OS X is missing clock_gettime()
-#define CLOCK_MONOTONIC 0
-#define CLOCK_REALTIME 0
-int clock_gettime(int clk_id, struct timespec *ts) {
-    struct timeval tv;
-    int err = gettimeofday(&tv, NULL);
-    if (err) {
-      return err;
-    }
-    ts->tv_sec  = tv.tv_sec;
-    ts->tv_nsec = tv.tv_usec * 1000;
-    return 0;
-}
-#endif
 
 enum {
   SUBSCRIPTION_PENDING,
@@ -48,6 +36,24 @@ typedef struct {
 
   int64_t retry_after;
 } cosmo_transfer;
+
+static int cosmo_random_fd = -1;
+
+static void cosmo_random_cleanup() {
+  assert(!close(cosmo_random_fd));
+}
+
+static uint64_t cosmo_random() {
+  if (cosmo_random_fd == -1) {
+    cosmo_random_fd = open("/dev/urandom", O_RDONLY);
+    assert(cosmo_random_fd >= 0);
+    atexit(cosmo_random_cleanup);
+  }
+
+  uint64_t ret;
+  assert(read(cosmo_random_fd, &ret, sizeof(ret)) == sizeof(ret));
+  return ret;
+}
 
 static void cosmo_log(cosmo *instance, const char *fmt, ...) {
   if (!instance->debug) {
@@ -463,7 +469,8 @@ static struct cosmo_command *cosmo_send_rpc(cosmo *instance, struct cosmo_comman
     instance->get_profile_head = NULL;
   }
 
-  assert(!clock_gettime(CLOCK_MONOTONIC, &instance->last_success));
+  // Should actually be a monotonic clock.
+  assert(timespec_get(&instance->last_success, TIME_UTC) == TIME_UTC);
   cosmo_handle_connect(instance);
 
   size_t index;
@@ -538,13 +545,13 @@ static void *cosmo_thread_main(void *arg) {
     instance->ack = json_array();
 
     instance->next_delay_ms = CYCLE_MS;
-    instance->next_delay_ms += rand_r(&instance->seedp) % (instance->next_delay_ms / CYCLE_STAGGER_FACTOR);
+    instance->next_delay_ms += cosmo_random() % (instance->next_delay_ms / CYCLE_STAGGER_FACTOR);
 
     assert(!pthread_mutex_unlock(&instance->lock));
     struct cosmo_command *to_retry = cosmo_send_rpc(instance, commands, ack);
     {
       struct timespec now;
-      assert(!clock_gettime(CLOCK_MONOTONIC, &now));
+      assert(timespec_get(&now, TIME_UTC) == TIME_UTC);
       if (now.tv_sec - instance->last_success.tv_sec > CONNECT_TIMEOUT_S) {
         cosmo_handle_disconnect(instance);
       }
@@ -565,7 +572,7 @@ static void *cosmo_thread_main(void *arg) {
 #define MS_PER_S 1000
 #define NS_PER_MS 1000000
     struct timespec ts;
-    assert(!clock_gettime(CLOCK_REALTIME, &ts));
+    assert(timespec_get(&ts, TIME_UTC) == TIME_UTC);
     uint64_t target_ms = (ts.tv_sec * MS_PER_S) + (ts.tv_nsec / NS_PER_MS) + instance->next_delay_ms;
     ts.tv_sec = target_ms / MS_PER_S;
     ts.tv_nsec = (target_ms % MS_PER_S) * NS_PER_MS;
@@ -711,8 +718,6 @@ cosmo *cosmo_create(const char *base_url, const char *client_id, const cosmo_cal
 
   cosmo *instance = malloc(sizeof(cosmo));
   assert(instance);
-
-  instance->seedp = (unsigned int) time(NULL);
 
   instance->debug = getenv("COSMO_DEBUG");
 

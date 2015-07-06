@@ -22,6 +22,7 @@ typedef struct {
 } cosmo_callbacks;
 
 typedef struct {
+  int placeholder;
 } cosmo_options;
 
 typedef struct cosmo cosmo;
