@@ -1,12 +1,7 @@
 #ifndef _COSMOPOLITE_H
 #define _COSMOPOLITE_H
 
-#include <curl/curl.h>
 #include <jansson.h>
-#include <pthread.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <time.h>
 
 #include "promise.h"
 

@@ -1,6 +1,12 @@
 #ifndef _COSMOPOLITE_INT_H
 #define _COSMOPOLITE_INT_H
 
+#include <curl/curl.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <time.h>
+
 // Declarations that aren't in the public API but are available to the test suite.
 
 struct cosmo_command {
