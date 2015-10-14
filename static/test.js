@@ -601,6 +601,54 @@ QUnit.asyncTest('Duplicate subject', function(assert) {
   });
 });
 
+QUnit.asyncTest('Multiple event listeners', function(assert) {
+  assert.expect(2);
+
+  var subject = randstring();
+  var message = randstring();
+
+  var cosmo = new Cosmopolite(null, randstring());
+
+  cosmo.addEventListener('message', function(e) {
+    assert.ok(true, 'first callback fired');
+  });
+
+  cosmo.addEventListener('message', function(e) {
+    assert.ok(true, 'second callback fired');
+    cosmo.shutdown();
+    QUnit.start();
+  });
+
+  cosmo.sendMessage(subject, message);
+  cosmo.subscribe(subject, -1);
+});
+
+QUnit.asyncTest('stopImmediatePropagation', function(assert) {
+  assert.expect(1);
+
+  var subject = randstring();
+  var message = randstring();
+
+  var cosmo = new Cosmopolite(null, randstring());
+
+  cosmo.addEventListener('message', function(e) {
+    assert.ok(true, 'first callback fired');
+    e.stopImmediatePropagation();
+    window.setTimeout(function() {
+      cosmo.shutdown();
+      QUnit.start();
+    }, 500);
+  });
+
+  cosmo.addEventListener('message', function(e) {
+    assert.ok(false, 'second callback fired');
+  });
+
+  cosmo.sendMessage(subject, message);
+  cosmo.subscribe(subject, -1);
+});
+
+
 
 module('dev_appserver only');
 
