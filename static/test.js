@@ -660,7 +660,8 @@ QUnit.asyncTest('Local subject -- Message round trip', function(assert) {
   var cosmo = new Cosmopolite(null, randstring());
 
   cosmo.addEventListener('message', function(e) {
-    assert.equal(e.detail['subject']['name'], subject['name'], 'subject matches');
+    assert.equal(e.detail['subject']['name'], subject['name'],
+        'subject matches');
     assert.ok(e.detail['subject']['local'], 'subject still local');
     assert.equal(e.detail['message'], message, 'message matches');
     cosmo.shutdown();

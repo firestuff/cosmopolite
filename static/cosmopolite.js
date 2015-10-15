@@ -290,8 +290,10 @@ Cosmopolite.prototype.subscribe = function(subjects, opt_messages, opt_lastID) {
     var subject = subjects[i];
 
     ret.push(this.newPromise_(function(resolve, reject) {
-      if (subject['local'] && (subject['readable_only_by'] || subject['writable_only_by'])) {
-        console.log(this.loggingPrefix_(), 'local subjects can\'t have ACLs:', subject);
+      if (subject['local'] &&
+          (subject['readable_only_by'] || subject['writable_only_by'])) {
+        console.log(this.loggingPrefix_(),
+                    'local subjects can\'t have ACLs:', subject);
         reject();
         return;
       }
@@ -407,8 +409,10 @@ Cosmopolite.prototype.unsubscribe = function(subject) {
  */
 Cosmopolite.prototype.sendMessage = function(subject, message) {
   return this.newPromise_(function(resolve, reject) {
-    if (subject['local'] && (subject['readable_only_by'] || subject['writable_only_by'])) {
-      console.log(this.loggingPrefix_(), 'local subjects can\'t have ACLs:', subject);
+    if (subject['local'] &&
+        (subject['readable_only_by'] || subject['writable_only_by'])) {
+      console.log(this.loggingPrefix_(),
+                  'local subjects can\'t have ACLs:', subject);
       reject();
       return;
     }
@@ -529,12 +533,13 @@ Cosmopolite.prototype.pin = function(subject, message) {
     var onSuccess = function() {
       this.pins_[id] = args;
       resolve(id);
-    }
+    };
 
     if (subject['local']) {
       onSuccess.bind(this)();
-      // Ugly hack, but we need this to promise to resolve before the callback fires.
-      // This is the equivalent of sched_yield(), and probably about as reliable.
+      // Ugly hack, but we need this to promise to resolve before the callback
+      // fires. This is the equivalent of sched_yield(), and probably about as
+      // reliable.
       window.setTimeout(this.onPin_.bind(this, Object.create(args)), 0);
       return;
     }
