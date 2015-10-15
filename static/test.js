@@ -648,6 +648,137 @@ QUnit.asyncTest('stopImmediatePropagation', function(assert) {
   cosmo.subscribe(subject, -1);
 });
 
+QUnit.asyncTest('Local subject -- Message round trip', function(assert) {
+  assert.expect(3);
+
+  var subject = {
+    'name': randstring(),
+    'local': true
+  };
+  var message = randstring();
+
+  var cosmo = new Cosmopolite(null, randstring());
+
+  cosmo.addEventListener('message', function(e) {
+    assert.equal(e.detail['subject']['name'], subject['name'], 'subject matches');
+    assert.ok(e.detail['subject']['local'], 'subject still local');
+    assert.equal(e.detail['message'], message, 'message matches');
+    cosmo.shutdown();
+    QUnit.start();
+  });
+
+  cosmo.subscribe(subject, -1);
+  cosmo.sendMessage(subject, message);
+});
+
+QUnit.asyncTest('Local subject -- Subject is distinct', function(assert) {
+  assert.expect(1);
+
+  var subject1 = {
+    'name': randstring(),
+    'local': true
+  };
+  var subject2 = subject1['name'];
+  var message = randstring();
+
+  var cosmo = new Cosmopolite(null, randstring());
+
+  cosmo.addEventListener('message', function(e) {
+    assert.ok(false, 'message received on wrong subject');
+  });
+
+  cosmo.subscribe(subject2, -1).then(function() {
+    assert.ok(true, 'subscribe resolved');
+    cosmo.sendMessage(subject1, message);
+    window.setTimeout(function() {
+      cosmo.shutdown();
+      QUnit.start();
+    }, 5000);
+  });
+});
+
+QUnit.asyncTest('Local subject -- ACLs are rejected', function(assert) {
+  assert.expect(4);
+
+  var subject_read = {
+    'name': randstring(),
+    'readable_only_by': 'foo',
+    'local': true
+  };
+  var subject_write = {
+    'name': randstring(),
+    'writable_only_by': 'foo',
+    'local': true
+  };
+  var message = randstring();
+
+  var cosmo = new Cosmopolite(null, randstring());
+
+  cosmo.subscribe(subject_read, -1).then(function() {
+    assert.ok(false, 'subscribe of readable_only_by/local resolved');
+  }).catch(function() {
+    assert.ok(true, 'subscribe of readable_only_by/local failed');
+  });
+
+  cosmo.subscribe(subject_write, -1).then(function() {
+    assert.ok(false, 'subscribe of writable_only_by/local resolved');
+  }).catch(function() {
+    assert.ok(true, 'subscribe of writable_only_by/local failed');
+  });
+
+  cosmo.sendMessage(subject_read, message).then(function() {
+    assert.ok(false, 'sendMessage of readable_only_by/local resolved');
+  }).catch(function() {
+    assert.ok(true, 'sendMessage of readable_only_by/local failed');
+  });
+
+  cosmo.sendMessage(subject_write, message).then(function() {
+    assert.ok(false, 'sendMessage of writable_only_by/local resolved');
+  }).catch(function() {
+    assert.ok(true, 'sendMessage of writable_only_by/local failed');
+    cosmo.shutdown();
+    QUnit.start();
+  });
+});
+
+QUnit.asyncTest('Local subject -- pin/unpin', function(assert) {
+  assert.expect(7);
+
+  var subject = {
+    'name': randstring(),
+    'local': true
+  };
+  var message = randstring();
+
+  var cosmo = new Cosmopolite(null, randstring());
+
+  cosmo.addEventListener('pin', function(e) {
+    assert.equal(subject['name'], e.detail['subject']['name'],
+        'onPin: subject matches');
+    assert.ok(e.detail['subject']['local'], 'onPin: local set');
+    assert.equal(message, e.detail['message'],
+        'onPin: message matches');
+    assert.equal(cosmo.getPins(subject).length, 1);
+    pin.then(function(id) {
+      cosmo.unpin(id);
+    });
+  });
+
+  cosmo.addEventListener('unpin', function(e) {
+    assert.equal(subject['name'], e.detail['subject']['name'],
+        'onUnpin: subject matches');
+    assert.ok(e.detail['subject']['local'], 'onUnpin: local set');
+    assert.equal(message, e.detail['message'],
+        'onUnpin: message matches');
+    cosmo.shutdown();
+    QUnit.start();
+  });
+
+  cosmo.subscribe(subject);
+  var pin = cosmo.pin(subject, message);
+});
+
+
 
 
 module('dev_appserver only');
