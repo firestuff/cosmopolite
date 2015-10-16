@@ -191,7 +191,7 @@ Cosmopolite.typeMessage;
 /**
  * @typedef {{command: string,
               arguments: Object,
-              onSuccess: (function(Object)|null)}}
+              onSuccess: (?function(Object))}}
  * @private
  */
 Cosmopolite.typeRPC_;
@@ -540,7 +540,8 @@ Cosmopolite.prototype.pin = function(subject, message) {
       // Ugly hack, but we need this to promise to resolve before the callback
       // fires. This is the equivalent of sched_yield(), and probably about as
       // reliable.
-      window.setTimeout(this.onPin_.bind(this, Object.create(args)), 0);
+      var msg = /** @type {Cosmopolite.typeMessage} */ (Object.create(args));
+      window.setTimeout(this.onPin_.bind(this, msg), 0);
       return;
     }
 
@@ -566,7 +567,8 @@ Cosmopolite.prototype.unpin = function(id) {
 
     if (pin['subject']['local']) {
       resolve();
-      window.setTimeout(this.onUnpin_.bind(this, Object.create(pin)), 0);
+      var msg = /** @type {Cosmopolite.typeMessage} */ (Object.create(pin));
+      window.setTimeout(this.onUnpin_.bind(this, msg), 0);
       return;
     }
 

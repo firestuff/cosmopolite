@@ -6,7 +6,7 @@ curl \
   --data output_format=json \
   --data output_info=errors \
   --data output_info=warnings \
-  --data language=ECMASCRIPT5 \
+  --data language=ECMASCRIPT6 \
   --data warning_level=verbose \
   --data-urlencode "js_code@cosmopolite.js" \
   http://closure-compiler.appspot.com/compile
