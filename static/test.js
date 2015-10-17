@@ -943,3 +943,18 @@ QUnit.asyncTest('sendMessage admin ACL', function(assert) {
     });
   });
 });
+
+
+QUnit.module('Hogfather');
+
+QUnit.test('Construct/shutdown', function(assert) {
+  assert.expect(4);
+  var cosmo = new Cosmopolite(null, randstring());
+  assert.ok(true, 'new Cosmopolite() succeeds');
+  var hogfather = new Hogfather(cosmo, randstring());
+  assert.ok(true, 'new Hogfather()) succeeds');
+  hogfather.shutdown();
+  assert.ok(true, 'Hogfather.shutdown() succeeds');
+  cosmo.shutdown();
+  assert.ok(true, 'Cosmopolite.shutdown() succeeds');
+});

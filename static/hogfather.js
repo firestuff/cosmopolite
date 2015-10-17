@@ -24,3 +24,9 @@
  */
 var Hogfather = function(cosmo, name) {
 };
+
+
+/**
+ */
+Hogfather.prototype.shutdown = function() {
+};
