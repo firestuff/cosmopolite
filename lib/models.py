@@ -376,13 +376,13 @@ class Subject(db.Model):
       if readable_only_by == Profile.ADMIN_KEY:
         ret['readable_only_by'] = 'admin'
       else:
-        ret['readable_only_by'] = str(readable_only_by.id())
+        ret['readable_only_by'] = str(readable_only_by.id_or_name())
     writable_only_by = Subject.writable_only_by.get_value_for_datastore(self)
     if writable_only_by:
       if writable_only_by == Profile.ADMIN_KEY:
         ret['writable_only_by'] = 'admin'
       else:
-        ret['writable_only_by'] = str(writable_only_by.id())
+        ret['writable_only_by'] = str(writable_only_by.id_or_name())
     return ret
 
   @classmethod
@@ -518,7 +518,8 @@ class Message(db.Model):
     return {
       'event_type':        'message',
       'id':                self.id_,
-      'sender':            str(Message.sender.get_value_for_datastore(self).id()),
+      'sender':
+        str(Message.sender.get_value_for_datastore(self).id_or_name()),
       'subject':           self.parent().ToDict(),
       'created':           self.created,
       'sender_message_id': self.sender_message_id,
@@ -541,7 +542,8 @@ class Pin(db.Model):
     return {
       'event_type':        event_type,
       'id':                str(self.key().id()),
-      'sender':            str(Pin.sender.get_value_for_datastore(self).id()),
+      'sender':
+        str(Pin.sender.get_value_for_datastore(self).id_or_name()),
       'subject':           self.parent().ToDict(),
       'created':           self.created,
       'sender_message_id': self.sender_message_id,
