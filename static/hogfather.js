@@ -21,13 +21,22 @@
  * @constructor
  * @param {Cosmopolite} cosmo
  * @param {string} name
- * @param {function()} onReady
  */
-var Hogfather = function(cosmo, name, onReady) {
-  cosmo.getProfile().then(function(profile_id) {
-    this.prefix_ = '/hogfather/' + profile_id + '/' + name + '/';
-    onReady();
-  }.bind(this));
+var Hogfather = function(cosmo, name) {
+  this.cosmo_ = cosmo;
+  this.name_ = name;
+
+  this.cosmo_.getProfile().then(this.onProfile_.bind(this));
+};
+
+
+/**
+ * @param {string} profile_id
+ */
+Hogfather.prototype.onProfile_ = function(profile_id) {
+  this.prefix_ = '/hogfather/' + profile_id + '/' + this.name_ + '/';
+  this.cosmo_.subscribe(this.prefix_ + 'control');
+  console.log(this.prefix_);
 };
 
 

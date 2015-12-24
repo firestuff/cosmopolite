@@ -949,10 +949,14 @@ QUnit.module('Hogfather');
 
 QUnit.asyncTest('Construct/shutdown', function(assert) {
   assert.expect(4);
+
   var cosmo = new Cosmopolite(null, randstring());
   assert.ok(true, 'new Cosmopolite() succeeds');
 
-  var hogfather = new Hogfather(cosmo, randstring(), function() {
+  var hogfather = new Hogfather(cosmo, randstring());
+  assert.ok(true, 'new Hogfather()) succeeds');
+
+  window.setTimeout(function() {
     hogfather.shutdown();
     assert.ok(true, 'Hogfather.shutdown() succeeds');
 
@@ -960,6 +964,6 @@ QUnit.asyncTest('Construct/shutdown', function(assert) {
     assert.ok(true, 'Cosmopolite.shutdown() succeeds');
 
     QUnit.start();
-  });
-  assert.ok(true, 'new Hogfather()) succeeds');
+  }, 10 * 1000);
+
 });
