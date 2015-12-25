@@ -20,27 +20,55 @@
 /**
  * @constructor
  * @param {Cosmopolite} cosmo
- * @param {string} name
+ * @param {string} prefix
  */
-var Hogfather = function(cosmo, name) {
+var Hogfather = function(cosmo, prefix) {
   this.cosmo_ = cosmo;
-  this.name_ = name;
+  this.prefix_ = prefix;
 
-  this.cosmo_.getProfile().then(this.onProfile_.bind(this));
+  console.log(this.loggingPrefix_(), 'create');
 };
 
 
 /**
- * @param {string} profile_id
+ * @param {Cosmopolite} cosmo
+ * @return {Promise}
  */
-Hogfather.prototype.onProfile_ = function(profile_id) {
-  this.prefix_ = '/hogfather/' + profile_id + '/' + this.name_ + '/';
-  this.cosmo_.subscribe(this.prefix_ + 'control');
-  console.log(this.prefix_);
+Hogfather.Create = function(cosmo) {
+  return new Promise(function(resolve, reject) {
+    var prefix;
+    cosmo.getProfile().then(function(profile_id) {
+      prefix = '/hogfather/' + profile_id + '/' + cosmo.uuid() + '/';
+      var subject = {
+        name: prefix + 'control',
+        readable_only_by: 'me',
+        writeable_only_by: 'me',
+      };
+      var msg = {
+        owners: [profile_id],
+        writers: [profile_id],
+        readers: [profile_id],
+      };
+      return cosmo.sendMessage(subject, msg);
+    }).then(function(msg) {
+      resolve(new Hogfather(cosmo, prefix));
+    }).catch(function(err) {
+      reject(err);
+    });
+  });
 };
 
 
 /**
  */
 Hogfather.prototype.shutdown = function() {
+};
+
+
+/**
+ * @private
+ * @return {string}
+ */
+Hogfather.prototype.loggingPrefix_ = function() {
+  return 'hogfather (' + this.prefix_ + '):';
 };
