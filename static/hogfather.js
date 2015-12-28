@@ -31,6 +31,21 @@ hogfather.PublicChat = function(cosmo, id) {
   this.cosmo_ = cosmo;
   this.id_ = id;
   this.subject_ = '/hogfather/public/' + id;
+
+  /**
+   * @type {DocumentFragment}
+   * @private
+   * Weep for all our souls.
+   */
+  this.eventTarget_ = document.createDocumentFragment();
+  this.addEventListener =
+      this.eventTarget_.addEventListener.bind(this.eventTarget_);
+  this.removeEventListener =
+      this.eventTarget_.removeEventListener.bind(this.eventTarget_);
+  this.dispatchEvent =
+      this.eventTarget_.dispatchEvent.bind(this.eventTarget_);
+
+  this.cosmo_.addEventListener('message', this.onMessage_.bind(this));
 };
 
 
@@ -100,14 +115,8 @@ hogfather.PublicChat.prototype.getMessages = function() {
     if (message.message.type != 'message') {
       return;
     }
-    // Copy message so we can modify it.
-    message = JSON.parse(JSON.stringify(message));
-    // message == cosmopolite message
-    // message.message = hogfather message
-    // message.message.message == application message
-    message.message = message.message.message;
-    ret.push(message);
-  });
+    ret.push(this.cleanMessage_(message));
+  }.bind(this));
   return ret;
 };
 
@@ -121,6 +130,44 @@ hogfather.PublicChat.prototype.sendMessage = function(message) {
     type: 'message',
     message: message,
   });
+};
+
+
+/**
+ * @private
+ * @param {Event} e
+ */
+hogfather.PublicChat.prototype.onMessage_ = function(e) {
+  var message = e.detail;
+  switch (message.message.type) {
+    case 'message':
+      var e2 = new CustomEvent('message', {
+        'detail': this.cleanMessage_(message),
+      });
+      this.dispatchEvent(e2);
+      break;
+
+    default:
+      console.log('Unknown message type:', message);
+      break;
+  }
+};
+
+
+/**
+ * @private
+ * @param {Cosmopolite.typeMessage} message
+ * @return {Cosmopolite.typeMessage}
+ */
+hogfather.PublicChat.prototype.cleanMessage_ = function(message) {
+  // Copy message so we can modify it.
+  message = /** @type {Cosmopolite.typeMessage} */ (
+      JSON.parse(JSON.stringify(message)));
+  // message == cosmopolite message
+  // message.message = hogfather message
+  // message.message.message == application message
+  message.message = message.message.message;
+  return message;
 };
 
 
