@@ -675,6 +675,13 @@ Cosmopolite.prototype.uuid = function() {
 
 
 /**
+ * @see https://www.cosmopolite.org/reference#uuid
+ * @return {string}
+ */
+Cosmopolite.uuid = Cosmopolite.prototype.uuid;
+
+
+/**
  * Build a new Promise object with exception handling.
  *
  * @param {function(...)} callback
