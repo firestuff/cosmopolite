@@ -94,10 +94,13 @@ hogfather.PublicChat.prototype.getMessages = function() {
     if (message.message.type != 'message') {
       return;
     }
+    // Copy message so we can modify it.
+    message = JSON.parse(JSON.stringify(message));
     // message == cosmopolite message
     // message.message = hogfather message
     // message.message.message == application message
-    ret.push(message.message.message);
+    message.message = message.message.message;
+    ret.push(message);
   });
   return ret;
 };
