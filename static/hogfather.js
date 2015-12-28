@@ -30,9 +30,7 @@ var hogfather = {};
 hogfather.PublicChat = function(cosmo, id) {
   this.cosmo_ = cosmo;
   this.id_ = id;
-  this.group_ = '/hogfather/public/' + id;
-
-  console.log(this.loggingPrefix_(), 'construct');
+  this.subject_ = '/hogfather/public/' + id;
 };
 
 
@@ -68,9 +66,13 @@ hogfather.PublicChat.Join = function(cosmo, id) {
  */
 hogfather.PublicChat.prototype.Start = function() {
   return new Promise(function(resolve, reject) {
-    // XXX
-    resolve();
-  });
+    this.cosmo_.subscribe(this.subject_, -1).then(function() {
+      console.log(this.loggingPrefix_(), 'ready');
+      resolve();
+    }.bind(this)).catch(function(err) {
+      reject(err);
+    });
+  }.bind(this));
 };
 
 
