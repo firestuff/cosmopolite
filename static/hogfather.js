@@ -17,16 +17,22 @@
 
 
 
+// Namespace
+var hogfather = {};
+
+
+
 /**
  * @constructor
  * @param {Cosmopolite} cosmo
- * @param {string} prefix
+ * @param {string} id
  */
-var Hogfather = function(cosmo, prefix) {
+hogfather.PublicChat = function(cosmo, id) {
   this.cosmo_ = cosmo;
-  this.prefix_ = prefix;
+  this.id_ = id;
+  this.group_ = '/hogfather/public/' + id;
 
-  console.log(this.loggingPrefix_(), 'create');
+  console.log(this.loggingPrefix_(), 'construct');
 };
 
 
@@ -34,24 +40,22 @@ var Hogfather = function(cosmo, prefix) {
  * @param {Cosmopolite} cosmo
  * @return {Promise}
  */
-Hogfather.Create = function(cosmo) {
+hogfather.PublicChat.Create = function(cosmo) {
+  var id = cosmo.uuid();
+  return hogfather.PublicChat.Join(cosmo, id);
+};
+
+
+/**
+ * @param {Cosmopolite} cosmo
+ * @param {string} id
+ * @return {Promise}
+ */
+hogfather.PublicChat.Join = function(cosmo, id) {
   return new Promise(function(resolve, reject) {
-    var prefix;
-    cosmo.getProfile().then(function(profile_id) {
-      prefix = '/hogfather/' + profile_id + '/' + cosmo.uuid() + '/';
-      var subject = {
-        name: prefix + 'control',
-        readable_only_by: 'me',
-        writeable_only_by: 'me',
-      };
-      var msg = {
-        owners: [profile_id],
-        writers: [profile_id],
-        readers: [profile_id],
-      };
-      return cosmo.sendMessage(subject, msg);
-    }).then(function(msg) {
-      resolve(new Hogfather(cosmo, prefix));
+    var chat = new hogfather.PublicChat(cosmo, id);
+    chat.Start().then(function() {
+      resolve(chat);
     }).catch(function(err) {
       reject(err);
     });
@@ -60,8 +64,19 @@ Hogfather.Create = function(cosmo) {
 
 
 /**
+ * @return {Promise}
  */
-Hogfather.prototype.shutdown = function() {
+hogfather.PublicChat.prototype.Start = function() {
+  return new Promise(function(resolve, reject) {
+    // XXX
+    resolve();
+  });
+};
+
+
+/**
+ */
+hogfather.PublicChat.prototype.Shutdown = function() {
 };
 
 
@@ -69,6 +84,6 @@ Hogfather.prototype.shutdown = function() {
  * @private
  * @return {string}
  */
-Hogfather.prototype.loggingPrefix_ = function() {
-  return 'hogfather (' + this.prefix_ + '):';
+hogfather.PublicChat.prototype.loggingPrefix_ = function() {
+  return 'hogfather (' + this.id_ + '):';
 };
