@@ -47,7 +47,8 @@ class OnChannelDisconnect(webapp2.RequestHandler):
   def post(self):
     instance_id = self.request.get('from')
     instance = models.Instance.FromID(instance_id)
-    instance.Delete()
+    if instance:
+      instance.Delete()
 
 
 app = webapp2.WSGIApplication([
