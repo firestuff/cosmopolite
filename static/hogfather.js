@@ -82,6 +82,11 @@ hogfather.PublicChat.prototype.Shutdown = function() {
 };
 
 
+hogfather.PublicChat.prototype.getID = function() {
+  return this.id_;
+};
+
+
 /**
  * @private
  * @return {string}
