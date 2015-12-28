@@ -82,11 +82,17 @@ hogfather.PublicChat.prototype.Shutdown = function() {
 };
 
 
+/**
+ * @return {string}
+ */
 hogfather.PublicChat.prototype.getID = function() {
   return this.id_;
 };
 
 
+/**
+ * @return {Array.<Cosmopolite.typeMessage>}
+ */
 hogfather.PublicChat.prototype.getMessages = function() {
   var messages = this.cosmo_.getMessages(this.subject_);
   var ret = [];
@@ -106,6 +112,10 @@ hogfather.PublicChat.prototype.getMessages = function() {
 };
 
 
+/**
+ * @param {!*} message
+ * @return {Promise}
+ */
 hogfather.PublicChat.prototype.sendMessage = function(message) {
   return this.cosmo_.sendMessage(this.subject_, {
     type: 'message',
