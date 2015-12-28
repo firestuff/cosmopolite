@@ -87,6 +87,30 @@ hogfather.PublicChat.prototype.getID = function() {
 };
 
 
+hogfather.PublicChat.prototype.getMessages = function() {
+  var messages = this.cosmo_.getMessages(this.subject_);
+  var ret = [];
+  messages.forEach(function(message) {
+    if (message.message.type != 'message') {
+      return;
+    }
+    // message == cosmopolite message
+    // message.message = hogfather message
+    // message.message.message == application message
+    ret.push(message.message.message);
+  });
+  return ret;
+};
+
+
+hogfather.PublicChat.prototype.sendMessage = function(message) {
+  return this.cosmo_.sendMessage(this.subject_, {
+    type: 'message',
+    message: message,
+  });
+};
+
+
 /**
  * @private
  * @return {string}
