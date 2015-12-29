@@ -454,9 +454,10 @@ those require a server response.</p>
 
 <p>Returns: A
 <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">
-Promise</a> that resolves with no arguments on success, or rejects with no arguments if the client
-is denied access to read the subject. If the <code>subject</code> argument was an Array of
-subjects, returns an Array of Promises that correspond.</p>
+Promise</a> that resolves with no arguments on success, or rejects with an
+<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error">
+Error</a> argument if the client is denied access to read the subject. If the <code>subject</code>
+argument was an Array of subjects, returns an Array of Promises that correspond.</p>
 
 <p>subscribe() creates a <a href="#subscription">subscription</a> on the server to a particular
 subject. The subscription is tied to our current <a href="#instance">instance</a> but is re-created
@@ -514,10 +515,11 @@ given subject.</a>
 
 <p>Returns: A
 <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">
-Promise</a> that resolves on success, or rejects with no arguments if the client is denied access
-to write to the subject. On success, a <a href="#message">message</a> argument is passed to the
-resolve callback; it differs from the original <code>message</code> argument in that it has
-metadata added by the server.</p>
+Promise</a> that resolves on success, or rejects with an
+<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error">
+Error</a> argument if the client is denied access to write to the subject. On success, a
+<a href="#message">message</a> argument is passed to the resolve callback; it differs from the
+original <code>message</code> argument in that it has metadata added by the server.</p>
 
 <p>Sends a <a href="#message">message</a> to the given <a href="#subject">subject</a>. The message
 contents are serialized and sent to the server (see 
