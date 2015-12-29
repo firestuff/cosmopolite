@@ -32,6 +32,9 @@ hogfather.PublicChat = function(cosmo, id) {
   this.id_ = id;
   this.subject_ = '/hogfather/public/' + id;
 
+  this.owners_ = [];
+  this.writers_ = [];
+
   /**
    * @type {DocumentFragment}
    * @private
@@ -139,8 +142,19 @@ hogfather.PublicChat.prototype.sendMessage = function(message) {
  */
 hogfather.PublicChat.prototype.onMessage_ = function(e) {
   var message = e.detail;
+  if (!this.owners_.length) {
+    this.owners_.push(message.sender);
+  }
+  if (!this.writers_.length) {
+    this.writers_.push(message.sender);
+  }
   switch (message.message.type) {
     case 'message':
+      if (this.writers_.indexOf(message.sender) == -1) {
+        console.log(this.loggingPrefix_(), "message from non-writer:",
+            message, this.writers_);
+        break;
+      }
       var e2 = new CustomEvent('message', {
         'detail': this.cleanMessage_(message),
       });
