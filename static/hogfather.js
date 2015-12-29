@@ -114,6 +114,7 @@ hogfather.PublicChat.prototype.getID = function() {
  * @param {Cosmopolite.typeMessage} message
  * @param {Array.<string>} owners
  * @param {Array.<string>} writers
+ * @return {boolean}
  */
 hogfather.PublicChat.prototype.checkMessage_ = function(
     message, owners, writers) {
@@ -136,10 +137,10 @@ hogfather.PublicChat.prototype.checkMessage_ = function(
     default:
       console.log('Unknown message type:', message);
       return false;
-  };
+  }
 
   if (acl.indexOf(message.sender) == -1) {
-    console.log(this.loggingPrefix_(), "message from unauthorized source:",
+    console.log(this.loggingPrefix_(), 'message from unauthorized source:',
         message, acl);
     return false;
   } else {
