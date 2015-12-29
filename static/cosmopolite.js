@@ -294,7 +294,7 @@ Cosmopolite.prototype.subscribe = function(subjects, opt_messages, opt_lastID) {
           (subject['readable_only_by'] || subject['writable_only_by'])) {
         console.log(this.loggingPrefix_(),
                     'local subjects can\'t have ACLs:', subject);
-        reject();
+        reject(new Error('Local subject with ACL'));
         return;
       }
 
@@ -531,6 +531,7 @@ Cosmopolite.prototype.pin = function(subject, message) {
     };
 
     var onSuccess = function() {
+      // TODO: this should check result status
       this.pins_[id] = args;
       resolve(id);
     };
