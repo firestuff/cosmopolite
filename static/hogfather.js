@@ -34,6 +34,7 @@ hogfather.PublicChat = function(cosmo, id) {
 
   this.owners_ = [];
   this.writers_ = [];
+  this.messages_ = [];
 
   /**
    * @type {DocumentFragment}
@@ -109,18 +110,49 @@ hogfather.PublicChat.prototype.getID = function() {
 
 
 /**
+ * @private
+ * @param {Cosmopolite.typeMessage} message
+ * @param {Array.<string>} owners
+ * @param {Array.<string>} writers
+ */
+hogfather.PublicChat.prototype.checkMessage_ = function(
+    message, owners, writers) {
+
+  // Bootstrapping for new groups
+  if (!owners.length) {
+    owners.push(message.sender);
+  }
+  if (!writers.length) {
+    writers.push(message.sender);
+  }
+
+  var acl;
+
+  switch (message.message.type) {
+    case 'message':
+      acl = writers;
+      break;
+
+    default:
+      console.log('Unknown message type:', message);
+      return false;
+  };
+
+  if (acl.indexOf(message.sender) == -1) {
+    console.log(this.loggingPrefix_(), "message from unauthorized source:",
+        message, acl);
+    return false;
+  } else {
+    return true;
+  }
+};
+
+
+/**
  * @return {Array.<Cosmopolite.typeMessage>}
  */
 hogfather.PublicChat.prototype.getMessages = function() {
-  var messages = this.cosmo_.getMessages(this.subject_);
-  var ret = [];
-  messages.forEach(function(message) {
-    if (message.message.type != 'message') {
-      return;
-    }
-    ret.push(this.cleanMessage_(message));
-  }.bind(this));
-  return ret;
+  return this.messages_;
 };
 
 
@@ -142,27 +174,17 @@ hogfather.PublicChat.prototype.sendMessage = function(message) {
  */
 hogfather.PublicChat.prototype.onMessage_ = function(e) {
   var message = e.detail;
-  if (!this.owners_.length) {
-    this.owners_.push(message.sender);
-  }
-  if (!this.writers_.length) {
-    this.writers_.push(message.sender);
+  if (!this.checkMessage_(message, this.owners_, this.writers_)) {
+    return;
   }
   switch (message.message.type) {
     case 'message':
-      if (this.writers_.indexOf(message.sender) == -1) {
-        console.log(this.loggingPrefix_(), "message from non-writer:",
-            message, this.writers_);
-        break;
-      }
+      var cleanMessage = this.cleanMessage_(message);
+      this.messages_.push(cleanMessage);
       var e2 = new CustomEvent('message', {
-        'detail': this.cleanMessage_(message),
+        'detail': cleanMessage,
       });
       this.dispatchEvent(e2);
-      break;
-
-    default:
-      console.log('Unknown message type:', message);
       break;
   }
 };
