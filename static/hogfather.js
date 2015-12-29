@@ -110,6 +110,22 @@ hogfather.PublicChat.prototype.getID = function() {
 
 
 /**
+ * @return {boolean}
+ */
+hogfather.PublicChat.prototype.amOwner = function() {
+  return this.owners_.indexOf(this.cosmo_.currentProfile()) >= 0;
+};
+
+
+/**
+ * @return {boolean}
+ */
+hogfather.PublicChat.prototype.amWriter = function() {
+  return this.writers_.indexOf(this.cosmo_.currentProfile()) >= 0;
+};
+
+
+/**
  * @private
  * @param {Cosmopolite.typeMessage} message
  * @param {Array.<string>} owners
@@ -162,10 +178,20 @@ hogfather.PublicChat.prototype.getMessages = function() {
  * @return {Promise}
  */
 hogfather.PublicChat.prototype.sendMessage = function(message) {
-  return this.cosmo_.sendMessage(this.subject_, {
-    type: 'message',
-    message: message,
-  });
+  return new Promise(function(resolve, reject) {
+    if (!this.amWriter()) {
+      reject(new Error('Write access denied'));
+      return;
+    }
+    this.cosmo_.sendMessage(this.subject_, {
+      type: 'message',
+      message: message,
+    }).then(function(msg) {
+      resolve(msg);
+    }).catch(function(err) {
+      reject(err);
+    });
+  }.bind(this));
 };
 
 

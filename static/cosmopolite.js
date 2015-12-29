@@ -413,7 +413,7 @@ Cosmopolite.prototype.sendMessage = function(subject, message) {
         (subject['readable_only_by'] || subject['writable_only_by'])) {
       console.log(this.loggingPrefix_(),
                   'local subjects can\'t have ACLs:', subject);
-      reject();
+      reject(new Error('Local subject with ACL'));
       return;
     }
 
