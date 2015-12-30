@@ -35,6 +35,7 @@ hogfather.PublicChat = function(cosmo, id) {
   this.owners_ = [];
   this.writers_ = [];
   this.messages_ = [];
+  this.requests_ = [];
 
   /**
    * @type {DocumentFragment}
@@ -113,7 +114,8 @@ hogfather.PublicChat.prototype.getID = function() {
  * @return {boolean}
  */
 hogfather.PublicChat.prototype.amOwner = function() {
-  return this.owners_.indexOf(this.cosmo_.currentProfile()) >= 0;
+  return (this.owners_.length == 0 ||
+          this.owners_.indexOf(this.cosmo_.currentProfile()) >= 0);
 };
 
 
@@ -121,7 +123,8 @@ hogfather.PublicChat.prototype.amOwner = function() {
  * @return {boolean}
  */
 hogfather.PublicChat.prototype.amWriter = function() {
-  return this.writers_.indexOf(this.cosmo_.currentProfile()) >= 0;
+  return (this.amOwner() ||
+          this.writers_.indexOf(this.cosmo_.currentProfile()) >= 0);
 };
 
 
@@ -139,15 +142,21 @@ hogfather.PublicChat.prototype.checkMessage_ = function(
   if (!owners.length) {
     owners.push(message.sender);
   }
-  if (!writers.length) {
-    writers.push(message.sender);
-  }
 
   var acl;
 
   switch (message.message.type) {
+    case 'request_access':
+      return true;
+
+    case 'add_writer':
+    case 'add_owner':
+    case 'deny_request':
+      acl = owners;
+      break;
+
     case 'message':
-      acl = writers;
+      acl = owners.concat(writers);
       break;
 
     default:
@@ -174,6 +183,14 @@ hogfather.PublicChat.prototype.getMessages = function() {
 
 
 /**
+ * @return {Array.<Cosmopolite.typeMessage>}
+ */
+hogfather.PublicChat.prototype.getRequests = function() {
+  return this.requests_;
+};
+
+
+/**
  * @param {!*} message
  * @return {Promise}
  */
@@ -183,15 +200,94 @@ hogfather.PublicChat.prototype.sendMessage = function(message) {
       reject(new Error('Write access denied'));
       return;
     }
-    this.cosmo_.sendMessage(this.subject_, {
+    resolve(this.cosmo_.sendMessage(this.subject_, {
       type: 'message',
       message: message,
-    }).then(function(msg) {
-      resolve(msg);
-    }).catch(function(err) {
-      reject(err);
-    });
+    }));
   }.bind(this));
+};
+
+
+/**
+ * @param {string} info
+ * @return {Promise}
+ */
+hogfather.PublicChat.prototype.requestAccess = function(info) {
+  return new Promise(function(resolve, reject) {
+    if (this.amOwner()) {
+      reject(new Error('Already owner'));
+      return;
+    }
+    resolve(this.cosmo_.sendMessage(this.subject_, {
+      type: 'request_access',
+      info: info,
+    }));
+  }.bind(this));
+};
+
+
+/**
+ * @param {string} sender
+ * @return {Promise}
+ */
+hogfather.PublicChat.prototype.addOwner = function(sender) {
+  return new Promise(function(resolve, reject) {
+    if (!this.amOwner()) {
+      reject(new Error('Owner access denied'));
+      return;
+    }
+    resolve(this.cosmo_.sendMessage(this.subject_, {
+      type: 'add_owner',
+      sender: sender,
+    }));
+  }.bind(this));
+};
+
+
+/**
+ * @param {string} sender
+ * @return {Promise}
+ */
+hogfather.PublicChat.prototype.addWriter = function(sender) {
+  return new Promise(function(resolve, reject) {
+    if (!this.amOwner()) {
+      reject(new Error('Owner access denied'));
+      return;
+    }
+    resolve(this.cosmo_.sendMessage(this.subject_, {
+      type: 'add_writer',
+      sender: sender,
+    }));
+  }.bind(this));
+};
+
+
+/**
+ * @param {string} sender
+ * @return {Promise}
+ */
+hogfather.PublicChat.prototype.denyRequest = function(sender) {
+  return new Promise(function(resolve, reject) {
+    if (!this.amOwner()) {
+      reject(new Error('Owner access denied'));
+      return;
+    }
+    resolve(this.cosmo_.sendMessage(this.subject_, {
+      type: 'deny_request',
+      sender: sender,
+    }));
+  }.bind(this));
+};
+
+
+/**
+ * @private
+ * @param {string} sender
+ */
+hogfather.PublicChat.prototype.removeRequest_ = function(sender) {
+  this.requests_ = this.requests_.filter(function(request) {
+    return request.sender != sender;
+  });
 };
 
 
@@ -204,7 +300,42 @@ hogfather.PublicChat.prototype.onMessage_ = function(e) {
   if (!this.checkMessage_(message, this.owners_, this.writers_)) {
     return;
   }
+
   switch (message.message.type) {
+    case 'add_owner':
+      this.removeRequest_(message.message.sender);
+      this.owners_.push(message.message.sender);
+      var e2 = new CustomEvent('acl_change', {
+        'detail': message,
+      });
+      this.dispatchEvent(e2);
+      break;
+
+    case 'add_writer':
+      this.removeRequest_(message.message.sender);
+      this.writers_.push(message.message.sender);
+      var e2 = new CustomEvent('acl_change', {
+        'detail': message,
+      });
+      this.dispatchEvent(e2);
+      break;
+
+    case 'deny_request':
+      this.removeRequest_(message.message.sender);
+      var e2 = new CustomEvent('request_denied', {
+        'detail': message,
+      });
+      this.dispatchEvent(e2);
+      break;
+
+    case 'request_access':
+      this.requests_.push(message);
+      var e2 = new CustomEvent('request', {
+        'detail': message,
+      });
+      this.dispatchEvent(e2);
+      break;
+
     case 'message':
       var cleanMessage = this.cleanMessage_(message);
       this.messages_.push(cleanMessage);
