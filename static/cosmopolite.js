@@ -663,9 +663,12 @@ Cosmopolite.prototype.init_ = function() {
  * @const
  */
 Cosmopolite.prototype.uuid = function() {
+  var randomBytes = new Uint8Array(31);
+  window.crypto.getRandomValues(randomBytes);
+  var i = 0;
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
     /** @type {number} */
-    var r = (Math.random() * 16) | 0;
+    var r = randomBytes[i++] % 16;
     if (c == 'x') {
       return r.toString(16);
     } else {
