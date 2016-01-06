@@ -343,12 +343,13 @@ Cosmopolite.prototype.subscribe = function(subjects, opt_messages, opt_lastID) {
         var key = this.messageCacheKeyPrefix_ + subjectString;
         var messageStr = localStorage[key];
         if (messageStr) {
-          var messages = JSON.parse(messageStr);
-          subscription.use_cache = false;
-          messages.forEach(function(msg) {
-            msg['message'] = JSON.stringify(msg['message']);
-            this.onMessage_(msg);
-          subscription.use_cache = true;
+          subscription.messages = JSON.parse(messageStr);
+          // Simplified version of onMessage_, to avoid a bunch of the
+          // overhead.
+          subscription.messages.forEach(function(msg) {
+            this.dispatchEvent(new CustomEvent('message', {
+              'detail': msg,
+            }));
           }.bind(this));
         }
         if (subscription.messages.length > 0) {
