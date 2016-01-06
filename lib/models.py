@@ -199,6 +199,17 @@ class Subject(db.Model):
     cls._cache[key_name] = obj
     return obj
 
+  @classmethod
+  def ReadThrough(cls, key):
+    obj = cls._cache.get(key.name())
+    if obj:
+      return obj
+
+    obj = cls.get(key)
+    if obj:
+      cls._cache[key.name()] = obj
+      return obj
+
   @db.transactional()
   def GetRecentMessages(self, num_messages):
     query = (
@@ -515,12 +526,13 @@ class Message(db.Model):
   random_value = db.IntegerProperty(required=True)
 
   def ToEvent(self):
+    parent = Subject.ReadThrough(self.parent_key())
     return {
       'event_type':        'message',
       'id':                self.id_,
       'sender':
         str(Message.sender.get_value_for_datastore(self).id_or_name()),
-      'subject':           self.parent().ToDict(),
+      'subject':           parent.ToDict(),
       'created':           self.created,
       'sender_message_id': self.sender_message_id,
       'random_value':      self.random_value,
@@ -539,12 +551,13 @@ class Pin(db.Model):
   sender_address = db.StringProperty(required=True)
 
   def ToEvent(self, event_type='pin'):
+    parent = Subject.ReadThrough(self.parent_key())
     return {
       'event_type':        event_type,
       'id':                str(self.key().id()),
       'sender':
         str(Pin.sender.get_value_for_datastore(self).id_or_name()),
-      'subject':           self.parent().ToDict(),
+      'subject':           parent.ToDict(),
       'created':           self.created,
       'sender_message_id': self.sender_message_id,
       'message':           self.message,
