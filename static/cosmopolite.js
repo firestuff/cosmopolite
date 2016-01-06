@@ -344,9 +344,11 @@ Cosmopolite.prototype.subscribe = function(subjects, opt_messages, opt_lastID) {
         var messageStr = localStorage[key];
         if (messageStr) {
           var messages = JSON.parse(messageStr);
+          subscription.use_cache = false;
           messages.forEach(function(msg) {
             msg['message'] = JSON.stringify(msg['message']);
             this.onMessage_(msg);
+          subscription.use_cache = true;
           }.bind(this));
         }
         if (subscription.messages.length > 0) {
