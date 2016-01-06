@@ -149,6 +149,13 @@ var Cosmopolite = function(opt_urlPrefix, opt_namespace, opt_trackingID) {
     localStorage[this.messageQueueKey_] = JSON.stringify([]);
   }
 
+  /**
+   * @type {string}
+   * @const
+   * @private
+   */
+  this.messageCacheKeyPrefix_ = this.namespace_ + ':message_cache:';
+
   if (document.readyState == 'complete') {
     this.init_();
   } else {
@@ -210,7 +217,8 @@ Cosmopolite.typeSubjectLoose;
 /**
  * @typedef {{messages: Array.<Cosmopolite.typeMessage>,
               pins: Array.<Cosmopolite.typeMessage>,
-              state: Cosmopolite.SubscriptionState_}}
+              state: Cosmopolite.SubscriptionState_,
+              use_cache: boolean}}
  * @private
  */
 Cosmopolite.typeSubscription_;
@@ -302,12 +310,14 @@ Cosmopolite.prototype.subscribe = function(subjects, opt_messages, opt_lastID) {
       var canonicalSubject = this.canonicalSubject_(subject);
       /** @type {string} */
       var subjectString = this.subjectString_(canonicalSubject);
-      if (!(subjectString in this.subscriptions_)) {
-        this.subscriptions_[subjectString] = {
+      var subscription = this.subscriptions_[subjectString];
+      if (!subscription) {
+        this.subscriptions_[subjectString] = subscription = {
           'subject': canonicalSubject,
           'messages': [],
           'pins': [],
-          'state': Cosmopolite.SubscriptionState_.PENDING
+          'state': Cosmopolite.SubscriptionState_.PENDING,
+          'use_cache': (opt_messages == -1),
         };
       }
 
@@ -326,6 +336,24 @@ Cosmopolite.prototype.subscribe = function(subjects, opt_messages, opt_lastID) {
       }
       if (opt_lastID != null) {
         args['last_id'] = opt_lastID;
+      }
+
+      if (subscription.use_cache) {
+        // Attempt to shorten request to server using cache.
+        var key = this.messageCacheKeyPrefix_ + subjectString;
+        var messageStr = localStorage[key];
+        if (messageStr) {
+          var messages = JSON.parse(messageStr);
+          messages.forEach(function(msg) {
+            msg['message'] = JSON.stringify(msg['message']);
+            this.onMessage_(msg);
+          }.bind(this));
+        }
+        if (subscription.messages.length > 0) {
+          delete args['messages'];
+          args['last_id'] =
+              subscription.messages[subscription.messages.length - 1]['id'];
+        }
       }
 
       var preEvents = function(response) {
@@ -1309,7 +1337,7 @@ Cosmopolite.prototype.onMessage_ = function(e) {
   }
   e['message'] = JSON.parse(e['message']);
 
-  // Reverse search for the position to insert this message, as iit will most
+  // Reverse search for the position to insert this message, as it will most
   // likely be at the end.
   /** @type {?number} */
   var insertAfter;
@@ -1321,6 +1349,11 @@ Cosmopolite.prototype.onMessage_ = function(e) {
     }
   }
   subscription.messages.splice(insertAfter + 1, 0, e);
+
+  if (subscription.use_cache) {
+    var key = this.messageCacheKeyPrefix_ + subjectString;
+    localStorage[key] = JSON.stringify(subscription.messages);
+  }
 
   var e2 = new CustomEvent('message', {
     'detail': e
