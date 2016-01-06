@@ -311,14 +311,18 @@ Cosmopolite.prototype.subscribe = function(subjects, opt_messages, opt_lastID) {
       /** @type {string} */
       var subjectString = this.subjectString_(canonicalSubject);
       var subscription = this.subscriptions_[subjectString];
+      var use_cache = false;
       if (!subscription) {
+        // Initially set use_cache to false, so we can batch the first cache
+        // write later.
         this.subscriptions_[subjectString] = subscription = {
           'subject': canonicalSubject,
           'messages': [],
           'pins': [],
           'state': Cosmopolite.SubscriptionState_.PENDING,
-          'use_cache': (opt_messages == -1),
+          'use_cache': false,
         };
+        use_cache = (opt_messages == -1);
       }
 
       if (subject['local']) {
@@ -338,12 +342,14 @@ Cosmopolite.prototype.subscribe = function(subjects, opt_messages, opt_lastID) {
         args['last_id'] = opt_lastID;
       }
 
-      if (subscription.use_cache) {
-        // Attempt to shorten request to server using cache.
+      if (use_cache) {
+        // Load cache, fire events.
         var key = this.messageCacheKeyPrefix_ + subjectString;
         var messageStr = localStorage[key];
         if (messageStr) {
-          subscription.messages = JSON.parse(messageStr);
+          subscription.messages =
+              /** @type {Array.<Cosmopolite.typeMessage>} */ (
+                  JSON.parse(messageStr));
           // Simplified version of onMessage_, to avoid a bunch of the
           // overhead.
           subscription.messages.forEach(function(msg) {
@@ -353,6 +359,7 @@ Cosmopolite.prototype.subscribe = function(subjects, opt_messages, opt_lastID) {
           }.bind(this));
         }
         if (subscription.messages.length > 0) {
+          // Shorten our server request using the cache.
           delete args['messages'];
           args['last_id'] =
               subscription.messages[subscription.messages.length - 1]['id'];
@@ -375,6 +382,8 @@ Cosmopolite.prototype.subscribe = function(subjects, opt_messages, opt_lastID) {
         /** @type {string} */
         var result = response['result'];
         if (result == 'ok') {
+          subscription.use_cache = use_cache;
+          this.writeMessageCache_(canonicalSubject);
           // unsubscribe may have been called since we sent the RPC. That's racy
           // without waiting for the promise, but do our best
           if (subjectString in this.subscriptions_) {
@@ -798,6 +807,24 @@ Cosmopolite.prototype.subjectString_ = function(subject) {
     subject['writable_only_by'],
     subject['local']
   ].toString();
+};
+
+
+/**
+ * Write message cache to local storage.
+ *
+ * @param {Cosmopolite.typeSubject} subject
+ * @const
+ * @private
+ */
+Cosmopolite.prototype.writeMessageCache_ = function(subject) {
+  var subjectString = this.subjectString_(subject);
+  var subscription = this.subscriptions_[subjectString];
+  if (!subscription || !subscription.use_cache) {
+    return;
+  }
+  var key = this.messageCacheKeyPrefix_ + subjectString;
+  localStorage[key] = JSON.stringify(subscription.messages);
 };
 
 
@@ -1353,10 +1380,7 @@ Cosmopolite.prototype.onMessage_ = function(e) {
   }
   subscription.messages.splice(insertAfter + 1, 0, e);
 
-  if (subscription.use_cache) {
-    var key = this.messageCacheKeyPrefix_ + subjectString;
-    localStorage[key] = JSON.stringify(subscription.messages);
-  }
+  this.writeMessageCache_(e['subject']);
 
   var e2 = new CustomEvent('message', {
     'detail': e
