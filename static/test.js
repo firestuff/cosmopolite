@@ -947,34 +947,18 @@ QUnit.asyncTest('sendMessage admin ACL', function(assert) {
 
 QUnit.module('Hogfather');
 
-QUnit.test('Construct/shutdown', function(assert) {
-  assert.expect(4);
-
-  var cosmo = new Cosmopolite(null, randstring());
-  assert.ok(true, 'new Cosmopolite() succeeds');
-
-  var hogfather = new Hogfather(cosmo, randstring());
-  assert.ok(true, 'new Hogfather()) succeeds');
-
-  hogfather.shutdown();
-  assert.ok(true, 'Hogfather.shutdown() succeeds');
-
-  cosmo.shutdown();
-  assert.ok(true, 'Cosmopolite.shutdown() succeeds');
-});
-
-QUnit.asyncTest('Create', function(assert) {
+QUnit.asyncTest('PublicChat.create', function(assert) {
   assert.expect(5);
 
   var cosmo = new Cosmopolite(null, randstring());
   assert.ok(true, 'new Cosmopolite() succeeds');
 
-  Hogfather.Create(cosmo).then(function(hogfather) {
+  hogfather.PublicChat.create(cosmo).then(function(chat) {
     assert.ok(true, 'Hogfather.Create() succeeds');
 
-    assert.ok(hogfather, 'Hogfather.Create() returns something');
+    assert.ok(chat, 'Hogfather.Create() returns something');
 
-    hogfather.shutdown();
+    chat.shutdown();
     assert.ok(true, 'Hogfather.shutdown() succeeds');
 
     cosmo.shutdown();

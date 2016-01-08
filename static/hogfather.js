@@ -59,9 +59,9 @@ hogfather.PublicChat = function(cosmo, id) {
  * @param {Cosmopolite} cosmo
  * @return {Promise}
  */
-hogfather.PublicChat.Create = function(cosmo) {
+hogfather.PublicChat.create = function(cosmo) {
   var id = cosmo.uuid();
-  return hogfather.PublicChat.Join(cosmo, id);
+  return hogfather.PublicChat.join(cosmo, id);
 };
 
 
@@ -70,10 +70,10 @@ hogfather.PublicChat.Create = function(cosmo) {
  * @param {string} id
  * @return {Promise}
  */
-hogfather.PublicChat.Join = function(cosmo, id) {
+hogfather.PublicChat.join = function(cosmo, id) {
   return new Promise(function(resolve, reject) {
     var chat = new hogfather.PublicChat(cosmo, id);
-    chat.Start_().then(function() {
+    chat.start_().then(function() {
       resolve(chat);
     }).catch(function(err) {
       reject(err);
@@ -86,7 +86,7 @@ hogfather.PublicChat.Join = function(cosmo, id) {
  * @return {Promise}
  * @private
  */
-hogfather.PublicChat.prototype.Start_ = function() {
+hogfather.PublicChat.prototype.start_ = function() {
   return new Promise(function(resolve, reject) {
     this.cosmo_.subscribe(this.subject_, -1).then(function() {
       console.log(this.loggingPrefix_(), 'ready');
@@ -101,7 +101,7 @@ hogfather.PublicChat.prototype.Start_ = function() {
 /**
  * @return {Promise}
  */
-hogfather.PublicChat.prototype.Shutdown = function() {
+hogfather.PublicChat.prototype.shutdown = function() {
   console.log(this.loggingPrefix_(), 'shutdown start');
   this.cosmo_.removeEventListener('message', this.boundOnMessage_);
   return this.cosmo_.unsubscribe(this.subject_);
