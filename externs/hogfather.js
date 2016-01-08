@@ -24,7 +24,7 @@ hogfather.PublicChat = function(cosmo, id) {};
  * @param {Cosmopolite} cosmo
  * @return {Promise}
  */
-hogfather.PublicChat.Create = function(cosmo) {};
+hogfather.PublicChat.create = function(cosmo) {};
 
 
 /**
@@ -32,12 +32,12 @@ hogfather.PublicChat.Create = function(cosmo) {};
  * @param {string} id
  * @return {Promise}
  */
-hogfather.PublicChat.Join = function(cosmo, id) {};
+hogfather.PublicChat.join = function(cosmo, id) {};
 
 
 /**
  */
-hogfather.PublicChat.prototype.Shutdown = function() {};
+hogfather.PublicChat.prototype.shutdown = function() {};
 
 
 /**
