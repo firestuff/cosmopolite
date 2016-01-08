@@ -20,7 +20,7 @@ curl \
   --data output_info=warnings \
   --data language=ECMASCRIPT5 \
   --data warning_level=verbose \
-  --data externs_url=https://www.cosmopolite.org/externs/cosmopolite.js \
+  --data externs_url=https://cosmopolite.org/externs/cosmopolite.js \
   --data-urlencode "js_code@hogfather.js" \
   http://closure-compiler.appspot.com/compile
 echo
