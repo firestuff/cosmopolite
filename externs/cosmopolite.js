@@ -70,6 +70,22 @@ Cosmopolite.prototype.addEventListener = function(type, listener) {};
 
 
 /**
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/removeEventListener
+ * @param {string} type
+ * @param {function(Event)} listener
+ */
+Cosmopolite.prototype.removeEventListener = function(type, listener) {};
+
+
+/**
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/dispatchEvent
+ * @param {!Event} event
+ * @return {boolean}
+ */
+Cosmopolite.prototype.dispatchEvent = function(event) {};
+
+
+/**
  * @see https://www.cosmopolite.org/reference#connected
  * @return {boolean}
  * @nosideeffects
