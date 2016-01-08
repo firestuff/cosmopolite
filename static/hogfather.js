@@ -50,7 +50,8 @@ hogfather.PublicChat = function(cosmo, id) {
   this.dispatchEvent =
       this.eventTarget_.dispatchEvent.bind(this.eventTarget_);
 
-  this.cosmo_.addEventListener('message', this.onMessage_.bind(this));
+  this.boundOnMessage_ = this.onMessage_.bind(this);
+  this.cosmo_.addEventListener('message', this.boundOnMessage_);
 };
 
 
@@ -98,8 +99,12 @@ hogfather.PublicChat.prototype.Start_ = function() {
 
 
 /**
+ * @return {Promise}
  */
 hogfather.PublicChat.prototype.Shutdown = function() {
+  console.log(this.loggingPrefix_(), 'shutdown start');
+  this.cosmo_.removeEventListener('message', this.boundOnMessage_);
+  return this.cosmo_.unsubscribe(this.subject_);
 };
 
 
