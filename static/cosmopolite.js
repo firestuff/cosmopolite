@@ -122,8 +122,16 @@ var Cosmopolite = function(opt_urlPrefix, opt_namespace, opt_trackingID) {
    */
   this.addEventListener =
       this.eventTarget_.addEventListener.bind(this.eventTarget_);
+
+  /**
+   * @type {function(string, function(Event))}
+   */
   this.removeEventListener =
       this.eventTarget_.removeEventListener.bind(this.eventTarget_);
+
+  /**
+   * @type {function(!Event):boolean}
+   */
   this.dispatchEvent =
       this.eventTarget_.dispatchEvent.bind(this.eventTarget_);
 
