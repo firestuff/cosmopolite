@@ -56,6 +56,14 @@ function Cosmopolite(opt_urlPrefix, opt_namespace, opt_trackingID) {}
 
 
 /**
+ * @see https://www.cosmopolite.org/reference#uuid
+ * @return {string}
+ * @nosideeffects
+ */
+Cosmopolite.uuid = function() {};
+
+
+/**
  * @see https://www.cosmopolite.org/reference#shutdown
  */
 Cosmopolite.prototype.shutdown = function() {};
