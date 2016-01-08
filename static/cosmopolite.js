@@ -555,6 +555,16 @@ Cosmopolite.prototype.currentProfile = function() {
 
 
 /**
+ * @see https://www.cosmopolite.org/reference#isConnected
+ * @return {boolean}
+ * @const
+ */
+Cosmopolite.prototype.isConnected = function() {
+  return (this.channelState_ == Cosmopolite.ChannelState_.OPEN);
+};
+
+
+/**
  * @see https://www.cosmopolite.org/reference#pin_method
  * @param {Cosmopolite.typeSubjectLoose} subject
  * @param {!*} message
