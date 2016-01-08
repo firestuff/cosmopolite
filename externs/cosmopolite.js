@@ -62,6 +62,14 @@ Cosmopolite.prototype.shutdown = function() {};
 
 
 /**
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener
+ * @param {string} type
+ * @param {function(Event)} listener
+ */
+Cosmopolite.prototype.addEventListener = function(type, listener) {};
+
+
+/**
  * @see https://www.cosmopolite.org/reference#connected
  * @return {boolean}
  * @nosideeffects
