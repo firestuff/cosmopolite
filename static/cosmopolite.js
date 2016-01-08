@@ -116,6 +116,10 @@ var Cosmopolite = function(opt_urlPrefix, opt_namespace, opt_trackingID) {
    * Weep for all our souls.
    */
   this.eventTarget_ = document.createDocumentFragment();
+
+  /**
+   * @type {function(string, function(Event))}
+   */
   this.addEventListener =
       this.eventTarget_.addEventListener.bind(this.eventTarget_);
   this.removeEventListener =
@@ -551,16 +555,6 @@ Cosmopolite.prototype.getProfile = function() {
  */
 Cosmopolite.prototype.currentProfile = function() {
   return this.profile_;
-};
-
-
-/**
- * @see https://www.cosmopolite.org/reference#isConnected
- * @return {boolean}
- * @const
- */
-Cosmopolite.prototype.isConnected = function() {
-  return (this.channelState_ == Cosmopolite.ChannelState_.OPEN);
 };
 
 
