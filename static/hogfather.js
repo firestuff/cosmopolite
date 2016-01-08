@@ -72,7 +72,7 @@ hogfather.PublicChat.Create = function(cosmo) {
 hogfather.PublicChat.Join = function(cosmo, id) {
   return new Promise(function(resolve, reject) {
     var chat = new hogfather.PublicChat(cosmo, id);
-    chat.Start().then(function() {
+    chat.Start_().then(function() {
       resolve(chat);
     }).catch(function(err) {
       reject(err);
@@ -83,8 +83,9 @@ hogfather.PublicChat.Join = function(cosmo, id) {
 
 /**
  * @return {Promise}
+ * @private
  */
-hogfather.PublicChat.prototype.Start = function() {
+hogfather.PublicChat.prototype.Start_ = function() {
   return new Promise(function(resolve, reject) {
     this.cosmo_.subscribe(this.subject_, -1).then(function() {
       console.log(this.loggingPrefix_(), 'ready');
