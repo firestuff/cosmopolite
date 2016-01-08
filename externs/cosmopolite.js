@@ -43,6 +43,12 @@ Cosmopolite.typeSubject;
 Cosmopolite.typeSubjectLoose;
 
 
+/**
+ * @see https://cosmopolite.org/reference#logout
+ * @typedef {{login_url: string}}
+ */
+Cosmopolite.typeEventLogoutDetail;
+
 
 /**
  * @see https://www.cosmopolite.org/reference#constructor
