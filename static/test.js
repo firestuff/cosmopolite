@@ -967,3 +967,22 @@ QUnit.asyncTest('PublicChat.create', function(assert) {
     QUnit.start();
   });
 });
+
+QUnit.asyncTest('PublicChat message round trip', function(assert) {
+  assert.expect(2);
+
+  var message = randstring();
+
+  var cosmo = new Cosmopolite(null, randstring());
+  hogfather.PublicChat.create(cosmo).then(function(chat) {
+    chat.addEventListener('message', function(e) {
+      assert.equal(e.detail.message, message);
+      chat.shutdown();
+      cosmo.shutdown();
+      QUnit.start();
+    });
+    chat.sendMessage(message).then(function(msg) {
+      assert.equal(msg.message.message, message);
+    });
+  });
+});
