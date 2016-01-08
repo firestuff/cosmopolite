@@ -67,14 +67,3 @@ handlers:
     X-Frame-Options: DENY
     X-Content-Type-Options: nosniff
     Strict-Transport-Security: max-age=31536000; includeSubDomains
-
-pagespeed:
-  url_blacklist:
-  - https://www.cosmopolite.org/externs/*
-  enabled_rewriters:
-  - InlineImages
-  - CollapseWhitespace
-  - ElideAttributes
-  - RemoveQuotes
-  - LeftTrimUrls
-  - MinifyCss
